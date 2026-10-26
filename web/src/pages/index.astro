@@ -1,89 +1,136 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
-import Kartu from '../components/Kartu.astro';
 import { ikon } from '../lib/ikon';
 ---
-<Dasar judul="Tap KTM">
-  <header class="atas-putih">
-    <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
-    <h1 class="sapa-besar">Tap KTM kamu</h1>
-    <p class="sapa-kecil">Jadwal, tugas, dan AI asisten langsung terbuka.</p>
-  </header>
+<Dasar judul="Masuk">
+  <section class="masuk">
+    <header class="kepala-masuk">
+      <p class="wordmark"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+      <h1>Masuk</h1>
+      <p class="redup">Kartu mahasiswamu adalah kuncinya. Tap KTM, atau pakai NIM dan PIN.</p>
+    </header>
 
-  <section class="zona-biru">
-    <div class="kartu-wrap"><Kartu nama="KTM kamu" nim="Tempel di belakang HP" prodi="Universitas Pamulang" /></div>
+    <!-- Sudah pernah masuk di perangkat ini -->
+    <a class="lanjut" id="lanjut" href="/beranda/" hidden>
+      <span class="lanjut-foto" id="lanjut-foto">·</span>
+      <span class="lanjut-teks"><b>Lanjut sebagai <span id="lanjut-nama"></span></b><span>Atau tempel KTM untuk langsung masuk</span></span>
+      <span class="lanjut-panah"><Fragment set:html={ikon('kembali')} /></span>
+    </a>
 
-    <!-- Lanjut sesi yang tersimpan -->
-    <div class="langkah" id="lanjut" hidden>
-      <a class="tombol kuning" id="lanjut-ke" href="/beranda/">Lanjut sebagai <span id="lanjut-nama"></span></a>
-      <button class="tautan" id="ganti-akun" type="button">Ganti akun</button>
+    <!-- Tap KTM -->
+    <div class="blok" id="awal">
+      <div class="tap-baris">
+        <div class="ktm-mini" aria-hidden="true"><span class="chip-mini"></span><span class="gel-mini"><Fragment set:html={ikon('nfc')} /></span></div>
+        <div class="tap-teks">
+          <b>Tap KTM</b>
+          <span>Tempel kartu ke belakang HP. Hanya nomor seri yang dibaca, data parkir aman.</span>
+        </div>
+      </div>
+      <button class="tombol" id="mulai-tap" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM</button>
+      <div class="info-nfc" id="tanpa-nfc" hidden>
+        <p id="tanpa-nfc-teks">Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM di bawah.</p>
+        <a class="tombol garis-biru" id="ke-chrome" href="#" hidden>Buka di Chrome</a>
+      </div>
     </div>
 
-    <!-- Awal -->
-    <div class="langkah" id="awal">
-      <button class="tombol kuning" id="mulai-tap" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM</button>
-      <a class="tombol kuning" id="ke-chrome" href="#" hidden>Buka di Chrome untuk tap KTM</a>
-      <p class="catatan" id="tanpa-nfc" hidden>Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM.</p>
-      <button class="tombol garis" id="ke-nim" type="button">Masuk pakai NIM</button>
-      <p class="catatan"><Fragment set:html={ikon('perisai')} /> Hanya nomor seri kartu yang dibaca. Isi KTM, termasuk data parkir, tidak diubah.</p>
-    </div>
-
-    <!-- Menunggu kartu -->
-    <div class="langkah" id="menunggu" hidden>
-      <p class="status">Tempelkan KTM ke belakang HP</p>
-      <p class="catatan">Tahan sebentar sampai HP bergetar.</p>
-      <button class="tautan" id="batal-tap" type="button">Batal</button>
+    <div class="blok" id="menunggu" hidden>
+      <div class="tap-baris">
+        <span class="denyut" aria-hidden="true"></span>
+        <div class="tap-teks"><b>Tempelkan KTM ke belakang HP</b><span>Tahan sebentar sampai HP bergetar.</span></div>
+        <button class="tautan" id="batal-tap" type="button">Batal</button>
+      </div>
     </div>
 
     <!-- KTM terdaftar: PIN -->
-    <form class="kartu form" id="form-pin" hidden>
-      <p class="status-gelap">Halo, <span id="pin-nama"></span> 👋</p>
+    <form class="blok" id="form-pin" hidden>
+      <p class="judul-blok">Halo, <span id="pin-nama"></span>. Masukkan PIN.</p>
       <label for="pin">PIN 6 angka</label>
-      <input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+      <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
       <button class="tombol" type="submit">Masuk</button>
+      <button class="tautan" type="button" data-kembali>Bukan kamu? Kembali</button>
     </form>
 
     <!-- KTM baru: daftar -->
-    <form class="kartu form" id="form-daftar" hidden>
-      <p class="status-gelap">✓ KTM terbaca, tinggal daftar sekali</p>
-      <p class="redup kecil">Kartu ini belum tertaut ke akun mana pun. Isi data di bawah, berikutnya cukup tap KTM lalu masukkan PIN. Kalau NIM kamu sudah ada di sistem, isi NIM dan PIN saja.</p>
+    <form class="blok" id="form-daftar" hidden>
+      <p class="judul-blok">✓ KTM terbaca. Daftar sekali saja.</p>
+      <p class="redup kecil">Kalau NIM kamu sudah ada di sistem, isi NIM dan PIN saja.</p>
       <label for="d-nim">NIM</label>
-      <input id="d-nim" name="nim" inputmode="numeric" required />
+      <input id="d-nim" name="nim" inputmode="numeric" autocomplete="username" required />
       <label for="d-nama">Nama lengkap</label>
       <input id="d-nama" name="nama" autocomplete="name" />
       <label for="d-prodi">Program studi</label>
       <input id="d-prodi" name="prodi" value="Teknik Informatika" />
       <label for="d-pin">Buat PIN 6 angka</label>
-      <input id="d-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
+      <input id="d-pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
       <button class="tombol" type="submit">Daftarkan KTM</button>
+      <button class="tautan" type="button" data-kembali>Batal</button>
     </form>
 
-    <!-- Masuk pakai NIM -->
-    <form class="kartu form" id="form-nim" hidden>
-      <p class="status-gelap">Masuk pakai NIM</p>
-      <label for="m-nim">NIM atau NIDN</label>
-      <input id="m-nim" name="nim" inputmode="numeric" required />
-      <label for="m-pin">PIN</label>
-      <input id="m-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
-      <button class="tombol" type="submit">Masuk</button>
-      <button class="tautan biru" id="kembali" type="button">Kembali</button>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
+
+    <!-- Masuk pakai NIM: selalu terlihat, dekat atas supaya tidak tertutup keyboard -->
+    <form class="blok" id="form-nim">
+      <p class="judul-blok">Masuk pakai NIM</p>
+      <div class="dua-kolom">
+        <div>
+          <label for="m-nim">NIM atau NIDN</label>
+          <input id="m-nim" name="nim" inputmode="numeric" autocomplete="username" required />
+        </div>
+        <div>
+          <label for="m-pin">PIN</label>
+          <input id="m-pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+        </div>
+      </div>
+      <button class="tombol garis-biru" type="submit">Masuk</button>
     </form>
 
-    <p id="pesan" class="galat pesan" role="alert"></p>
+    <p class="catatan-kecil">Smart KTM tidak menulis apa pun ke kartu atau ke sistem kampus.</p>
   </section>
 </Dasar>
 
 <style is:global>
-  .kartu-wrap { margin: 4px 4px 22px; transform: perspective(800px) rotateX(6deg); }
-  .langkah { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
-  .catatan { display: flex; gap: 8px; justify-content: center; align-items: flex-start; text-align: center; font-size: 0.85rem; color: rgba(255, 255, 255, 0.8); }
-  .catatan .ikon { width: 16px; height: 16px; margin-top: 2px; }
-  .status { font-size: 1.35rem; font-weight: 800; text-align: center; }
-  .status-gelap { font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; }
-  .form .tombol { margin-top: 18px; }
-  .tautan.biru { color: var(--biru); display: block; margin: 8px auto 0; }
-  .langkah .tautan { color: var(--putih); }
-  .pesan { margin-top: 14px; text-align: center; min-height: 1.5em; }
+  body:has(.masuk) .halaman { background: var(--latar); }
+  .masuk { padding: 18px 16px 32px; display: flex; flex-direction: column; gap: 12px; }
+  .kepala-masuk { margin-bottom: 4px; }
+  .wordmark { display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--biru); font-size: 0.95rem; }
+  .wordmark .ikon { width: 20px; height: 20px; }
+  .kepala-masuk h1 { font-size: 1.6rem; font-weight: 800; margin-top: 14px; }
+  .kepala-masuk p.redup { font-size: 0.9rem; margin-top: 2px; }
+
+  .blok { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 14px; scroll-margin: 16px; }
+  .blok .tombol { margin-top: 12px; }
+  .blok .tautan { display: block; margin: 6px auto 0; color: var(--teks-2); font-size: 0.85rem; }
+  .judul-blok { font-weight: 800; font-size: 0.98rem; margin-bottom: 2px; }
+  .blok label { margin-top: 10px; font-size: 0.82rem; }
+  .dua-kolom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+
+  .tap-baris { display: flex; gap: 12px; align-items: center; }
+  .tap-teks { flex: 1; min-width: 0; }
+  .tap-teks b { display: block; font-size: 0.95rem; }
+  .tap-teks span { font-size: 0.8rem; color: var(--teks-2); }
+  .tap-baris .tautan { margin: 0 0 0 auto; }
+  .ktm-mini {
+    width: 76px; aspect-ratio: 1.586; border-radius: 9px; flex: none; position: relative;
+    background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
+  }
+  .chip-mini { position: absolute; left: 9px; top: 15px; width: 14px; height: 11px; border-radius: 3px; background: linear-gradient(135deg, #fde68a, #f59e0b); }
+  .gel-mini { position: absolute; right: 6px; top: 5px; color: rgba(255, 255, 255, 0.9); }
+  .gel-mini .ikon { width: 14px; height: 14px; }
+  .denyut { width: 14px; height: 14px; border-radius: 50%; background: var(--biru); flex: none; margin: 0 6px; animation: denyut 1.4s ease-out infinite; }
+  @keyframes denyut { 0% { box-shadow: 0 0 0 0 rgba(23, 71, 201, 0.45); } 100% { box-shadow: 0 0 0 14px rgba(23, 71, 201, 0); } }
+  .info-nfc { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f6; }
+  .info-nfc p { font-size: 0.82rem; color: var(--teks-2); }
+
+  .lanjut { display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: var(--biru); color: var(--putih); border-radius: 16px; text-decoration: none; }
+  .lanjut-foto { width: 42px; height: 42px; border-radius: 12px; overflow: hidden; flex: none; display: grid; place-items: center; font-weight: 800; background: rgba(255, 255, 255, 0.2); }
+  .lanjut-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .lanjut-teks { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .lanjut-teks b { font-size: 0.95rem; }
+  .lanjut-teks > span { font-size: 0.78rem; opacity: 0.85; }
+  .lanjut-panah { transform: rotate(180deg); display: grid; }
+
+  .pesan-galat { padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+  .catatan-kecil { text-align: center; font-size: 0.75rem; color: var(--teks-2); margin-top: 4px; }
 </style>
 
 <script>
@@ -91,19 +138,23 @@ import { ikon } from '../lib/ikon';
   import { bacaKtm, diAndroid, diBrave, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const bagian = ['lanjut', 'awal', 'menunggu', 'form-pin', 'form-daftar', 'form-nim'];
-  const kartu = document.querySelector('.ktm')!;
-  const pesan = $('pesan');
+  // Blok yang bergantian di bagian atas; form NIM selalu ada.
+  const bagian = ['awal', 'menunggu', 'form-pin', 'form-daftar'];
   let uid = '';
   let berhenti: Berhenti | null = null;
 
+  function salah(t: string) {
+    $('pesan').textContent = t;
+    $('pesan').hidden = !t;
+  }
+
   function tampil(id: string) {
     bagian.forEach((b) => ($(b).hidden = b !== id));
-    kartu.classList.toggle('sinyal', id === 'menunggu');
-    pesan.textContent = '';
-    $(id).querySelector<HTMLInputElement>('input')?.focus();
+    $('form-nim').hidden = id === 'form-pin' || id === 'form-daftar';
+    salah('');
+    const input = $(id).querySelector<HTMLInputElement>('input');
+    if (input) setTimeout(() => input.focus(), 50);
   }
-  const salah = (t: string) => (pesan.textContent = t);
 
   function selesaiMasuk(r: { token: string; peran: string }) {
     sesi.simpan(r.token);
@@ -141,11 +192,16 @@ import { ikon } from '../lib/ikon';
       salah(pesanGalatNfc(e));
     }
   }
+
   $('mulai-tap').addEventListener('click', mulaiBaca);
-  $('batal-tap').addEventListener('click', () => { berhenti?.(); berhenti = null; tampil(sesi.ambil() ? 'lanjut' : 'awal'); });
-  $('ke-nim').addEventListener('click', () => tampil('form-nim'));
-  $('kembali').addEventListener('click', () => tampil('awal'));
-  $('ganti-akun').addEventListener('click', () => { sesi.hapus(); tampil('awal'); });
+  $('batal-tap').addEventListener('click', () => { berhenti?.(); berhenti = null; tampil('awal'); });
+  document.querySelectorAll('[data-kembali]').forEach((b) => b.addEventListener('click', () => tampil('awal')));
+
+  // Kolom yang sedang diisi digeser ke area terlihat saat keyboard muncul.
+  document.addEventListener('focusin', (e) => {
+    const el = e.target as HTMLElement;
+    if (el.matches('input')) setTimeout(() => el.closest('.blok')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
+  });
 
   function kirim(form: HTMLFormElement, jalan: (d: Record<string, string>) => Promise<void>) {
     form.addEventListener('submit', async (ev) => {
@@ -166,24 +222,30 @@ import { ikon } from '../lib/ikon';
   kirim($('form-nim'), async (d) => selesaiMasuk(await api('/masuk', { nim: d.nim, pin: d.pin })));
 
   if (!nfcDidukung()) {
+    // Tanpa NFC, masuk pakai NIM jadi aksi utama.
+    $('form-nim').querySelector('button[type=submit]')!.classList.remove('garis-biru');
     $('mulai-tap').hidden = true;
     $('tanpa-nfc').hidden = false;
-    // Di Android (mis. Brave): tawarkan pindah ke Chrome yang mendukung Web NFC.
     if (diAndroid()) {
       ($('ke-chrome') as HTMLAnchorElement).href = tautanChrome();
       $('ke-chrome').hidden = false;
-      $('tanpa-nfc').textContent = diBrave()
-        ? 'Brave tidak mendukung pembacaan NFC dari web. Buka di Chrome untuk tap KTM, atau masuk pakai NIM.'
-        : 'Browser ini belum bisa membaca NFC. Buka di Chrome untuk tap KTM, atau masuk pakai NIM.';
+      if (diBrave()) $('tanpa-nfc-teks').textContent = 'Brave tidak bisa membaca NFC dari web. Buka di Chrome untuk tap KTM, atau masuk pakai NIM di bawah.';
     }
   }
 
+  // Sudah pernah masuk di perangkat ini?
   if (sesi.ambil()) {
-    api<{ nama: string; peran: string }>('/saya')
+    api<{ nama: string; peran: string; foto?: string }>('/saya')
       .then((s) => {
         $('lanjut-nama').textContent = s.nama.split(' ')[0];
-        ($('lanjut-ke') as HTMLAnchorElement).href = tujuan(s.peran);
-        if (!berhenti) tampil('lanjut');
+        ($('lanjut') as HTMLAnchorElement).href = tujuan(s.peran);
+        if (s.foto) {
+          const img = document.createElement('img');
+          img.src = s.foto;
+          img.alt = '';
+          $('lanjut-foto').replaceChildren(img);
+        } else $('lanjut-foto').textContent = s.nama.charAt(0);
+        $('lanjut').hidden = false;
       })
       .catch((e) => { if (e instanceof GalatApi && e.status === 401) sesi.hapus(); });
   }
