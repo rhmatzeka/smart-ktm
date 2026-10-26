@@ -34,7 +34,7 @@ cat > "$UNIT/smart-ktm-anvil.service" <<EOF
 [Unit]
 Description=Smart KTM - blockchain lokal (Anvil)
 [Service]
-ExecStart=$HOME/.foundry/bin/anvil --port 8545 --state $AKAR/server/data/anvil-state.json --silent
+ExecStart=$HOME/.foundry/bin/anvil --port 8545 --state $AKAR/server/data/anvil-state.json --state-interval 30 --silent
 Restart=always
 [Install]
 WantedBy=default.target
