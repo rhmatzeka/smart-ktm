@@ -3,24 +3,26 @@ import Dasar from '../layouts/Dasar.astro';
 import { ikon, ikonApp } from '../lib/ikon';
 ---
 <Dasar judul="Beranda" nav="beranda">
-  <header class="atas-putih">
-    <div class="baris-atas">
-      <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
-      <a class="avatar" href="/profil/" aria-label="Profil">
-        <span id="inisial">·</span>
-        <span class="lencana-ktm" id="lencana-ktm" hidden title="KTM tertaut"><Fragment set:html={ikon('centang')} /></span>
-      </a>
-    </div>
-    <h1 class="sapa-besar" id="sapa">Hai!</h1>
-    <p class="sapa-kecil" id="sapa-waktu">Memuat…</p>
-
+  <header class="pita-ktm">
+    <div class="pita-atas"><span>Universitas Pamulang</span><span>Kartu Tanda Mahasiswa</span></div>
+    <a class="pita-id" href="/profil/" aria-label="Profil">
+      <span class="pita-foto" id="pita-foto">·</span>
+      <span class="pita-teks">
+        <b id="pita-nama">Memuat…</b>
+        <span id="pita-nim"></span>
+        <span id="pita-prodi"></span>
+      </span>
+      <span class="pita-chip" aria-hidden="true"></span>
+    </a>
+  </header>
+  <div class="atas-menu">
     <nav class="menu-cepat" aria-label="Menu cepat">
       <a href="#jadwal"><Fragment set:html={ikonApp('kalender', 'biru')} /><span>Jadwal</span></a>
       <a href="#tugas"><Fragment set:html={ikonApp('tugas', 'teal')} /><span>Tugas</span></a>
       <a href="/tanya/"><Fragment set:html={ikonApp('kilau', 'oranye')} /><span>Tanya AI</span></a>
       <a href="/kenalan/"><Fragment set:html={ikonApp('nfc', 'hijau')} /><span>Kenalan</span></a>
     </nav>
-  </header>
+  </div>
 
   <section class="zona-biru naik">
     <!-- Kelas berikutnya -->
@@ -73,7 +75,29 @@ import { ikon, ikonApp } from '../lib/ikon';
 </Dasar>
 
 <style is:global>
-  .avatar { text-decoration: none; }
+  /* Header pita KTM */
+  .pita-ktm {
+    position: relative; overflow: hidden; color: var(--putih); padding: 14px 16px 18px;
+    border-radius: 0 0 24px 24px;
+    background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
+  }
+  .pita-ktm::after {
+    content: ''; position: absolute; inset: -60% -20%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%);
+  }
+  .pita-atas { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.85; position: relative; z-index: 1; }
+  .pita-id { display: flex; gap: 12px; align-items: center; margin-top: 12px; color: inherit; text-decoration: none; position: relative; z-index: 1; }
+  .pita-foto {
+    width: 60px; height: 72px; border-radius: 10px; flex: none; overflow: hidden;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.4rem;
+    background: rgba(255, 255, 255, 0.18); border: 2px solid rgba(255, 255, 255, 0.85);
+  }
+  .pita-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .pita-teks { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .pita-teks b { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
+  .pita-teks span { font-size: 0.8rem; opacity: 0.9; }
+  .pita-chip { width: 34px; height: 26px; border-radius: 6px; flex: none; align-self: flex-start; background: linear-gradient(135deg, #fde68a, #f59e0b); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+  .atas-menu { padding: 0 16px; position: relative; z-index: 2; }
   /* Menu cepat: ikon garis biru, dipisah garis tipis (gaya aplikasi bank) */
   .menu-cepat {
     display: grid; grid-template-columns: repeat(4, 1fr);
@@ -187,7 +211,6 @@ import { ikon, ikonApp } from '../lib/ikon';
   const $ = (id: string) => document.getElementById(id)!;
   const titik = (j: string) => j.replace(':', '.');
   const durasi = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} jam${m % 60 ? ` ${m % 60} mnt` : ''}` : `${m} menit`);
-  const SAPA: Record<string, string> = { Pagi: 'Selamat pagi!', Siang: 'Selamat siang!', Sore: 'Selamat sore!', Malam: 'Selamat malam!' };
   let semuaTugas = false;
   const terbuka = new Set<number>();
   const rincian = new Map<number, string>();
@@ -272,9 +295,6 @@ import { ikon, ikonApp } from '../lib/ikon';
 
   function render(b: any) {
     data = b;
-    $('sapa').textContent = `Hai ${b.nama}`;
-    $('sapa-waktu').textContent = `${SAPA[b.sapaan] ?? ''} ${b.sekarang.split(' · ')[0]}`;
-    $('inisial').textContent = b.nama.charAt(0).toUpperCase();
     hero(b);
 
     const malam = b.momen === 'malam';
@@ -358,7 +378,22 @@ import { ikon, ikonApp } from '../lib/ikon';
     }
   });
 
-  api<any>('/saya').then((s) => ($('lencana-ktm').hidden = !s.ktm)).catch(() => {});
+  api<any>('/saya')
+    .then((s) => {
+      $('pita-nama').textContent = s.nama;
+      $('pita-nim').textContent = s.nim;
+      $('pita-prodi').textContent = [s.prodi, s.semester && `Semester ${s.semester}`].filter(Boolean).join(' · ');
+      const foto = $('pita-foto');
+      if (s.foto) {
+        const img = document.createElement('img');
+        img.src = s.foto;
+        img.alt = '';
+        foto.replaceChildren(img);
+      } else {
+        foto.textContent = s.nama.split(/\s+/).slice(0, 2).map((k: string) => k.charAt(0)).join('');
+      }
+    })
+    .catch(() => {});
   muat();
   setInterval(muat, 60_000);
 </script>

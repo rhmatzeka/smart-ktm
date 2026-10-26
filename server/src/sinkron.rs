@@ -18,6 +18,11 @@ pub struct DataUnpam {
     pub nama: String,
     #[serde(default)]
     pub prodi: String,
+    #[serde(default)]
+    pub semester: String,
+    /// Foto profil MyUnpam sebagai data URL JPEG kecil (diperkecil di bookmark).
+    #[serde(default)]
+    pub foto: String,
     pub kelas: Vec<KelasUnpam>,
 }
 
@@ -134,6 +139,12 @@ pub fn sinkron(c: &mut Connection, user: i64, d: &DataUnpam) -> anyhow::Result<u
     }
     if !d.prodi.trim().is_empty() {
         tx.execute("UPDATE users SET prodi = ?1 WHERE id = ?2", params![rapikan(d.prodi.trim_end_matches(" S1").trim()), user])?;
+    }
+    if !d.semester.trim().is_empty() {
+        tx.execute("UPDATE users SET semester = ?1 WHERE id = ?2", params![d.semester.trim().trim_start_matches('0'), user])?;
+    }
+    if d.foto.starts_with("data:image/") && d.foto.len() < 300_000 {
+        tx.execute("UPDATE users SET foto = ?1 WHERE id = ?2", params![d.foto, user])?;
     }
     tx.commit()?;
     Ok(id_matkul.len())

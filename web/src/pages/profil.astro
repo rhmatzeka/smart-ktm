@@ -51,6 +51,7 @@ import { ikon } from '../lib/ikon';
   .kepala-profil { text-align: center; }
   .kepala-profil .baris-atas { text-align: left; }
   .ikon-keluar { width: 40px; height: 40px; border-radius: 12px; border: 0; background: #ffe4e6; color: var(--merah); display: grid; place-items: center; cursor: pointer; }
+  .avatar.raksasa img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .avatar.raksasa { width: 84px; height: 84px; font-size: 2.1rem; margin: 14px auto 10px; }
   .avatar.raksasa .lencana-ktm { width: 28px; height: 28px; right: 2px; bottom: 2px; }
   .avatar.raksasa .lencana-ktm .ikon { width: 16px; height: 16px; }
@@ -86,7 +87,14 @@ import { ikon } from '../lib/ikon';
 
   api<any>('/saya')
     .then((s) => {
-      $('inisial').firstChild!.textContent = s.nama.charAt(0).toUpperCase();
+      if (s.foto) {
+        const img = document.createElement('img');
+        img.src = s.foto;
+        img.alt = '';
+        $('inisial').firstChild!.replaceWith(img);
+      } else {
+        $('inisial').firstChild!.textContent = s.nama.charAt(0).toUpperCase();
+      }
       $('lencana-ktm').hidden = !s.ktm;
       $('nama').textContent = s.nama;
       $('prodi').textContent = s.prodi || 'Dosen';

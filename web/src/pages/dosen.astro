@@ -78,6 +78,8 @@ import { ikon } from '../lib/ikon';
   }
   .layar-ikon { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; background: var(--biru-pudar); color: var(--biru); position: relative; z-index: 1; }
   .layar-ikon .ikon { width: 40px; height: 40px; }
+  .layar-ikon.berfoto { width: 96px; height: 116px; border-radius: 14px; overflow: hidden; border: 3px solid rgba(255, 255, 255, 0.9); }
+  .layar-ikon.berfoto img { width: 100%; height: 100%; object-fit: cover; }
   .layar-nama { font-size: 1.9rem; font-weight: 800; margin-top: 14px; position: relative; z-index: 1; line-height: 1.1; }
   .layar-ket { color: var(--teks-2); margin-top: 6px; position: relative; z-index: 1; }
   .layar[data-keadaan='hadir'] { background: var(--hijau); color: var(--putih); }
@@ -119,9 +121,10 @@ import { ikon } from '../lib/ikon';
   let pantau: number | undefined;
   let kembaliTunggu: number | undefined;
 
-  function layar(keadaan: string, nama: string, ket: string) {
+  function layar(keadaan: string, nama: string, ket: string, foto?: string | null) {
     $('layar').dataset.keadaan = keadaan;
-    $('l-ikon').innerHTML = ikon(keadaan === 'hadir' || keadaan === 'sudah' ? 'centang' : keadaan === 'galat' ? 'peringatan' : 'nfc');
+    $('l-ikon').classList.toggle('berfoto', !!foto);
+    $('l-ikon').innerHTML = foto ? `<img src="${esc(foto)}" alt="">` : ikon(keadaan === 'hadir' || keadaan === 'sudah' ? 'centang' : keadaan === 'galat' ? 'peringatan' : 'nfc');
     $('l-nama').textContent = nama;
     $('l-ket').textContent = ket;
     clearTimeout(kembaliTunggu);
@@ -181,8 +184,8 @@ import { ikon } from '../lib/ikon';
   async function tap(uid: string) {
     try {
       const r = await api<any>(`/dosen/sesi/${sesiId}/tap`, { uid });
-      if (r.status === 'sudah') layar('sudah', r.nama, `Sudah tercatat jam ${jam(r.waktu)}`);
-      else layar('hadir', r.nama, `Hadir ${jam(r.waktu)} · NIM ${r.nim}`);
+      if (r.status === 'sudah') layar('sudah', r.nama, `Sudah tercatat jam ${jam(r.waktu)}`, r.foto);
+      else layar('hadir', r.nama, `Hadir ${jam(r.waktu)} · NIM ${r.nim}`, r.foto);
       muatSesi();
     } catch (e) {
       navigator.vibrate?.([80, 60, 80]);

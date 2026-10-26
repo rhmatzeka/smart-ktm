@@ -125,6 +125,14 @@ import { ikon } from '../lib/ikon';
     $('pesan').hidden = !t;
   }
 
+  const pasangFoto = (el: HTMLElement, foto: string | null | undefined, nama: string) => {
+    if (foto) {
+      const img = document.createElement('img');
+      img.src = foto;
+      img.alt = '';
+      el.replaceChildren(img);
+    } else el.textContent = inisial(nama);
+  };
   const inisial = (nama: string) => nama.split(/\s+/).slice(0, 2).map((k) => k.charAt(0).toUpperCase()).join('');
   const tautan = (p: any) => [
     p.github && `<li>${ikon('kode')}GitHub<a href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
@@ -155,7 +163,7 @@ import { ikon } from '../lib/ikon';
     try {
       const p = await api<any>('/kenalan', { uid });
       $('profil').hidden = false;
-      $('inisial').textContent = inisial(p.nama);
+      pasangFoto($('inisial'), p.privat ? null : p.foto, p.nama);
       $('nama').textContent = p.nama;
       $('prodi').textContent = p.privat ? 'Profil ini disembunyikan pemiliknya.' : `${p.prodi}, ${p.kampus}`;
       $('bio').textContent = p.privat ? '' : p.bio;
@@ -197,7 +205,7 @@ import { ikon } from '../lib/ikon';
   // Pratinjau kartu sendiri
   api<any>('/saya')
     .then((s) => {
-      $('s-inisial').textContent = inisial(s.nama);
+      pasangFoto($('s-inisial'), s.foto, s.nama);
       $('s-nama').textContent = s.nama;
       $('s-prodi').textContent = `${s.prodi || 'Dosen'}, Universitas Pamulang`;
       $('s-bio').textContent = s.bio || '';

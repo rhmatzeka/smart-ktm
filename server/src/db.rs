@@ -81,6 +81,13 @@ pub fn siapkan(c: &Connection) -> rusqlite::Result<()> {
     if !punya {
         c.execute("ALTER TABLE matkul ADD COLUMN dosen_nama TEXT", [])?;
     }
+    // Foto profil & semester dari MyUnpam.
+    for (kolom, tipe) in [("foto", "TEXT"), ("semester", "TEXT")] {
+        let ada: bool = c.query_row("SELECT COUNT(*) > 0 FROM pragma_table_info('users') WHERE name = ?1", [kolom], |r| r.get(0))?;
+        if !ada {
+            c.execute(&format!("ALTER TABLE users ADD COLUMN {kolom} {tipe}"), [])?;
+        }
+    }
     c.busy_timeout(std::time::Duration::from_secs(5))?;
     let ada: i64 = c.query_row("SELECT COUNT(*) FROM matkul", [], |r| r.get(0))?;
     if ada == 0 {

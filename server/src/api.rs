@@ -234,14 +234,15 @@ async fn keluar(State(app): State<App>, h: HeaderMap) -> Hasil {
 async fn saya(State(app): State<App>, h: HeaderMap) -> Hasil {
     let c = app.db.lock().unwrap();
     let u = pengguna(&c, &h)?;
-    let (bio, github, portofolio, publik, ktm): (String, String, String, bool, bool) = c.query_row(
-        "SELECT bio, github, portofolio, publik, uid_hash IS NOT NULL FROM users WHERE id = ?1",
+    let (bio, github, portofolio, publik, ktm, foto, semester): (String, String, String, bool, bool, Option<String>, Option<String>) = c.query_row(
+        "SELECT bio, github, portofolio, publik, uid_hash IS NOT NULL, foto, semester FROM users WHERE id = ?1",
         [u.id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
     )?;
     Ok(Json(json!({
         "nama": u.nama, "nim": u.nim, "prodi": u.prodi, "peran": u.peran,
         "bio": bio, "github": github, "portofolio": portofolio, "publik": publik, "ktm": ktm,
+        "foto": foto, "semester": semester,
     })))
 }
 
@@ -341,14 +342,14 @@ async fn sinkron_unpam(State(app): State<App>, h: HeaderMap, Json(d): Json<sinkr
 async fn kenalan(State(app): State<App>, Json(b): Json<Uid>) -> Hasil {
     let h = uid_hash(&app, &b.uid)?;
     let c = app.db.lock().unwrap();
-    let r: Option<(i64, String, String, String, String, String, bool, String)> = c
+    let r: Option<(i64, String, String, String, String, String, bool, String, Option<String>)> = c
         .query_row(
-            "SELECT id, nama, prodi, bio, github, portofolio, publik, dibuat FROM users WHERE uid_hash = ?1 AND peran = 'mhs'",
+            "SELECT id, nama, prodi, bio, github, portofolio, publik, dibuat, foto FROM users WHERE uid_hash = ?1 AND peran = 'mhs'",
             [h],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?)),
         )
         .optional()?;
-    let Some((id, nama, prodi, bio, github, portofolio, publik, dibuat)) = r else {
+    let Some((id, nama, prodi, bio, github, portofolio, publik, dibuat, foto)) = r else {
         return Err(galat(StatusCode::NOT_FOUND, "KTM ini belum terdaftar di Smart KTM"));
     };
     if !publik {
@@ -365,7 +366,7 @@ async fn kenalan(State(app): State<App>, Json(b): Json<Uid>) -> Hasil {
         lencana.insert(0, format!("{onchain} presensi tercatat on-chain"));
     }
     Ok(Json(json!({
-        "privat": false, "nama": nama, "prodi": prodi, "kampus": "Universitas Pamulang",
+        "privat": false, "nama": nama, "prodi": prodi, "kampus": "Universitas Pamulang", "foto": foto,
         "bio": bio, "github": github, "portofolio": portofolio, "lencana": lencana,
     })))
 }
@@ -516,10 +517,10 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
         if !terbuka {
             return Err(galat(StatusCode::CONFLICT, "Sesi sudah ditutup"));
         }
-        let mhs: Option<(i64, String, String)> = c
-            .query_row("SELECT id, nama, nim FROM users WHERE uid_hash = ?1 AND peran = 'mhs'", [&mhs_hash], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        let mhs: Option<(i64, String, String, Option<String>)> = c
+            .query_row("SELECT id, nama, nim, foto FROM users WHERE uid_hash = ?1 AND peran = 'mhs'", [&mhs_hash], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
             .optional()?;
-        let Some((mid, nama, nim)) = mhs else {
+        let Some((mid, nama, nim, foto)) = mhs else {
             return Err(galat(StatusCode::NOT_FOUND, "KTM belum terdaftar. Minta mahasiswa daftar dulu di Smart KTM."));
         };
         let ikut: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM ambil WHERE user_id = ?1 AND matkul_id = ?2)", params![mid, matkul_id], |r| r.get(0))?;
@@ -530,7 +531,7 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
         let lama: Option<(String, String, Option<String>)> = c
             .query_row("SELECT waktu, bukti, tx FROM presensi WHERE sesi_id = ?1 AND user_id = ?2", params![id, mid], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
             .optional()?;
-        let dasar = json!({ "nama": nama, "nim": samarkan_nim(&nim) });
+        let dasar = json!({ "nama": nama, "nim": samarkan_nim(&nim), "foto": foto });
         if let Some((saat, bukti, tx)) = lama {
             let mut v = dasar;
             v["status"] = json!("sudah");
