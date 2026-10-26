@@ -73,20 +73,42 @@ pub fn tugas(c: &Connection, user: i64, kini: &DateTime<FixedOffset>, termasuk_s
     Ok(hasil)
 }
 
-/// Rekap per matkul. Pertemuan dihitung sejak akun dibuat; sesi yang masih
-/// terbuka baru dihitung kalau mahasiswa sudah tap.
+/// Rekap kehadiran per matkul. Kalau mahasiswa sudah sinkron MyUnpam, angka diambil dari
+/// status presensi per pertemuan di MyUnpam; kalau belum, dari sesi tap KTM di Smart KTM
+/// (pertemuan dihitung sejak akun dibuat, sesi terbuka baru dihitung kalau sudah tap).
 pub fn presensi(c: &Connection, user: i64, dibuat: &str) -> rusqlite::Result<Vec<Value>> {
+    let hari_ini = waktu::sekarang().format("%Y-%m-%d").to_string();
     let mut q = c.prepare(
-        "SELECT m.nama, m.batas_absen,
+        "SELECT m.id, m.nama, m.batas_absen,
            (SELECT COUNT(*) FROM sesi s WHERE s.matkul_id = m.id AND s.dibuka >= ?2 AND
               (s.ditutup IS NOT NULL OR EXISTS(SELECT 1 FROM presensi p WHERE p.sesi_id = s.id AND p.user_id = ?1))),
            (SELECT COUNT(*) FROM presensi p JOIN sesi s ON s.id = p.sesi_id WHERE s.matkul_id = m.id AND p.user_id = ?1),
            (SELECT COUNT(*) FROM presensi p JOIN sesi s ON s.id = p.sesi_id WHERE s.matkul_id = m.id AND p.user_id = ?1 AND p.tx IS NOT NULL)
          FROM matkul m JOIN ambil a ON a.matkul_id = m.id WHERE a.user_id = ?1 ORDER BY m.hari, m.mulai",
     )?;
-    let baris = q.query_map(params![user, dibuat], |r| {
-        let (nama, batas, total, hadir, onchain): (String, i64, i64, i64, i64) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?);
-        let absen = (total - hadir).max(0);
+    let baris: Vec<(i64, String, i64, i64, i64, i64)> = q
+        .query_map(params![user, dibuat], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut q_unpam = c.prepare("SELECT ke, mulai, akhir, status FROM pertemuan_unpam WHERE user_id = ?1 AND matkul_id = ?2 ORDER BY ke")?;
+
+    let mut hasil = vec![];
+    for (id, nama, batas, total_tap, hadir_tap, onchain) in baris {
+        let unpam: Vec<(i64, String, String, Option<String>)> =
+            q_unpam.query_map(params![user, id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?.collect::<rusqlite::Result<_>>()?;
+        let (hadir, total, absen, belum, bisa, jumlah, sumber) = if unpam.is_empty() {
+            (hadir_tap, total_tap, (total_tap - hadir_tap).max(0), vec![], vec![], 0, "smart-ktm")
+        } else {
+            // Periode presensi yang sudah lewat tanpa status = terlewat; yang sedang berjalan = masih bisa.
+            let lewat: Vec<_> = unpam.iter().filter(|p| p.2 < hari_ini).collect();
+            let berjalan: Vec<_> = unpam.iter().filter(|p| p.1 <= hari_ini && hari_ini <= p.2).collect();
+            let hadir = |p: &(i64, String, String, Option<String>)| p.3.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("hadir"));
+            let belum: Vec<i64> = lewat.iter().filter(|p| p.3.is_none()).map(|p| p.0).collect();
+            let bisa: Vec<i64> = berjalan.iter().filter(|p| p.3.is_none()).map(|p| p.0).collect();
+            let n_hadir = lewat.iter().chain(berjalan.iter()).filter(|p| hadir(p)).count() as i64;
+            let total = lewat.len() as i64 + berjalan.iter().filter(|p| p.3.is_some()).count() as i64;
+            let absen = lewat.iter().filter(|p| !hadir(p)).count() as i64;
+            (n_hadir, total, absen, belum, bisa, unpam.len() as i64, "myunpam")
+        };
         let status = if absen >= batas {
             "lewat batas"
         } else if absen == batas - 1 {
@@ -94,9 +116,12 @@ pub fn presensi(c: &Connection, user: i64, dibuat: &str) -> rusqlite::Result<Vec
         } else {
             "aman"
         };
-        Ok(json!({ "matkul": nama, "hadir": hadir, "total": total, "absen": absen, "batas": batas, "status": status, "onchain": onchain }))
-    })?;
-    baris.collect()
+        hasil.push(json!({
+            "matkul": nama, "hadir": hadir, "total": total, "absen": absen, "batas": batas, "status": status,
+            "onchain": onchain, "belum_presensi": belum, "bisa_presensi": bisa, "jumlah_pertemuan": jumlah, "sumber": sumber,
+        }));
+    }
+    Ok(hasil)
 }
 
 pub fn pengingat(c: &Connection, user: i64) -> rusqlite::Result<Vec<Value>> {

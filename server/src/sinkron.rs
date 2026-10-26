@@ -36,6 +36,24 @@ pub struct KelasUnpam {
     pub ruang: String,
     #[serde(default)]
     pub dosen: String,
+    /// Status presensi per pertemuan dari menu Presensi MyUnpam.
+    #[serde(default)]
+    pub pertemuan: Vec<PertemuanUnpam>,
+}
+
+#[derive(Deserialize)]
+pub struct PertemuanUnpam {
+    pub ke: i64,
+    #[serde(default)]
+    pub jenis: String,
+    /// Periode presensi: tanggal "YYYY-MM-DD"
+    pub mulai: String,
+    pub akhir: String,
+    /// "hadir", status lain dari MyUnpam, atau null kalau belum presensi
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub waktu: Option<String>,
 }
 
 /// "08.50 - 10.30" -> ("08:50", "10:30")
@@ -97,6 +115,15 @@ pub fn sinkron(c: &mut Connection, user: i64, d: &DataUnpam) -> anyhow::Result<u
         )?;
         id_matkul.push(tx.query_row("SELECT id FROM matkul WHERE kode = ?1", [&kode], |r| r.get::<_, i64>(0))?);
     }
+    tx.execute("DELETE FROM pertemuan_unpam WHERE user_id = ?1", [user])?;
+    for (k, m) in d.kelas.iter().zip(&id_matkul) {
+        for p in &k.pertemuan {
+            tx.execute(
+                "INSERT OR REPLACE INTO pertemuan_unpam(user_id, matkul_id, ke, jenis, mulai, akhir, status, waktu) VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![user, m, p.ke, p.jenis, p.mulai, p.akhir, p.status.as_deref().filter(|s| !s.is_empty()), p.waktu],
+            )?;
+        }
+    }
     tx.execute("DELETE FROM ambil WHERE user_id = ?1", [user])?;
     for m in &id_matkul {
         tx.execute("INSERT OR IGNORE INTO ambil(user_id, matkul_id) VALUES(?1, ?2)", params![user, m])?;
@@ -126,7 +153,7 @@ pub fn bersihkan_contoh(c: &mut Connection, kecuali: i64) -> anyhow::Result<()> 
     )?;
     tx.execute("DELETE FROM matkul WHERE kode LIKE 'TPL05%'", [])?;
     let palsu = "(SELECT id FROM users WHERE id != ?1 AND ((peran = 'mhs' AND nim LIKE '2310114000__') OR (peran = 'dosen' AND nim LIKE '04000001%')))";
-    for t in ["presensi", "ambil", "sesi_login", "tugas_selesai", "pengingat"] {
+    for t in ["presensi", "ambil", "sesi_login", "tugas_selesai", "pengingat", "pertemuan_unpam"] {
         tx.execute(&format!("DELETE FROM {t} WHERE user_id IN {palsu}"), [kecuali])?;
     }
     tx.execute(&format!("DELETE FROM users WHERE id IN {palsu}"), [kecuali])?;
@@ -143,7 +170,8 @@ mod tes {
         serde_json::from_value(serde_json::json!({
             "nim": nim, "nama": "SITI NUR AINI", "prodi": "TEKNIK INFORMATIKA S1",
             "kelas": [
-                {"kode": "22TIF0312", "kelas": kelas, "nama": "MANAJEMEN PROYEK INFORMATIKA", "sks": 2, "hari": "Selasa", "jam": "08.50 - 10.30", "ruang": "VIKTOR V.630", "dosen": "DOSEN SATU, S.Kom., M.Kom."},
+                {"kode": "22TIF0312", "kelas": kelas, "nama": "MANAJEMEN PROYEK INFORMATIKA", "sks": 2, "hari": "Selasa", "jam": "08.50 - 10.30", "ruang": "VIKTOR V.630", "dosen": "DOSEN SATU, S.Kom., M.Kom.",
+                 "pertemuan": [{"ke": 1, "mulai": "2026-08-31", "akhir": "2026-09-05", "status": "hadir"}, {"ke": 2, "mulai": "2026-09-07", "akhir": "2026-09-12", "status": null}]},
                 {"kode": "22TIF0412", "kelas": kelas, "nama": "TESTING DAN QA PERANGKAT LUNAK", "sks": 2, "hari": "Senin", "jam": "10.30 - 12.10", "ruang": "VIKTOR V.630", "dosen": "DOSEN DUA"}
             ]
         }))
@@ -178,5 +206,7 @@ mod tes {
         let (nim, nama): (String, String) = c.query_row("SELECT nim, nama FROM users WHERE id = ?1", [demo], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         assert_eq!((nim.as_str(), nama.as_str()), ("231011400777", "Siti Nur Aini"));
         assert!(sinkron(&mut c, teman, &data("231011400777", "07TPLP003")).is_err(), "NIM orang lain ditolak");
+        let pt: i64 = c.query_row("SELECT COUNT(*) FROM pertemuan_unpam WHERE user_id = ?1", [demo], |r| r.get(0)).unwrap();
+        assert_eq!(pt, 2);
     }
 }

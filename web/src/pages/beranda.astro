@@ -64,6 +64,7 @@ import { ikon, ikonApp } from '../lib/ikon';
     <article class="kartu bagian" id="kehadiran">
       <p class="kartu-judul"><span class="titik-ikon t-ungu"><Fragment set:html={ikon('centang')} /></span>Kehadiran</p>
       <ul class="daftar-hadir" id="daftar-presensi"></ul>
+      <p class="sumber-data" id="sumber-hadir"></p>
       <button class="lihat-semua" id="semua-hadir" type="button"></button>
     </article>
 
@@ -142,6 +143,8 @@ import { ikon, ikonApp } from '../lib/ikon';
   .batang.awas i { background: var(--merah); }
   .skor { font-weight: 800; font-size: 0.85rem; white-space: nowrap; }
   .awas-teks { color: var(--merah); font-weight: 700; }
+  .bisa-teks { color: #b45309; font-weight: 700; }
+  .sumber-data { font-size: 0.75rem; color: var(--teks-2); margin-top: 8px; }
   .lihat-semua { margin-top: 12px; border: 0; background: none; color: var(--biru); font: 700 0.85rem var(--font); cursor: pointer; padding: 4px 0; }
   #pesan { margin-top: 12px; }
 </style>
@@ -231,17 +234,24 @@ import { ikon, ikonApp } from '../lib/ikon';
     $('semua-tugas').hidden = b.tugas.length <= 3;
     $('semua-tugas').textContent = semuaTugas ? 'Tampilkan lebih sedikit' : `Lihat semua (${b.tugas.length})`;
 
-    // Default hanya matkul yang perlu diwaspadai.
-    const waspada = b.presensi.filter((p: any) => p.status !== 'aman');
+    // Default hanya matkul yang perlu diperhatikan: terlewat, masih bisa presensi, atau mendekati batas.
+    const waspada = b.presensi.filter((p: any) => p.status !== 'aman' || p.belum_presensi?.length || p.bisa_presensi?.length);
     const tampil = semuaHadir ? b.presensi : waspada;
     $('daftar-presensi').innerHTML = tampil.length
       ? tampil.map((p: any) => {
           const pct = p.total ? Math.round((p.hadir / p.total) * 100) : 100;
-          const ket = p.absen ? `<span class="${p.status === 'aman' ? '' : 'awas-teks'}">absen ${p.absen}× dari batas ${p.batas}</span>` : 'belum pernah absen';
+          const bagian: string[] = [];
+          if (p.belum_presensi?.length) bagian.push(`<span class="awas-teks">belum presensi: pertemuan ${p.belum_presensi.join(', ')}</span>`);
+          const absenLain = p.absen - (p.belum_presensi?.length || 0);
+          if (absenLain > 0) bagian.push(`<span class="${p.status === 'aman' ? 'bisa-teks' : 'awas-teks'}">tercatat absen ${absenLain}× di MyUnpam</span>`);
+          if (p.bisa_presensi?.length) bagian.push(`<span class="bisa-teks">minggu ini: pertemuan ${p.bisa_presensi.join(', ')} belum presensi</span>`);
+          if (!bagian.length) bagian.push(p.absen ? `<span class="${p.status === 'aman' ? '' : 'awas-teks'}">absen ${p.absen}× dari batas ${p.batas}</span>` : p.sumber === 'myunpam' || p.total ? 'semua pertemuan hadir' : 'presensi belum dibuka di MyUnpam');
+          const ket = bagian.join('<br>');
           return `<li><span class="isi"><b>${esc(p.matkul)}</b><span class="ket">${ket}</span>
             <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${pct}%"></i></div></span><span class="skor">${p.hadir}/${p.total}</span></li>`;
         }).join('')
       : `<li class="kosong">${total ? 'Semua mata kuliah aman 👍' : 'Belum ada pertemuan tercatat. Kehadiran dihitung dari tap KTM di HP dosen.'}</li>`;
+    $('sumber-hadir').textContent = b.presensi.some((p: any) => p.sumber === 'myunpam') ? 'Data presensi dari MyUnpam (sinkron terakhir).' : '';
     $('semua-hadir').textContent = semuaHadir ? 'Tampilkan yang perlu diwaspadai saja' : `Lihat semua mata kuliah (${b.presensi.length})`;
   }
 
