@@ -29,7 +29,7 @@ $CF tunnel route dns smart-ktm "$HOST" || true
 
 # 3. Layanan systemd user
 mkdir -p "$UNIT"
-pkill -f "anvil --port 8545" 2>/dev/null || true
+pkill -x anvil 2>/dev/null && sleep 1 || true
 cat > "$UNIT/smart-ktm-anvil.service" <<EOF
 [Unit]
 Description=Smart KTM - blockchain lokal (Anvil)
