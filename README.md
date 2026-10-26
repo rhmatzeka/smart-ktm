@@ -7,6 +7,7 @@
 Tap your student ID card on a phone and your day opens up: the next class, today's schedule, assignments, and attendance, plus an AI agent that can answer questions and take actions for you. In class, the lecturer's phone becomes an attendance machine: students tap their cards, and every check-in is anchored on a smart contract as a hash, so attendance records cannot be edited quietly afterwards.
 
 Live demo: **https://ktm.rahmateka.my.id** (tap-to-login needs Chrome on Android with NFC enabled).
+Attendance contract on Ethereum Sepolia: [`0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d`](https://sepolia.etherscan.io/address/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d). Students do not need a crypto wallet: the server's operator wallet signs and pays for every check-in.
 
 ## Features
 

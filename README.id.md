@@ -4,6 +4,8 @@
 
 **AI Agent dan Blockchain pada KTM.** Tugas mata kuliah Manajemen Proyek Informatika, Universitas Pamulang.
 
+Kontrak presensi di Ethereum Sepolia: [`0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d`](https://sepolia.etherscan.io/address/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d). Mahasiswa tidak perlu punya wallet kripto: wallet operator di server yang menandatangani dan membayar gas setiap presensi.
+
 Tap KTM (kartu MIFARE Classic yang juga dipakai untuk parkir) ke HP, lalu jadwal, tugas, dan kehadiran langsung terbuka, lengkap dengan AI agent yang bisa menjawab dan bertindak (membuat pengingat, menandai tugas selesai). Presensi kelas dilakukan dengan tap KTM di HP dosen, dan setiap kehadiran dicatat sebagai hash di smart contract sehingga tidak bisa diubah diam-diam.
 
 ## Fitur
