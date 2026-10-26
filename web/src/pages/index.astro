@@ -22,6 +22,7 @@ import { ikon } from '../lib/ikon';
     <!-- Awal -->
     <div class="langkah" id="awal">
       <button class="tombol kuning" id="mulai-tap" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM</button>
+      <a class="tombol kuning" id="ke-chrome" href="#" hidden>Buka di Chrome untuk tap KTM</a>
       <p class="catatan" id="tanpa-nfc" hidden>Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM.</p>
       <button class="tombol garis" id="ke-nim" type="button">Masuk pakai NIM</button>
       <p class="catatan"><Fragment set:html={ikon('perisai')} /> Hanya nomor seri kartu yang dibaca. Isi KTM, termasuk data parkir, tidak diubah.</p>
@@ -87,7 +88,7 @@ import { ikon } from '../lib/ikon';
 
 <script>
   import { api, sesi, tujuan, GalatApi } from '../lib/api';
-  import { bacaKtm, nfcDidukung, pesanGalatNfc, type Berhenti } from '../lib/nfc';
+  import { bacaKtm, diAndroid, diBrave, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const bagian = ['lanjut', 'awal', 'menunggu', 'form-pin', 'form-daftar', 'form-nim'];
@@ -167,6 +168,14 @@ import { ikon } from '../lib/ikon';
   if (!nfcDidukung()) {
     $('mulai-tap').hidden = true;
     $('tanpa-nfc').hidden = false;
+    // Di Android (mis. Brave): tawarkan pindah ke Chrome yang mendukung Web NFC.
+    if (diAndroid()) {
+      ($('ke-chrome') as HTMLAnchorElement).href = tautanChrome();
+      $('ke-chrome').hidden = false;
+      $('tanpa-nfc').textContent = diBrave()
+        ? 'Brave tidak mendukung pembacaan NFC dari web. Buka di Chrome untuk tap KTM, atau masuk pakai NIM.'
+        : 'Browser ini belum bisa membaca NFC. Buka di Chrome untuk tap KTM, atau masuk pakai NIM.';
+    }
   }
 
   if (sesi.ambil()) {

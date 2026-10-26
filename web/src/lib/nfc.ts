@@ -4,7 +4,15 @@
 // yang "NdefFormatable": menulis NDEF akan memformat kartu dan menghapus data parkirnya.
 // Jangan pernah memanggil NDEFReader.write() atau makeReadOnly() di proyek ini.
 
-export const nfcDidukung = () => typeof window !== 'undefined' && 'NDEFReader' in window;
+// Brave (dan browser Chromium lain) bisa punya NDEFReader tapi tidak pernah membaca kartu,
+// jadi Brave dianggap tidak mendukung.
+export const diBrave = () => typeof navigator !== 'undefined' && 'brave' in navigator;
+export const nfcDidukung = () => typeof window !== 'undefined' && 'NDEFReader' in window && !diBrave();
+export const diAndroid = () => typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+
+/** Tautan yang membuka halaman ini di Chrome Android. */
+export const tautanChrome = () =>
+  `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;end`;
 
 export type Berhenti = () => void;
 
