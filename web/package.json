@@ -1,0 +1,13 @@
+{
+  "name": "smart-ktm-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "astro": "^5.18.2"
+  }
+}

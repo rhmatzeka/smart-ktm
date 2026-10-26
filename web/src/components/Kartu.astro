@@ -1,0 +1,60 @@
+---
+// KTM digital. Isi nama/NIM/prodi diisi skrip halaman lewat data-isi.
+interface Props {
+  nama?: string;
+  nim?: string;
+  prodi?: string;
+  sinyal?: boolean;
+}
+const { nama = 'Nama Mahasiswa', nim = 'NIM', prodi = 'Program Studi', sinyal = false } = Astro.props;
+---
+<div class:list={['ktm', { sinyal }]}>
+  <div class="gelombang" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="atas">
+    <span class="lembaga">Kartu Tanda Mahasiswa</span>
+    <span class="chip" aria-hidden="true"></span>
+  </div>
+  <div class="bawah">
+    <strong data-isi="nama">{nama}</strong>
+    <span data-isi="nim">{nim}</span>
+    <span data-isi="prodi">{prodi}</span>
+  </div>
+</div>
+
+<style>
+  .ktm {
+    position: relative; aspect-ratio: 1.586; width: 100%;
+    border-radius: var(--r-kartu); padding: 18px 20px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    color: var(--kertas);
+    background:
+      radial-gradient(120% 90% at 100% 0%, #1d4a78 0%, transparent 60%),
+      linear-gradient(160deg, #123659, var(--tinta));
+    box-shadow: 0 18px 40px -18px rgba(14, 42, 71, 0.55);
+    overflow: hidden;
+  }
+  .atas { display: flex; justify-content: space-between; align-items: flex-start; }
+  .lembaga { font-family: var(--judul); font-weight: 700; font-size: 0.95rem; opacity: 0.9; }
+  .chip {
+    width: 42px; height: 32px; border-radius: 7px;
+    background: linear-gradient(135deg, #f7cf6a, var(--sinyal) 55%, #c98d0a);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  }
+  .bawah { display: flex; flex-direction: column; gap: 2px; }
+  .bawah strong { font-family: var(--judul); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
+  .bawah span { opacity: 0.85; font-size: 0.95rem; }
+
+  /* Gelombang NFC hanya bergerak saat halaman sedang menunggu tap. */
+  .gelombang { position: absolute; right: 18px; top: 50%; translate: 0 -50%; width: 90px; height: 90px; pointer-events: none; }
+  .gelombang span {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 3px solid var(--sinyal); opacity: 0;
+  }
+  .ktm.sinyal .gelombang span { animation: riak 1.8s ease-out infinite; }
+  .ktm.sinyal .gelombang span:nth-child(2) { animation-delay: 0.6s; }
+  .ktm.sinyal .gelombang span:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes riak {
+    from { transform: scale(0.2); opacity: 0.9; }
+    to { transform: scale(1.4); opacity: 0; }
+  }
+</style>

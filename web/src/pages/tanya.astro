@@ -1,0 +1,100 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+---
+<Dasar judul="Tanya AI" nav="tanya">
+  <h1>Tanya AI</h1>
+  <p class="redup intro">Agent ini bisa lihat jadwal, tugas, dan kehadiranmu, juga bisa membuat pengingat dan menandai tugas selesai.</p>
+
+  <div class="obrolan" id="obrolan" aria-live="polite"></div>
+
+  <div class="saran" id="saran">
+    <button type="button">Minggu ini deadline apa aja?</button>
+    <button type="button">Besok kuliah jam berapa?</button>
+    <button type="button">Absenku aman nggak?</button>
+    <button type="button">Ingatkan aku ngerjain ERD jam 7 malam ini</button>
+  </div>
+
+  <form id="form" class="ketik">
+    <label for="isi" class="sr">Pesan</label>
+    <input id="isi" name="isi" placeholder="Tulis pertanyaan…" autocomplete="off" required />
+    <button class="tombol" type="submit">Kirim</button>
+  </form>
+</Dasar>
+
+<style is:global>
+  .intro { margin: 8px 0 18px; }
+  .obrolan { display: flex; flex-direction: column; gap: 10px; }
+  .gelembung { max-width: 88%; padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .saya { align-self: flex-end; background: var(--tinta); color: var(--kertas); border-bottom-right-radius: 4px; }
+  .ai { align-self: flex-start; background: var(--kertas); border-bottom-left-radius: 4px; }
+  .ai.menunggu { color: var(--redup); }
+  .aksi { align-self: flex-start; font-size: 0.875rem; font-weight: 700; color: var(--hadir); padding-left: 4px; }
+  .mode { align-self: flex-start; font-size: 0.8rem; color: var(--redup); padding-left: 4px; }
+  .saran { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 12px; }
+  .saran button {
+    border: 2px solid var(--garis); background: transparent; color: var(--tinta);
+    border-radius: 999px; padding: 8px 14px; font: 1rem var(--isi); cursor: pointer;
+  }
+  .ketik {
+    position: sticky; bottom: 76px; display: flex; gap: 8px;
+    padding: 10px 0; background: var(--plastik);
+  }
+  .ketik .tombol { width: auto; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+
+<script>
+  import { api, tanganiGalat } from '../lib/api';
+
+  type Pesan = { peran: 'user' | 'model'; teks: string };
+  const KUNCI = 'smartktm.obrolan';
+  const obrolan = document.getElementById('obrolan')!;
+  const form = document.getElementById('form') as HTMLFormElement;
+  const isi = document.getElementById('isi') as HTMLInputElement;
+  let riwayat: Pesan[] = [];
+  try { riwayat = JSON.parse(sessionStorage.getItem(KUNCI) || '[]'); } catch { riwayat = []; }
+
+  function tambah(kelas: string, teks: string) {
+    const el = document.createElement('div');
+    el.className = kelas;
+    el.textContent = teks;
+    obrolan.appendChild(el);
+    el.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    return el;
+  }
+  const simpan = () => { try { sessionStorage.setItem(KUNCI, JSON.stringify(riwayat.slice(-20))); } catch { /* abaikan */ } };
+
+  riwayat.forEach((p) => tambah(`gelembung ${p.peran === 'user' ? 'saya' : 'ai'}`, p.teks));
+
+  async function kirim(teks: string) {
+    tambah('gelembung saya', teks);
+    const tunggu = tambah('gelembung ai menunggu', 'Sedang mengecek data kamu…');
+    isi.value = '';
+    isi.disabled = true;
+    try {
+      const r = await api<{ balasan: string; aksi: string[]; mode: string }>('/chat', { pesan: teks, riwayat });
+      tunggu.remove();
+      r.aksi.forEach((a) => tambah('aksi', `✓ ${a}`));
+      tambah('gelembung ai', r.balasan);
+      if (r.mode === 'offline') tambah('mode', 'Mode offline: kunci Gemini belum diatur di server.');
+      riwayat.push({ peran: 'user', teks }, { peran: 'model', teks: r.balasan });
+      simpan();
+    } catch (e) {
+      tunggu.remove();
+      tanganiGalat(e, (t) => tambah('gelembung ai', `Gagal: ${t}`));
+    } finally {
+      isi.disabled = false;
+      isi.focus();
+    }
+  }
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const t = isi.value.trim();
+    if (t) kirim(t);
+  });
+  document.getElementById('saran')!.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest('button');
+    if (b) kirim(b.textContent!.trim());
+  });
+</script>

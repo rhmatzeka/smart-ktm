@@ -1,0 +1,9 @@
+{
+  "name": "Smart KTM",
+  "short_name": "Smart KTM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E8EDF4",
+  "theme_color": "#0E2A47",
+  "icons": [{ "src": "/ikon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

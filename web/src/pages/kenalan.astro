@@ -1,0 +1,87 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+---
+<Dasar judul="Kenalan" nav="kenalan">
+  <h1>Kenalan</h1>
+  <p class="redup intro">Tempelkan KTM teman ke HP-mu untuk melihat profil publiknya. Jadwal dan kehadiran tidak pernah ditampilkan.</p>
+
+  <button class="tombol sinyal" id="mulai" type="button">Tap KTM teman</button>
+  <p class="redup tunggu" id="tunggu" hidden>Menunggu kartu… tempel di belakang HP.</p>
+
+  <article class="profil" id="profil" hidden>
+    <div class="inisial" id="inisial" aria-hidden="true"></div>
+    <h2 id="nama"></h2>
+    <p class="redup" id="prodi"></p>
+    <p class="bio" id="bio"></p>
+    <ul class="baris" id="tautan"></ul>
+    <ul class="lencana" id="lencana"></ul>
+  </article>
+
+  <p id="pesan" class="galat" role="alert"></p>
+</Dasar>
+
+<style is:global>
+  .intro { margin: 8px 0 20px; }
+  .tunggu { margin-top: 12px; text-align: center; }
+  .profil { margin-top: 24px; text-align: center; }
+  .inisial {
+    width: 96px; height: 96px; margin: 0 auto 12px; border-radius: 50%;
+    display: grid; place-items: center; font: 800 2.4rem var(--judul);
+    background: var(--tinta); color: var(--sinyal);
+  }
+  .profil h2 { font-size: 1.8rem; margin: 0; }
+  .bio { margin: 12px 0 16px; }
+  .profil .baris { text-align: left; }
+  .lencana { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .lencana li { background: var(--kertas); border: 2px solid var(--sinyal); border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 0.9rem; }
+</style>
+
+<script>
+  import { api, esc } from '../lib/api';
+  import { bacaKtm, nfcDidukung, pesanGalatNfc } from '../lib/nfc';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const salah = (t: string) => ($('pesan').textContent = t);
+
+  async function tampilkan(uid: string) {
+    salah('');
+    try {
+      const p = await api<any>('/kenalan', { uid });
+      $('profil').hidden = false;
+      $('inisial').textContent = p.nama.charAt(0).toUpperCase();
+      $('nama').textContent = p.nama;
+      if (p.privat) {
+        $('prodi').textContent = 'Profil ini disembunyikan pemiliknya.';
+        $('bio').textContent = '';
+        $('tautan').innerHTML = '';
+        $('lencana').innerHTML = '';
+        return;
+      }
+      $('prodi').textContent = `${p.prodi}, ${p.kampus}`;
+      $('bio').textContent = p.bio;
+      const tautan = [
+        p.github && `<li><span class="isi">GitHub</span><a class="ujung" href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
+        p.portofolio && `<li><span class="isi">Portofolio</span><a class="ujung" href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${esc(p.portofolio)}</a></li>`,
+      ].filter(Boolean);
+      $('tautan').innerHTML = tautan.join('');
+      $('lencana').innerHTML = p.lencana.map((l: string) => `<li>${esc(l)}</li>`).join('');
+    } catch (e) {
+      $('profil').hidden = true;
+      salah((e as Error).message);
+    }
+  }
+
+  $('mulai').addEventListener('click', async () => {
+    try {
+      await bacaKtm(tampilkan, salah);
+      $('mulai').hidden = true;
+      $('tunggu').hidden = false;
+    } catch (e) {
+      salah(pesanGalatNfc(e));
+    }
+  });
+  if (!nfcDidukung()) {
+    ($('mulai') as HTMLButtonElement).disabled = true;
+    salah('Fitur ini butuh Chrome di Android dengan NFC menyala.');
+  }
+</script>

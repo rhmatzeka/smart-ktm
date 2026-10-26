@@ -1,0 +1,79 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import Kartu from '../components/Kartu.astro';
+---
+<Dasar judul="Profil" nav="profil">
+  <Kartu />
+  <p class="redup kecil ktm-status" id="ktm-status"></p>
+
+  <form id="form">
+    <h2>Profil publik</h2>
+    <p class="redup kecil">Ini yang muncul saat KTM-mu ditap di HP orang lain.</p>
+    <label for="bio">Bio singkat</label>
+    <textarea id="bio" name="bio" rows="2" maxlength="160" placeholder="Contoh: Suka web3, IoT, dan AI agent"></textarea>
+    <label for="github">Username GitHub</label>
+    <input id="github" name="github" autocomplete="off" />
+    <label for="portofolio">Portofolio</label>
+    <input id="portofolio" name="portofolio" placeholder="contoh.my.id" />
+    <label class="centang"><input type="checkbox" id="publik" name="publik" /> Tampilkan profil saat KTM ditap orang lain</label>
+    <button class="tombol" type="submit">Simpan profil</button>
+    <p class="hijau" id="tersimpan" role="status"></p>
+  </form>
+
+  <button class="tombol garis keluar" id="keluar" type="button">Keluar dari perangkat ini</button>
+  <p id="pesan" class="galat" role="alert"></p>
+</Dasar>
+
+<style>
+  .ktm-status { margin-top: 10px; }
+  form .tombol { margin-top: 18px; }
+  .centang { display: flex; gap: 10px; align-items: center; font-weight: 400; }
+  .centang input { width: 22px; min-height: 22px; height: 22px; }
+  .hijau { color: var(--hadir); font-weight: 700; margin-top: 8px; min-height: 1.5em; }
+  .keluar { margin-top: 28px; }
+</style>
+
+<script>
+  import { api, sesi, tanganiGalat } from '../lib/api';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const salah = (t: string) => ($('pesan').textContent = t);
+  const form = $<HTMLFormElement>('form');
+
+  api<any>('/saya')
+    .then((s) => {
+      const isi = (k: string, v: string) => (document.querySelector(`[data-isi=${k}]`)!.textContent = v);
+      isi('nama', s.nama);
+      isi('nim', s.nim);
+      isi('prodi', s.prodi || 'Dosen');
+      $('ktm-status').textContent = s.ktm ? 'KTM fisik sudah tertaut ke akun ini.' : 'Belum ada KTM yang tertaut. Masuk lewat tap KTM untuk menautkan.';
+      $<HTMLTextAreaElement>('bio').value = s.bio;
+      $<HTMLInputElement>('github').value = s.github;
+      $<HTMLInputElement>('portofolio').value = s.portofolio;
+      $<HTMLInputElement>('publik').checked = s.publik;
+    })
+    .catch((e) => tanganiGalat(e, salah));
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    $('tersimpan').textContent = '';
+    try {
+      await api('/profil', {
+        bio: $<HTMLTextAreaElement>('bio').value,
+        github: $<HTMLInputElement>('github').value,
+        portofolio: $<HTMLInputElement>('portofolio').value,
+        publik: $<HTMLInputElement>('publik').checked,
+      });
+      $('tersimpan').textContent = 'Profil tersimpan.';
+    } catch (e) {
+      tanganiGalat(e, salah);
+    }
+  });
+
+  $('keluar').addEventListener('click', async () => {
+    await api('/keluar', {}).catch(() => {});
+    sesi.hapus();
+    try { sessionStorage.clear(); } catch { /* abaikan */ }
+    location.href = '/';
+  });
+</script>

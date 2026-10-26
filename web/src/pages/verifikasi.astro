@@ -1,0 +1,72 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+---
+<Dasar judul="Cek bukti kehadiran">
+  <a class="redup kecil" href="/">Smart KTM</a>
+  <h1 class="judul">Cek bukti kehadiran</h1>
+  <p class="redup">Setiap kehadiran punya kode bukti. Tempel kodenya untuk memastikan catatan itu asli dan sudah tercatat di blockchain.</p>
+
+  <form id="form">
+    <label for="b">Kode bukti</label>
+    <input id="b" name="b" placeholder="64 karakter, boleh diawali 0x" autocomplete="off" required />
+    <button class="tombol" type="submit">Cek bukti</button>
+  </form>
+
+  <section id="hasil" hidden>
+    <p class="vonis" id="vonis"></p>
+    <ul class="baris" id="rincian"></ul>
+  </section>
+  <p id="pesan" class="galat" role="alert"></p>
+</Dasar>
+
+<style is:global>
+  .judul { margin: 10px 0 8px; }
+  form .tombol { margin-top: 16px; }
+  #hasil { margin-top: 28px; }
+  .vonis { font-family: var(--judul); font-size: 1.6rem; font-weight: 800; margin-bottom: 12px; }
+  .vonis.sah { color: var(--hadir); }
+  .vonis.lokal { color: var(--kuning-teks); }
+  .baris .ujung { white-space: normal; overflow-wrap: anywhere; max-width: 60%; }
+</style>
+
+<script>
+  import { api, esc } from '../lib/api';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const input = $('b') as HTMLInputElement;
+
+  async function cek(kode: string) {
+    $('pesan').textContent = '';
+    $('hasil').hidden = true;
+    try {
+      const r = await api<any>(`/verifikasi/${encodeURIComponent(kode.trim())}`);
+      const onchain = r.chain && r.chain.tercatat;
+      const vonis = $('vonis');
+      vonis.className = `vonis ${onchain ? 'sah' : 'lokal'}`;
+      vonis.textContent = onchain ? 'Asli dan tercatat di blockchain.' : r.status === 'riwayat' ? 'Asli, dari riwayat sebelum blockchain aktif.' : 'Asli, tapi belum tercatat di blockchain.';
+      const baris: [string, string][] = [
+        ['Mahasiswa', `${r.mahasiswa} (${r.nim})`],
+        ['Mata kuliah', r.matkul],
+        ['Pertemuan', String(r.pertemuan)],
+        ['Waktu tap', `${r.waktu} WIB`],
+      ];
+      if (onchain) baris.push(['Waktu blok', new Date(r.chain.timestamp * 1000).toLocaleString('id-ID')]);
+      $('rincian').innerHTML =
+        baris.map(([k, v]) => `<li><span class="isi">${esc(k)}</span><span class="ujung">${esc(v)}</span></li>`).join('') +
+        (r.link_tx ? `<li><span class="isi">Transaksi</span><a class="ujung" href="${esc(r.link_tx)}" target="_blank" rel="noopener">buka di explorer</a></li>` : '');
+      $('hasil').hidden = false;
+    } catch (e) {
+      $('pesan').textContent = (e as Error).message;
+    }
+  }
+
+  $('form').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    cek(input.value);
+  });
+  const awal = new URLSearchParams(location.search).get('b');
+  if (awal) {
+    input.value = awal;
+    cek(awal);
+  }
+</script>

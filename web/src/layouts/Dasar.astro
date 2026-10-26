@@ -1,0 +1,126 @@
+---
+interface Props {
+  judul: string;
+  nav?: 'beranda' | 'tanya' | 'kenalan' | 'profil';
+  gelap?: boolean;
+}
+const { judul, nav, gelap = false } = Astro.props;
+const menu = [
+  { id: 'beranda', href: '/beranda/', label: 'Hari ini' },
+  { id: 'tanya', href: '/tanya/', label: 'Tanya AI' },
+  { id: 'kenalan', href: '/kenalan/', label: 'Kenalan' },
+  { id: 'profil', href: '/profil/', label: 'Profil' },
+];
+---
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content={gelap ? '#0E2A47' : '#E8EDF4'} />
+    <title>{judul} · Smart KTM</title>
+    <link rel="icon" href="/ikon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class:list={[{ gelap, 'ada-nav': !!nav }]}>
+    <main><slot /></main>
+    {nav && (
+      <nav class="nav-bawah" aria-label="Menu utama">
+        {menu.map((m) => (
+          <a href={m.href} aria-current={nav === m.id ? 'page' : undefined}>{m.label}</a>
+        ))}
+      </nav>
+    )}
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --tinta: #0e2a47;
+    --tinta-2: #3d5672;
+    --redup: #6b7f95;
+    --plastik: #e8edf4;
+    --kertas: #ffffff;
+    --garis: #cfd8e3;
+    --sinyal: #f2b01e;
+    --hadir: #1f7a52;
+    --awas: #b8432f;
+    --kuning-teks: #8a5a00;
+    --judul: 'Bricolage Grotesque', system-ui, sans-serif;
+    --isi: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    --r-kartu: 18px;
+    --r-kecil: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--isi);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--tinta);
+    background: var(--plastik);
+  }
+  body.gelap { background: var(--tinta); color: var(--plastik); }
+  main { max-width: 480px; margin: 0 auto; padding: 20px 16px 32px; }
+  body.ada-nav main { padding-bottom: 96px; }
+  h1, h2, h3 { font-family: var(--judul); line-height: 1.1; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+  h2 { font-size: 1.15rem; font-weight: 700; margin: 28px 0 10px; }
+  p { margin: 0; }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--sinyal); outline-offset: 2px; border-radius: 4px; }
+
+  .redup { color: var(--redup); }
+  .kecil { font-size: 0.875rem; }
+  .galat { color: var(--awas); font-weight: 700; }
+  [hidden] { display: none !important; }
+
+  .tombol {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 52px; padding: 0 22px; width: 100%;
+    border: 0; border-radius: 999px; cursor: pointer;
+    font: 700 1.05rem var(--isi); text-decoration: none;
+    background: var(--tinta); color: var(--kertas);
+  }
+  .tombol.sinyal { background: var(--sinyal); color: var(--tinta); }
+  .tombol.garis { background: transparent; color: var(--tinta); box-shadow: inset 0 0 0 2px var(--tinta); }
+  .tombol:disabled { opacity: 0.55; cursor: wait; }
+  .tautan { background: none; border: 0; padding: 8px 0; font: 700 1rem var(--isi); color: var(--tinta-2); text-decoration: underline; cursor: pointer; }
+
+  label { display: block; font-weight: 700; margin: 14px 0 6px; }
+  input, textarea, select {
+    width: 100%; min-height: 50px; padding: 12px 14px;
+    font: 1rem var(--isi); color: var(--tinta);
+    background: var(--kertas); border: 2px solid var(--garis); border-radius: var(--r-kecil);
+  }
+  input:focus, textarea:focus { border-color: var(--tinta); outline: none; }
+
+  /* Daftar baris: struktur utama halaman, bukan tumpukan kartu. */
+  .baris { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--tinta); }
+  .baris > li { display: flex; gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--garis); }
+  .baris .isi { flex: 1; min-width: 0; }
+  .baris .ujung { text-align: right; white-space: nowrap; font-weight: 700; }
+
+  .nav-bawah {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    display: flex; justify-content: center; gap: 4px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    background: var(--kertas); border-top: 1px solid var(--garis);
+  }
+  .nav-bawah a {
+    flex: 1; max-width: 120px; text-align: center; padding: 10px 4px; border-radius: 999px;
+    text-decoration: none; font-weight: 700; font-size: 0.9rem; color: var(--redup);
+  }
+  .nav-bawah a[aria-current='page'] { background: var(--tinta); color: var(--kertas); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>

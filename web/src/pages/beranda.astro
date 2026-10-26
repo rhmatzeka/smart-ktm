@@ -1,0 +1,151 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+---
+<Dasar judul="Hari ini" nav="beranda">
+  <p class="redup" id="tanggal">Memuat…</p>
+  <p class="sapa" id="sapa"></p>
+
+  <section class="sekarang" aria-live="polite">
+    <h1 id="judul-momen"></h1>
+    <p class="detail" id="detail-momen"></p>
+  </section>
+
+  <section class="ringkas" id="ringkas" hidden>
+    <p class="sumber" id="sumber-ringkas"></p>
+    <p id="isi-ringkas"></p>
+  </section>
+
+  <h2 id="judul-jadwal">Jadwal hari ini</h2>
+  <ol class="baris jadwal" id="jadwal"></ol>
+
+  <h2>Tugas yang belum dikumpulkan</h2>
+  <ul class="baris" id="tugas"></ul>
+
+  <h2>Kehadiran</h2>
+  <ul class="baris" id="presensi"></ul>
+  <p class="redup kecil chain" id="chain"></p>
+
+  <p id="pesan" class="galat" role="alert"></p>
+</Dasar>
+
+<style is:global>
+  .sapa { font-family: var(--judul); font-weight: 700; font-size: 1.1rem; margin-top: 2px; }
+  .sekarang { margin: 22px 0 18px; padding-left: 14px; border-left: 6px solid var(--sinyal); }
+  .sekarang h1 { font-size: 2.2rem; }
+  .detail { margin-top: 8px; color: var(--tinta-2); font-size: 1.05rem; }
+  .ringkas { background: var(--kertas); border-radius: var(--r-kartu); padding: 14px 16px; }
+  .sumber { font-size: 0.85rem; font-weight: 700; color: var(--tinta-2); margin-bottom: 4px; }
+  .jadwal li.selesai { color: var(--redup); }
+  .jadwal li.berlangsung .isi strong::after { content: ' sedang berlangsung'; font-weight: 400; color: var(--hadir); }
+  .jam { font-family: var(--judul); font-weight: 700; min-width: 3.4em; }
+  .merah { color: var(--awas); }
+  .kuning { color: var(--kuning-teks); }
+  .hijau { color: var(--hadir); }
+  .tombol.kumpul { margin-top: 8px; font-size: 0.9rem; padding: 0 14px; min-height: 36px; width: auto; }
+  .batang { height: 6px; border-radius: 3px; background: var(--garis); margin-top: 6px; overflow: hidden; }
+  .batang i { display: block; height: 100%; background: var(--hadir); }
+  .batang.awas i { background: var(--awas); }
+  .chain { margin-top: 10px; }
+</style>
+
+<script>
+  import { api, esc, tanganiGalat } from '../lib/api';
+
+  const $ = (id: string) => document.getElementById(id)!;
+
+  type Kelas = { nama: string; mulai: string; selesai: string; ruang: string; dosen: string; status?: string; menit_lagi?: number; menit_tersisa?: number };
+
+  const durasi = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} jam ${m % 60 ? `${m % 60} menit` : ''}`.trim() : `${m} menit`);
+  const jamTitik = (j: string) => j.replace(':', '.');
+
+  function momen(b: any): [string, string] {
+    const k: Kelas | null = b.kelas_berikut;
+    const s: Kelas | null = b.kelas_berlangsung;
+    switch (b.momen) {
+      case 'sebelum':
+        return [
+          k!.menit_lagi! <= 90 ? `${k!.nama} mulai ${durasi(k!.menit_lagi!)} lagi.` : `${k!.nama} jam ${jamTitik(k!.mulai)}.`,
+          `${jamTitik(k!.mulai)}–${jamTitik(k!.selesai)} di ${k!.ruang}, bersama ${k!.dosen}.`,
+        ];
+      case 'kelas':
+        return [`Sekarang: ${s!.nama}.`, `Di ${s!.ruang}, selesai ${durasi(s!.menit_tersisa!)} lagi. Jangan lupa tap KTM ke HP dosen.`];
+      case 'setelah': {
+        const t = b.tugas_kelas_tadi;
+        return ['Kelas hari ini sudah selesai.', t.length ? `Ada ${t.length} tugas dari kelas tadi yang belum dikumpulkan.` : 'Tidak ada tugas baru dari kelas tadi.'];
+      }
+      case 'malam': {
+        const besok: Kelas[] = b.jadwal_besok;
+        return besok.length
+          ? [`Besok mulai ${jamTitik(besok[0].mulai)}: ${besok[0].nama}.`, `${besok.length} kelas besok. Ruang ${besok[0].ruang}.`]
+          : ['Besok tidak ada kelas.', 'Waktu yang pas untuk mencicil tugas.'];
+      }
+      default:
+        return ['Hari ini tidak ada kelas.', 'Cek tugas di bawah, siapa tahu ada yang bisa dicicil.'];
+    }
+  }
+
+  function render(b: any) {
+    $('tanggal').textContent = b.sekarang;
+    $('sapa').textContent = `${b.sapaan}, ${b.nama}.`;
+    const [judul, detail] = momen(b);
+    $('judul-momen').textContent = judul;
+    $('detail-momen').textContent = detail;
+
+    $('ringkas').hidden = !b.ringkasan;
+    $('sumber-ringkas').textContent = b.ringkasan_ai ? 'Ringkasan dari AI agent' : 'Ringkasan hari ini';
+    $('isi-ringkas').textContent = b.ringkasan;
+
+    const malam = b.momen === 'malam';
+    const jadwal: Kelas[] = malam ? b.jadwal_besok : b.jadwal_hari_ini;
+    $('judul-jadwal').textContent = malam ? 'Jadwal besok' : 'Jadwal hari ini';
+    $('jadwal').innerHTML = jadwal.length
+      ? jadwal
+          .map((k) => `<li class="${esc(k.status ?? '')}"><span class="jam">${esc(jamTitik(k.mulai))}</span>
+            <span class="isi"><strong>${esc(k.nama)}</strong><br><span class="redup kecil">${esc(k.ruang)}, ${esc(k.dosen)}</span></span></li>`)
+          .join('')
+      : '<li class="redup">Tidak ada kelas.</li>';
+
+    $('tugas').innerHTML = b.tugas.length
+      ? b.tugas
+          .map((t: any) => `<li><span class="isi"><strong>${esc(t.judul)}</strong><br><span class="redup kecil">${esc(t.matkul)}</span><br>
+            <button class="tombol garis kumpul" data-tugas="${t.id}">Sudah dikumpulkan</button></span>
+            <span class="ujung ${t.tingkat}">${esc(t.sisa)}</span></li>`)
+          .join('')
+      : '<li class="redup">Semua tugas sudah dikumpulkan.</li>';
+
+    $('presensi').innerHTML = b.presensi
+      .map((p: any) => {
+        const pct = p.total ? Math.round((p.hadir / p.total) * 100) : 100;
+        const kelas = p.status === 'aman' ? 'hijau' : p.status === 'hampir batas' ? 'kuning' : 'merah';
+        const ket = p.absen ? `absen ${p.absen}× dari batas ${p.batas}` : 'belum pernah absen';
+        return `<li><span class="isi"><strong>${esc(p.matkul)}</strong><br><span class="kecil ${kelas}">${ket}</span>
+          <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${pct}%"></i></div></span>
+          <span class="ujung">${p.hadir}/${p.total}</span></li>`;
+      })
+      .join('');
+    $('chain').textContent = b.onchain ? `${b.onchain} kehadiranmu sudah tercatat di blockchain dan tidak bisa diubah.` : '';
+  }
+
+  async function muat() {
+    try {
+      render(await api('/beranda'));
+    } catch (e) {
+      tanganiGalat(e, (t) => ($('pesan').textContent = t));
+    }
+  }
+
+  $('tugas').addEventListener('click', async (ev) => {
+    const tombol = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-tugas]');
+    if (!tombol) return;
+    tombol.disabled = true;
+    try {
+      await api(`/tugas/${tombol.dataset.tugas}/selesai`, {});
+      await muat();
+    } catch (e) {
+      tanganiGalat(e, (t) => ($('pesan').textContent = t));
+    }
+  });
+
+  muat();
+  setInterval(muat, 60_000);
+</script>

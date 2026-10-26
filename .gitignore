@@ -1,0 +1,12 @@
+.superpowers/
+node_modules/
+web/dist/
+web/.astro/
+server/target/
+server/data/
+.env
+*.env
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
