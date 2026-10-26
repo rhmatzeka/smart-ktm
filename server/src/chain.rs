@@ -27,6 +27,14 @@ impl Chain {
         })
     }
 
+    /// Halaman kontrak di explorer (atau alamat mentah kalau explorer tidak diatur).
+    pub fn link_kontrak(&self) -> String {
+        match &self.explorer {
+            Some(e) => format!("{}/address/{}", e.trim_end_matches('/'), self.kontrak),
+            None => self.kontrak.clone(),
+        }
+    }
+
     pub fn link_tx(&self, tx: &str) -> Option<String> {
         self.explorer.as_ref().map(|e| format!("{}/tx/{tx}", e.trim_end_matches('/')))
     }

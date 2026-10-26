@@ -160,8 +160,8 @@ import { ikon } from '../lib/ikon';
       $('daftar').innerHTML = hadir.length
         ? hadir.map((p: any) => `<li><span class="avatar">${esc(p.nama.charAt(0))}</span><span class="isi"><b>${esc(p.nama)}</b>${statusChain(p)}</span><span class="jam">${esc(jam(p.waktu))}</span></li>`).join('')
         : '<li class="redup">Belum ada yang tap.</li>';
-      $('chain-info').textContent = s.chain
-        ? 'Setiap kehadiran dikirim ke smart contract sebagai hash, jadi tidak bisa diubah diam-diam.'
+      $('chain-info').innerHTML = s.chain
+        ? `Setiap kehadiran dikirim ke smart contract sebagai hash, jadi tidak bisa diubah diam-diam.${s.kontrak && s.kontrak.startsWith('http') ? ` <a href="${esc(s.kontrak)}" target="_blank" rel="noopener">Lihat kontrak di Etherscan</a>` : ''}`
         : 'Blockchain belum diatur di server: kehadiran hanya tersimpan lokal.';
       if (!s.terbuka) {
         berhenti?.();

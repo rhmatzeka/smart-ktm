@@ -63,7 +63,8 @@ import { ikon } from '../lib/ikon';
       if (r.tx) baris.push(['Transaksi', `${r.tx.slice(0, 10)}…${r.tx.slice(-6)}`]);
       $('rincian').innerHTML =
         baris.map(([k, v]) => `<li><span>${esc(k)}</span><span>${esc(v)}</span></li>`).join('') +
-        (r.link_tx ? `<li><span>Explorer</span><a href="${esc(r.link_tx)}" target="_blank" rel="noopener">buka transaksi</a></li>` : '');
+        (r.link_tx ? `<li><span>Explorer</span><a href="${esc(r.link_tx)}" target="_blank" rel="noopener">buka transaksi</a></li>` : '') +
+        (r.kontrak && r.kontrak.startsWith('http') ? `<li><span>Kontrak</span><a href="${esc(r.kontrak)}" target="_blank" rel="noopener">PresensiKTM di Etherscan</a></li>` : '');
       $('hasil').hidden = false;
     } catch (e) {
       $('pesan').textContent = (e as Error).message;

@@ -386,6 +386,7 @@ async fn verifikasi(State(app): State<App>, Path(bukti): Path<String>) -> Hasil 
     Ok(Json(json!({
         "mahasiswa": nama_depan(&nama), "nim": samarkan_nim(&nim), "matkul": matkul, "pertemuan": pertemuan,
         "waktu": saat, "status": status, "tx": tx, "link_tx": link, "chain": chain, "bukti": bukti,
+        "kontrak": app.chain.as_ref().map(|c| c.link_kontrak()),
     })))
 }
 
@@ -486,6 +487,7 @@ async fn lihat_sesi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -
     Ok(Json(json!({
         "id": id, "matkul": nama, "ruang": ruang, "pertemuan": pertemuan, "dibuka": dibuka, "terbuka": terbuka,
         "hadir": hadir, "total": peserta.len(), "peserta": peserta, "chain": app.chain.is_some(),
+        "kontrak": app.chain.as_ref().map(|c| c.link_kontrak()),
     })))
 }
 
