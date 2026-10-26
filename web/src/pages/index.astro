@@ -114,7 +114,12 @@ import { ikon } from '../lib/ikon';
     berhenti = null;
     uid = u;
     try {
-      const r = await api<{ terdaftar: boolean; nama?: string }>('/ktm/cek', { uid });
+      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean }>('/ktm/cek', { uid });
+      // KTM pemilik sesi di HP ini: langsung buka beranda, tanpa PIN.
+      if (r.milik_sesi) {
+        location.href = tujuan(r.peran ?? 'mhs');
+        return;
+      }
       if (r.terdaftar) {
         $('pin-nama').textContent = r.nama ?? '';
         tampil('form-pin');
@@ -127,15 +132,16 @@ import { ikon } from '../lib/ikon';
     }
   }
 
-  $('mulai-tap').addEventListener('click', async () => {
+  async function mulaiBaca() {
     try {
       berhenti = await bacaKtm(kartuTerbaca, salah);
       tampil('menunggu');
     } catch (e) {
       salah(pesanGalatNfc(e));
     }
-  });
-  $('batal-tap').addEventListener('click', () => { berhenti?.(); tampil('awal'); });
+  }
+  $('mulai-tap').addEventListener('click', mulaiBaca);
+  $('batal-tap').addEventListener('click', () => { berhenti?.(); berhenti = null; tampil(sesi.ambil() ? 'lanjut' : 'awal'); });
   $('ke-nim').addEventListener('click', () => tampil('form-nim'));
   $('kembali').addEventListener('click', () => tampil('awal'));
   $('ganti-akun').addEventListener('click', () => { sesi.hapus(); tampil('awal'); });
@@ -168,8 +174,16 @@ import { ikon } from '../lib/ikon';
       .then((s) => {
         $('lanjut-nama').textContent = s.nama.split(' ')[0];
         ($('lanjut-ke') as HTMLAnchorElement).href = tujuan(s.peran);
-        tampil('lanjut');
+        if (!berhenti) tampil('lanjut');
       })
       .catch((e) => { if (e instanceof GalatApi && e.status === 401) sesi.hapus(); });
+  }
+
+  // Izin NFC sudah pernah diberikan: langsung siap baca, cukup tempel KTM.
+  if (nfcDidukung()) {
+    navigator.permissions
+      ?.query({ name: 'nfc' as PermissionName })
+      .then((p) => { if (p.state === 'granted') mulaiBaca(); })
+      .catch(() => {});
   }
 </script>

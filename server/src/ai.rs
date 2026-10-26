@@ -346,9 +346,9 @@ pub async fn briefing(app: &App, user: i64, beranda: &Value) -> Option<String> {
         return Some(s.clone());
     }
     let prompt = format!(
-        "Tulis ringkasan hari ini untuk mahasiswa dalam 1-2 kalimat (maks 35 kata), bahasa Indonesia santai, \
-         langsung ke hal paling penting sesuai 'momen' (kelas berikutnya/berlangsung, tugas paling mendesak, peringatan absen). \
-         Tanpa salam, tanpa markdown. Data: {beranda}"
+        "Tulis SATU kalimat pendek (maks 16 kata) bahasa Indonesia santai untuk mahasiswa: \
+         hal paling penting saat ini sesuai 'momen' (kelas berikutnya, tugas paling mendesak, atau peringatan absen; pilih maksimal dua). \
+         Tanpa salam, tanpa markdown, tanpa emoji. Data: {beranda}"
     );
     let teks = match &app.ai.groq_kunci {
         Some(kunci) => {

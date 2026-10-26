@@ -75,7 +75,8 @@ pub fn momen(kini: u32, kelas: &[(u32, u32)]) -> &'static str {
     if kelas.iter().any(|&(m, s)| m <= kini && kini < s) {
         return "kelas";
     }
-    if kini >= 18 * 60 || kini < 4 * 60 {
+    // Lewat tengah malam dihitung hari baru: kelas pagi nanti yang ditampilkan.
+    if kini >= 18 * 60 {
         return "malam";
     }
     if kelas.iter().any(|&(m, _)| kini < m) {
@@ -100,6 +101,8 @@ mod tes {
         assert_eq!(momen(16 * 60, &kelas), "setelah");
         assert_eq!(momen(20 * 60, &kelas), "malam");
         assert_eq!(momen(12 * 60, &[]), "bebas");
+        assert_eq!(momen(60, &kelas), "sebelum"); // jam 01.00
+        assert_eq!(momen(60, &[]), "bebas");
     }
 
     #[test]

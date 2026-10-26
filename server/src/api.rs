@@ -119,13 +119,17 @@ struct Uid {
     uid: String,
 }
 
-async fn ktm_cek(State(app): State<App>, Json(b): Json<Uid>) -> Hasil {
-    let h = uid_hash(&app, &b.uid)?;
+/// `milik_sesi` = KTM ini milik akun yang sudah masuk di perangkat ini,
+/// jadi tap cukup untuk langsung membuka beranda tanpa PIN.
+async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<Uid>) -> Hasil {
+    let hash = uid_hash(&app, &b.uid)?;
     let c = app.db.lock().unwrap();
-    let r: Option<(String, String)> = c.query_row("SELECT nama, peran FROM users WHERE uid_hash = ?1", [&h], |r| Ok((r.get(0)?, r.get(1)?))).optional()?;
+    let r: Option<(i64, String, String)> =
+        c.query_row("SELECT id, nama, peran FROM users WHERE uid_hash = ?1", [&hash], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).optional()?;
+    let sesi = pengguna(&c, &h).ok();
     Ok(Json(match r {
-        Some((n, p)) => json!({ "terdaftar": true, "nama": nama_depan(&n), "peran": p }),
-        None => json!({ "terdaftar": false }),
+        Some((id, n, p)) => json!({ "terdaftar": true, "nama": nama_depan(&n), "peran": p, "milik_sesi": sesi.is_some_and(|s| s.id == id) }),
+        None => json!({ "terdaftar": false, "milik_sesi": false }),
     }))
 }
 
