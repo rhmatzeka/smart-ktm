@@ -29,7 +29,7 @@ impl Kelas {
 /// `hari` None = semua hari.
 pub fn jadwal(c: &Connection, user: i64, hari: Option<u32>) -> rusqlite::Result<Vec<Kelas>> {
     let mut q = c.prepare(
-        "SELECT m.id, m.kode, m.nama, m.hari, m.mulai, m.selesai, m.ruang, d.nama FROM matkul m
+        "SELECT m.id, m.kode, m.nama, m.hari, m.mulai, m.selesai, m.ruang, COALESCE(NULLIF(m.dosen_nama, ''), d.nama) FROM matkul m
          JOIN ambil a ON a.matkul_id = m.id JOIN users d ON d.id = m.dosen_id
          WHERE a.user_id = ?1 AND (?2 IS NULL OR m.hari = ?2) ORDER BY m.hari, m.mulai",
     )?;
@@ -110,7 +110,9 @@ pub fn beranda(c: &Connection, user: i64, nama: &str, dibuat: &str, kini: &DateT
     let m = waktu::menit_sekarang(kini);
     let hari_ini = jadwal(c, user, Some(hari))?;
     let besok = jadwal(c, user, Some(hari % 7 + 1))?;
-    let rentang: Vec<(u32, u32)> = hari_ini.iter().map(|k| (menit(&k.mulai), menit(&k.selesai))).collect();
+    // Kelas yang jamnya belum diisi (data impor) tidak ikut hitungan waktu.
+    let berjam: Vec<&Kelas> = hari_ini.iter().filter(|k| !k.mulai.is_empty()).collect();
+    let rentang: Vec<(u32, u32)> = berjam.iter().map(|k| (menit(&k.mulai), menit(&k.selesai))).collect();
     let momen = waktu::momen(m, &rentang);
 
     let jadwal_json: Vec<Value> = hari_ini
@@ -118,21 +120,21 @@ pub fn beranda(c: &Connection, user: i64, nama: &str, dibuat: &str, kini: &DateT
         .map(|k| {
             let (a, b) = (menit(&k.mulai), menit(&k.selesai));
             let mut v = k.json();
-            v["status"] = json!(if m >= b { "selesai" } else if m >= a { "berlangsung" } else { "nanti" });
+            v["status"] = json!(if k.mulai.is_empty() { "tanpa_jam" } else if m >= b { "selesai" } else if m >= a { "berlangsung" } else { "nanti" });
             v
         })
         .collect();
-    let berikut = hari_ini.iter().find(|k| m < menit(&k.mulai)).map(|k| {
+    let berikut = berjam.iter().find(|k| m < menit(&k.mulai)).map(|k| {
         let mut v = k.json();
         v["menit_lagi"] = json!(menit(&k.mulai) - m);
         v
     });
-    let berlangsung = hari_ini.iter().find(|k| menit(&k.mulai) <= m && m < menit(&k.selesai)).map(|k| {
+    let berlangsung = berjam.iter().find(|k| menit(&k.mulai) <= m && m < menit(&k.selesai)).map(|k| {
         let mut v = k.json();
         v["menit_tersisa"] = json!(menit(&k.selesai) - m);
         v
     });
-    let selesai_hari_ini: Vec<&str> = hari_ini.iter().filter(|k| menit(&k.selesai) <= m).map(|k| k.nama.as_str()).collect();
+    let selesai_hari_ini: Vec<&str> = berjam.iter().filter(|k| menit(&k.selesai) <= m).map(|k| k.nama.as_str()).collect();
 
     let tugas = tugas(c, user, kini, false)?;
     let tugas_kelas_tadi: Vec<&Value> = tugas.iter().filter(|t| selesai_hari_ini.contains(&t["matkul"].as_str().unwrap_or(""))).collect();
@@ -162,6 +164,7 @@ pub fn beranda(c: &Connection, user: i64, nama: &str, dibuat: &str, kini: &DateT
             Some(k) => kalimat.push(format!("Besok {} kelas, mulai {} jam {}.", besok.len(), k.nama, k.mulai)),
             None => kalimat.push("Besok tidak ada kelas.".into()),
         },
+        _ if !hari_ini.is_empty() => kalimat.push(format!("Hari ini ada {}.", hari_ini.iter().map(|k| k.nama.as_str()).collect::<Vec<_>>().join(", "))),
         _ => kalimat.push("Hari ini tidak ada kelas.".into()),
     }
     if let Some(t) = tugas.iter().find(|t| t["tingkat"] == "merah") {

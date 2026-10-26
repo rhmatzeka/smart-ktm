@@ -28,7 +28,12 @@ export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   return data as T;
 }
 
-export const tujuan = (peran: string) => (peran === 'dosen' ? '/dosen/' : '/beranda/');
+/** Halaman setelah masuk; `?lanjut=/jalur/` (mis. dari sinkron MyUnpam) didahulukan untuk mahasiswa. */
+export function tujuan(peran: string) {
+  if (peran === 'dosen') return '/dosen/';
+  const lanjut = new URLSearchParams(location.search).get('lanjut');
+  return lanjut && lanjut.startsWith('/') && !lanjut.startsWith('//') ? lanjut : '/beranda/';
+}
 
 /** Halaman yang butuh login: balik ke depan kalau sesi tidak ada atau habis. */
 export function tanganiGalat(e: unknown, tampil: (pesan: string) => void) {

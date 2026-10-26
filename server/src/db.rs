@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS sesi_login(token TEXT PRIMARY KEY, user_id INTEGER NO
 CREATE TABLE IF NOT EXISTS matkul(
   id INTEGER PRIMARY KEY, kode TEXT NOT NULL UNIQUE, nama TEXT NOT NULL, sks INTEGER NOT NULL,
   dosen_id INTEGER NOT NULL REFERENCES users(id), hari INTEGER NOT NULL, mulai TEXT NOT NULL,
-  selesai TEXT NOT NULL, ruang TEXT NOT NULL, batas_absen INTEGER NOT NULL DEFAULT 4);
+  selesai TEXT NOT NULL, ruang TEXT NOT NULL, batas_absen INTEGER NOT NULL DEFAULT 4, dosen_nama TEXT);
 CREATE TABLE IF NOT EXISTS ambil(user_id INTEGER NOT NULL REFERENCES users(id), matkul_id INTEGER NOT NULL REFERENCES matkul(id), PRIMARY KEY(user_id, matkul_id));
 CREATE TABLE IF NOT EXISTS tugas(id INTEGER PRIMARY KEY, matkul_id INTEGER NOT NULL REFERENCES matkul(id), judul TEXT NOT NULL, deskripsi TEXT NOT NULL, deadline TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS tugas_selesai(user_id INTEGER NOT NULL, tugas_id INTEGER NOT NULL, waktu TEXT NOT NULL, PRIMARY KEY(user_id, tugas_id));
@@ -72,6 +72,12 @@ pub fn rahasia(data_dir: &str) -> anyhow::Result<String> {
 
 pub fn siapkan(c: &Connection) -> rusqlite::Result<()> {
     c.execute_batch(SKEMA)?;
+    // Database lama belum punya kolom dosen_nama (nama dosen asli hasil impor).
+    let punya: bool = c.query_row("SELECT COUNT(*) > 0 FROM pragma_table_info('matkul') WHERE name = 'dosen_nama'", [], |r| r.get(0))?;
+    if !punya {
+        c.execute("ALTER TABLE matkul ADD COLUMN dosen_nama TEXT", [])?;
+    }
+    c.busy_timeout(std::time::Duration::from_secs(5))?;
     let ada: i64 = c.query_row("SELECT COUNT(*) FROM matkul", [], |r| r.get(0))?;
     if ada == 0 {
         isi_contoh(c)?;

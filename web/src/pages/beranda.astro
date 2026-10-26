@@ -180,6 +180,12 @@ import { ikon, ikonApp } from '../lib/ikon';
       pil.textContent = `besok ${titik(k.mulai)}`;
       pil.hidden = false;
     }
+    if (!k && !b.presensi.length) {
+      $('hero-label').textContent = 'Jadwal belum ada';
+      $('hero-matkul').textContent = 'Sinkronkan jadwal dari MyUnpam';
+      $('hero-info').innerHTML = '<a class="tombol kecil-saja" href="/sinkron/">Sinkron sekarang</a>';
+      return;
+    }
     if (!k) {
       $('hero-label').textContent = b.momen === 'setelah' ? 'Kelas hari ini selesai' : 'Hari ini';
       $('hero-matkul').textContent = b.momen === 'setelah' ? 'Waktunya istirahat atau cicil tugas' : 'Tidak ada kelas';
@@ -211,7 +217,7 @@ import { ikon, ikonApp } from '../lib/ikon';
 
     const hadir = b.presensi.reduce((s: number, p: any) => s + p.hadir, 0);
     const total = b.presensi.reduce((s: number, p: any) => s + p.total, 0);
-    $('s-hadir').textContent = `${total ? Math.round((hadir / total) * 100) : 100}%`;
+    $('s-hadir').textContent = total ? `${Math.round((hadir / total) * 100)}%` : '–';
     $('s-tugas').textContent = String(b.tugas.length);
     $('s-chain').textContent = String(b.onchain);
     $('ringkasan').textContent = b.ringkasan;
@@ -221,7 +227,7 @@ import { ikon, ikonApp } from '../lib/ikon';
       ? tugas.map((t: any) => `<li><span class="tanda ${t.tingkat}"></span><span class="isi"><b>${esc(t.judul)}</b><span class="ket">${esc(t.matkul)}</span></span>
           <span class="sisa ${t.tingkat}">${esc(t.sisa)}</span>
           <button class="tombol-kumpul" data-tugas="${t.id}" aria-label="Tandai ${esc(t.judul)} sudah dikumpulkan" title="Sudah dikumpulkan">${ikon('centang')}</button></li>`).join('')
-      : '<li class="kosong">Semua tugas sudah dikumpulkan 🎉</li>';
+      : '<li class="kosong">Belum ada tugas. Bilang ke Tanya AI, misalnya "ada tugas MPI bikin proposal, deadline Jumat".</li>';
     $('semua-tugas').hidden = b.tugas.length <= 3;
     $('semua-tugas').textContent = semuaTugas ? 'Tampilkan lebih sedikit' : `Lihat semua (${b.tugas.length})`;
 
@@ -235,7 +241,7 @@ import { ikon, ikonApp } from '../lib/ikon';
           return `<li><span class="isi"><b>${esc(p.matkul)}</b><span class="ket">${ket}</span>
             <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${pct}%"></i></div></span><span class="skor">${p.hadir}/${p.total}</span></li>`;
         }).join('')
-      : '<li class="kosong">Semua mata kuliah aman 👍</li>';
+      : `<li class="kosong">${total ? 'Semua mata kuliah aman 👍' : 'Belum ada pertemuan tercatat. Kehadiran dihitung dari tap KTM di HP dosen.'}</li>`;
     $('semua-hadir').textContent = semuaHadir ? 'Tampilkan yang perlu diwaspadai saja' : `Lihat semua mata kuliah (${b.presensi.length})`;
   }
 

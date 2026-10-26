@@ -1,0 +1,109 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Sinkron MyUnpam">
+  <header class="atas-putih">
+    <div class="baris-atas">
+      <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+      <a class="ikon-kembali" href="/beranda/" aria-label="Kembali ke beranda"><Fragment set:html={ikon('kembali')} /></a>
+    </div>
+    <h1 class="sapa-besar">Sinkron MyUnpam</h1>
+    <p class="sapa-kecil">Ambil jadwal kuliahmu langsung dari MyUnpam. Kata sandi tidak pernah dikirim ke Smart KTM.</p>
+  </header>
+
+  <section class="zona-biru">
+    <!-- Hasil sinkron (setelah bookmark dijalankan di MyUnpam) -->
+    <article class="kartu hasil-sinkron" id="hasil" hidden>
+      <p class="kartu-judul"><span class="titik-ikon t-hijau"><Fragment set:html={ikon('centang')} /></span><span id="hasil-judul">Menyinkronkan…</span></p>
+      <ul class="daftar-kelas" id="daftar"></ul>
+      <a class="tombol" href="/beranda/" id="ke-beranda" hidden>Lihat beranda</a>
+    </article>
+
+    <!-- Cara pakai -->
+    <article class="kartu langkah-sinkron" id="cara">
+      <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Cara sinkron (sekali saja)</p>
+      <ol>
+        <li><b>Salin kode bookmark</b> dengan tombol di bawah.</li>
+        <li>Di Chrome, buat bookmark baru (menu ⋮ lalu ☆), lalu <b>edit</b>: nama <code>Sinkron KTM</code>, alamat diganti dengan kode yang disalin.</li>
+        <li>Buka <a href="https://my.unpam.ac.id" target="_blank" rel="noopener">my.unpam.ac.id</a> dan login seperti biasa.</li>
+        <li>Di halaman MyUnpam, ketik <code>Sinkron KTM</code> di kolom alamat lalu pilih bookmark itu. Kamu akan kembali ke sini dengan jadwal terbaru.</li>
+      </ol>
+      <button class="tombol kuning" id="salin" type="button">Salin kode bookmark</button>
+      <p class="redup kecil laptop">Di laptop: seret tombol ini ke bilah bookmark → <a class="bookmarklet" id="seret" href="#">Sinkron KTM</a></p>
+      <p class="tersalin" id="tersalin" role="status"></p>
+    </article>
+
+    <p id="pesan" class="galat" role="alert"></p>
+  </section>
+</Dasar>
+
+<style is:global>
+  .ikon-kembali { width: 40px; height: 40px; border-radius: 12px; background: var(--biru-pudar); color: var(--biru); display: grid; place-items: center; }
+  .langkah-sinkron ol { margin: 0 0 16px; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; }
+  .langkah-sinkron code { background: var(--latar); padding: 1px 6px; border-radius: 6px; font-size: 0.85rem; }
+  .langkah-sinkron a { color: var(--biru); font-weight: 700; }
+  .laptop { margin-top: 12px; text-align: center; }
+  .bookmarklet { display: inline-block; padding: 4px 10px; border-radius: 8px; background: var(--biru-pudar); text-decoration: none; }
+  .tersalin { color: var(--hijau); font-weight: 700; text-align: center; margin-top: 8px; min-height: 1.4em; }
+  .hasil-sinkron { margin-bottom: 14px; }
+  .daftar-kelas { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .daftar-kelas li { padding: 10px 12px; border-radius: 12px; background: var(--latar); font-size: 0.85rem; }
+  .daftar-kelas b { display: block; font-size: 0.9rem; }
+</style>
+
+<script>
+  import { api, esc, sesi, tanganiGalat } from '../lib/api';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const KUNCI = 'smartktm.sinkron';
+
+  // Dijalankan di my.unpam.ac.id (sesi login pengguna sendiri), lalu kembali ke halaman ini.
+  const kode = `javascript:(async()=>{try{const g=u=>fetch(u,{headers:{accept:'application/json'}}).then(r=>{if(!r.ok)throw r.status;return r.json()});`
+    + `const j=await g('/api/jadwal-kuliah');const p=await g('/api/presensi/mahasiswa/jadwal-kuliah').catch(()=>[]);const s={};p.forEach(r=>s[r.id_mata_kuliah]=+r.sks||0);`
+    + `const d={nim:j.mahasiswa.nim,nama:(p[0]||{}).nama_mahasiswa||'',prodi:(j.jadwal[0]||{}).nama_prodi||'',kelas:j.jadwal.map(r=>({kode:r.id_mata_kuliah,kelas:r.id_kelas,nama:r.nama_mata_kuliah,sks:s[r.id_mata_kuliah]||0,hari:r.waktu_kuliah.hari.nama_hari,jam:r.waktu_kuliah.ket_jam,ruang:((r.nama_lokasi_kampus||'')+' '+r.id_ruang).trim(),dosen:(r.dosen||{}).nama_gelar_dosen||''}))};`
+    + `location.href='${location.origin}/sinkron/#'+encodeURIComponent(JSON.stringify(d))}catch(e){alert('Smart KTM: buka my.unpam.ac.id dan login dulu, lalu jalankan lagi.')}})()`;
+  ($('seret') as HTMLAnchorElement).href = kode;
+  $('seret').addEventListener('click', (e) => { e.preventDefault(); alert('Seret tombol ini ke bilah bookmark, jangan diklik.'); });
+
+  $('salin').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(kode);
+      $('tersalin').textContent = 'Kode tersalin. Lanjut ke langkah 2.';
+    } catch {
+      prompt('Salin kode ini:', kode);
+    }
+  });
+
+  async function kirim(data: any) {
+    $('hasil').hidden = false;
+    try {
+      const r = await api<{ jumlah: number }>('/sinkron', data);
+      try { sessionStorage.removeItem(KUNCI); } catch { /* abaikan */ }
+      $('hasil-judul').textContent = `${r.jumlah} kelas tersinkron dari MyUnpam`;
+      $('daftar').innerHTML = data.kelas
+        .map((k: any) => `<li><b>${esc(k.nama)}</b>${esc(k.hari)} ${esc(k.jam)} · ${esc(k.ruang)}<br>${esc(k.dosen)}</li>`)
+        .join('');
+      $('ke-beranda').hidden = false;
+      $('cara').hidden = true;
+    } catch (e) {
+      $('hasil').hidden = true;
+      tanganiGalat(e, (t) => ($('pesan').textContent = t));
+    }
+  }
+
+  // Data datang dari bookmark lewat #hash; simpan dulu kalau belum masuk.
+  let data: any = null;
+  try {
+    if (location.hash.length > 1) data = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+    else data = JSON.parse(sessionStorage.getItem(KUNCI) || 'null');
+  } catch { data = null; }
+  history.replaceState(null, '', location.pathname);
+  if (data) {
+    if (sesi.ambil()) kirim(data);
+    else {
+      try { sessionStorage.setItem(KUNCI, JSON.stringify(data)); } catch { /* abaikan */ }
+      location.href = '/?lanjut=/sinkron/';
+    }
+  }
+</script>

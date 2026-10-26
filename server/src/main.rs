@@ -3,6 +3,7 @@ mod api;
 mod chain;
 mod data;
 mod db;
+mod sinkron;
 mod waktu;
 
 use std::collections::HashMap;
@@ -37,8 +38,24 @@ async fn main() -> anyhow::Result<()> {
         }
         println!("Database direset, data contoh dibuat ulang.");
     }
-    let conn = rusqlite::Connection::open(&db_path)?;
+    let mut conn = rusqlite::Connection::open(&db_path)?;
     db::siapkan(&conn)?;
+
+    // `--sinkron data.json`: impor jadwal MyUnpam untuk mahasiswa yang KTM-nya tertaut, lalu keluar.
+    let argumen: Vec<String> = std::env::args().collect();
+    if let Some(i) = argumen.iter().position(|a| a == "--sinkron") {
+        let berkas = argumen.get(i + 1).ok_or_else(|| anyhow::anyhow!("pakai: --sinkron data.json"))?;
+        let d: sinkron::DataUnpam = serde_json::from_str(&std::fs::read_to_string(berkas)?)?;
+        let user: i64 = conn.query_row(
+            "SELECT id FROM users WHERE peran = 'mhs' AND (nim = ?1 OR uid_hash IS NOT NULL) ORDER BY nim = ?1 DESC, id LIMIT 1",
+            [&d.nim],
+            |r| r.get(0),
+        )?;
+        sinkron::bersihkan_contoh(&mut conn, user)?;
+        let n = sinkron::sinkron(&mut conn, user, &d)?;
+        println!("{n} kelas MyUnpam disinkronkan untuk NIM {}", d.nim);
+        return Ok(());
+    }
 
     let ai = ai::Konfig::dari_env();
     let chain = chain::Chain::dari_env().map(Arc::new);

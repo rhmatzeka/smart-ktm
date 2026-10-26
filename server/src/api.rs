@@ -9,7 +9,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::{ai, data, db, waktu, App};
+use crate::{ai, data, db, sinkron, waktu, App};
 
 pub struct Gagal(StatusCode, String);
 
@@ -53,6 +53,7 @@ pub fn router() -> Router<App> {
         .route("/beranda", get(beranda))
         .route("/tugas/{id}/selesai", post(tugas_selesai))
         .route("/chat", post(chat))
+        .route("/sinkron", post(sinkron_unpam))
         .route("/kenalan", post(kenalan))
         .route("/verifikasi/{bukti}", get(verifikasi))
         .route("/dosen/kelas", get(dosen_kelas))
@@ -186,9 +187,8 @@ async fn daftar(State(app): State<App>, Json(b): Json<Daftar>) -> Hasil {
                 "INSERT INTO users(peran, nim, nama, prodi, pin_hash, uid_hash, dibuat) VALUES('mhs', ?1, ?2, ?3, ?4, ?5, ?6)",
                 params![nim, nama, prodi, db::hash_pin(&b.pin), h, waktu::teks(&waktu::sekarang())],
             )?;
-            let id = c.last_insert_rowid();
-            c.execute("INSERT INTO ambil(user_id, matkul_id) SELECT ?1, id FROM matkul", [id])?;
-            (id, nama)
+            // Jadwal diisi lewat sinkron MyUnpam, bukan otomatis semua matkul.
+            (c.last_insert_rowid(), nama)
         }
     };
     let t = token_baru(&c, id)?;
@@ -311,6 +311,15 @@ async fn chat(State(app): State<App>, h: HeaderMap, Json(b): Json<Chat>) -> Hasi
         return Err(galat(StatusCode::BAD_REQUEST, "Pesan kosong"));
     }
     Ok(Json(ai::chat(&app, &u, &pesan, &b.riwayat).await))
+}
+
+async fn sinkron_unpam(State(app): State<App>, h: HeaderMap, Json(d): Json<sinkron::DataUnpam>) -> Hasil {
+    let mut c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "mhs")?;
+    let n = sinkron::sinkron(&mut c, u.id, &d).map_err(|e| galat(StatusCode::BAD_REQUEST, e.to_string()))?;
+    app.cache.lock().unwrap().retain(|k, _| !k.starts_with(&format!("{}:", u.id)));
+    Ok(Json(json!({ "jumlah": n })))
 }
 
 /// KTM orang lain ditap: hanya profil publik, tanpa jadwal/nilai.
@@ -498,7 +507,8 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
         };
         let ikut: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM ambil WHERE user_id = ?1 AND matkul_id = ?2)", params![mid, matkul_id], |r| r.get(0))?;
         if !ikut {
-            return Err(galat(StatusCode::FORBIDDEN, format!("{nama} tidak terdaftar di kelas ini")));
+            // Belum sinkron MyUnpam tapi hadir di kelas: dosen yang melihat langsung, jadi dimasukkan ke kelas.
+            c.execute("INSERT INTO ambil(user_id, matkul_id) VALUES(?1, ?2)", params![mid, matkul_id])?;
         }
         let lama: Option<(String, String, Option<String>)> = c
             .query_row("SELECT waktu, bukti, tx FROM presensi WHERE sesi_id = ?1 AND user_id = ?2", params![id, mid], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))

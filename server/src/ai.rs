@@ -83,7 +83,13 @@ fn alat() -> Value {
           "parameters": { "type": "object", "properties": {
               "teks": { "type": "string" },
               "waktu": { "type": "string", "description": "Format YYYY-MM-DD HH:MM, zona WIB" } }, "required": ["teks", "waktu"] } },
-        { "name": "lihat_pengingat", "description": "Melihat pengingat yang sudah dibuat." }
+        { "name": "lihat_pengingat", "description": "Melihat pengingat yang sudah dibuat." },
+        { "name": "tambah_tugas", "description": "Mencatat tugas baru dari mahasiswa. Matkul boleh nama lengkap, sebagian nama, atau singkatan (mis. MPI).",
+          "parameters": { "type": "object", "properties": {
+              "matkul": { "type": "string" },
+              "judul": { "type": "string" },
+              "deadline": { "type": "string", "description": "Format YYYY-MM-DD HH:MM, zona WIB. Kalau jam tidak disebut pakai 23:59" } },
+            "required": ["matkul", "judul", "deadline"] } }
     ]}])
 }
 
@@ -155,10 +161,41 @@ pub fn jalankan(app: &App, u: &Pengguna, nama: &str, args: &Value) -> (Value, Op
                 }
             }
             "lihat_pengingat" => (json!({ "pengingat": data::pengingat(&c, u.id)? }), None),
+            "tambah_tugas" => {
+                let judul = args["judul"].as_str().unwrap_or("").trim().chars().take(120).collect::<String>();
+                let deadline = args["deadline"].as_str().unwrap_or("");
+                match (cari_matkul(&c, u.id, args["matkul"].as_str().unwrap_or(""))?, waktu::baca(deadline)) {
+                    (Some((id, nama)), Some(t)) if !judul.is_empty() => {
+                        c.execute(
+                            "INSERT INTO tugas(matkul_id, judul, deskripsi, deadline) VALUES(?1, ?2, '', ?3)",
+                            params![id, judul, waktu::teks(&t)],
+                        )?;
+                        (json!({ "ok": true, "matkul": nama }), Some(format!("Tugas \"{judul}\" ({nama}) dicatat, deadline {}", waktu::tanggal_panjang(&t))))
+                    }
+                    (None, _) => (json!({ "galat": "matkul tidak ditemukan di jadwal mahasiswa" }), None),
+                    _ => (json!({ "galat": "judul kosong atau deadline bukan YYYY-MM-DD HH:MM" }), None),
+                }
+            }
             _ => (json!({ "galat": "alat tidak dikenal" }), None),
         })
     })();
     hasil.unwrap_or_else(|e| (json!({ "galat": e.to_string() }), None))
+}
+
+/// Cari matkul milik mahasiswa dari nama lengkap, sebagian nama, atau singkatan (MPI).
+fn cari_matkul(c: &rusqlite::Connection, user: i64, kunci: &str) -> rusqlite::Result<Option<(i64, String)>> {
+    let k = kunci.trim().to_lowercase();
+    if k.is_empty() {
+        return Ok(None);
+    }
+    let daftar = data::jadwal(c, user, None)?;
+    let singkatan = |n: &str| n.split_whitespace().filter(|w| w.len() > 3 || w.chars().all(|c| c.is_uppercase())).filter_map(|w| w.chars().next()).collect::<String>().to_lowercase();
+    Ok(daftar
+        .iter()
+        .find(|m| m.nama.to_lowercase() == k)
+        .or_else(|| daftar.iter().find(|m| singkatan(&m.nama) == k))
+        .or_else(|| daftar.iter().find(|m| m.nama.to_lowercase().contains(&k)))
+        .map(|m| (m.id, m.nama.clone())))
 }
 
 pub async fn chat(app: &App, u: &Pengguna, pesan: &str, riwayat: &[Pesan]) -> Value {
@@ -202,7 +239,7 @@ async fn groq(app: &App, kunci: &str, u: &Pengguna, pesan: &str, riwayat: &[Pesa
     for _ in 0..5 {
         let badan = json!({
             "model": app.ai.groq_model, "messages": isi, "tools": alat_openai(),
-            "tool_choice": "auto", "reasoning_effort": "low", "temperature": 0.4,
+            "tool_choice": "auto", "reasoning_effort": "low", "temperature": 0.2,
         });
         let res = app.http.post(GROQ_URL).bearer_auth(kunci).json(&badan).timeout(Duration::from_secs(40)).send().await?;
         let status = res.status();
@@ -242,7 +279,7 @@ fn sistem(u: &Pengguna) -> String {
          Pengguna: {} (NIM {}, {}). Sekarang {} WIB, hari {}. \
          Jawab dalam bahasa Indonesia santai, singkat dan jelas (maksimal sekitar 120 kata). \
          Selalu pakai alat untuk data jadwal, tugas, presensi dan pengingat; jangan mengarang data. \
-         Kalau mahasiswa minta diingatkan, pakai buat_pengingat. Kalau mahasiswa bilang tugasnya sudah selesai, cari id-nya lalu pakai tandai_tugas_selesai. \
+         Kalau mahasiswa minta diingatkan, pakai buat_pengingat. Kalau mahasiswa menyebut tugas baru, catat dengan tambah_tugas. Kalau mahasiswa bilang tugasnya sudah selesai, cari id-nya lalu pakai tandai_tugas_selesai. \
          Untuk pertanyaan materi kuliah umum, jawab dari pengetahuanmu. Pakai daftar dengan '•' bila perlu, tanpa markdown tebal atau judul.",
         u.nama,
         u.nim,

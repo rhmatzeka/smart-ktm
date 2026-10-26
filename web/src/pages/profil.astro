@@ -24,6 +24,7 @@ import { ikon } from '../lib/ikon';
       <a class="tombol garis" href="/verifikasi/"><Fragment set:html={ikon('rantai')} /> Cek bukti</a>
     </div>
     <div class="ktm-digital" id="ktm-digital" hidden><Kartu /></div>
+    <a class="tombol kuning sinkron-tombol" href="/sinkron/"><Fragment set:html={ikon('kalender')} /> Sinkron jadwal MyUnpam</a>
 
     <ul class="info-biru">
       <li><span class="titik-ikon t-hijau"><Fragment set:html={ikon('sekolah')} /></span><span><b>Universitas</b>Universitas Pamulang</span></li>
@@ -66,6 +67,7 @@ import { ikon } from '../lib/ikon';
   .dua-tombol { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .dua-tombol .tombol { font-size: 0.9rem; padding: 0 10px; }
   .ktm-digital { margin-top: 16px; }
+  .sinkron-tombol { margin-top: 12px; }
   .info-biru { list-style: none; margin: 20px 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
   .info-biru li { display: flex; gap: 12px; align-items: flex-start; }
   .info-biru b { display: block; font-size: 0.95rem; }
