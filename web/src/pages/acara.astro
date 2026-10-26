@@ -1,0 +1,213 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Acara & sertifikat">
+  <header class="pita-acara">
+    <div class="pita-atas"><a href="/dosen/">← Mode dosen</a><span>Sertifikat on-chain</span></div>
+    <h1 id="judul">Acara & sertifikat</h1>
+    <p id="sub">Peserta tap KTM, sertifikat langsung terbit di blockchain.</p>
+  </header>
+
+  <section class="isi-acara">
+    <!-- Daftar + buat acara -->
+    <div id="daftar-tahap">
+      <form class="blok" id="form-acara">
+        <p class="judul-blok">Buat acara baru</p>
+        <label for="a-nama">Nama acara</label>
+        <input id="a-nama" name="nama" placeholder="Seminar Nasional AI dan Blockchain" required />
+        <div class="dua-kolom">
+          <div><label for="a-peny">Penyelenggara</label><input id="a-peny" name="penyelenggara" placeholder="HIMA TI UNPAM" required /></div>
+          <div><label for="a-tgl">Tanggal</label><input id="a-tgl" name="tanggal" type="date" required /></div>
+        </div>
+        <label for="a-tempat">Tempat</label>
+        <input id="a-tempat" name="tempat" placeholder="Aula VIKTOR" />
+        <button class="tombol" type="submit">Buat acara</button>
+      </form>
+      <p class="label-bagian">Acara kamu</p>
+      <ul class="daftar-acara" id="daftar"></ul>
+    </div>
+
+    <!-- Mesin check-in -->
+    <div id="mesin-tahap" hidden>
+      <div class="layar" id="layar" data-keadaan="tunggu" aria-live="assertive">
+        <div class="layar-ikon" id="l-ikon"><Fragment set:html={ikon('nfc')} /></div>
+        <p class="layar-nama" id="l-nama">Tempelkan KTM</p>
+        <p class="layar-ket" id="l-ket">Sertifikat terbit otomatis</p>
+      </div>
+      <button class="tombol" id="mulai" type="button"><Fragment set:html={ikon('nfc')} /> Mulai terima tap KTM</button>
+      <p class="label-bagian" id="jumlah">Sertifikat terbit</p>
+      <ul class="daftar-acara" id="peserta"></ul>
+      <p class="redup kecil kontrak" id="kontrak"></p>
+      <button class="tombol garis-biru" id="tutup" type="button">Tutup check-in</button>
+      <button class="tautan" id="kembali" type="button">Kembali ke daftar acara</button>
+    </div>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
+  </section>
+</Dasar>
+
+<style is:global>
+  body:has(.isi-acara) .halaman { background: var(--latar); }
+  .pita-acara { position: relative; overflow: hidden; color: var(--putih); padding: 14px 16px 18px; border-radius: 0 0 22px 22px; background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua)); }
+  .pita-acara::after { content: ''; position: absolute; inset: -60% -20%; pointer-events: none; background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%); }
+  .pita-acara > * { position: relative; z-index: 1; }
+  .pita-acara .pita-atas { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.9; }
+  .pita-acara .pita-atas a { color: inherit; text-decoration: none; font-weight: 700; }
+  .pita-acara h1 { font-size: 1.35rem; font-weight: 800; margin-top: 10px; }
+  .pita-acara p { font-size: 0.82rem; opacity: 0.88; }
+  .isi-acara { padding: 14px 16px 40px; }
+  .blok { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 14px; }
+  .blok .tombol { margin-top: 12px; }
+  .blok label { font-size: 0.8rem; margin: 10px 0 5px; }
+  .judul-blok { font-weight: 800; font-size: 0.95rem; }
+  .dua-kolom { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+  .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 18px 2px 8px; }
+  .daftar-acara { list-style: none; margin: 0; padding: 0; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; overflow: hidden; }
+  .daftar-acara li + li { border-top: 1px solid #eef1f6; }
+  .daftar-acara button { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; padding: 12px 14px; background: none; border: 0; font: inherit; color: var(--teks); cursor: pointer; }
+  .daftar-acara .isi { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .daftar-acara b { font-size: 0.9rem; }
+  .daftar-acara small { font-size: 0.75rem; color: var(--teks-2); }
+  .daftar-acara .lencana-angka { font-size: 0.75rem; font-weight: 700; color: var(--biru); white-space: nowrap; }
+  .daftar-acara .baris { display: flex; gap: 10px; align-items: center; padding: 10px 14px; }
+  .daftar-acara .baris a { color: var(--biru); font-size: 0.75rem; font-weight: 700; }
+  .daftar-acara .kosong { padding: 14px; text-align: center; color: var(--teks-2); font-size: 0.85rem; }
+  .tutup-label { color: var(--teks-2); font-weight: 600; }
+
+  .layar { position: relative; min-height: 210px; margin-bottom: 12px; border-radius: 22px; padding: 20px; background: var(--putih); border: 1px solid var(--garis); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: background 0.25s; }
+  .layar-ikon { width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; background: var(--biru-pudar); color: var(--biru); overflow: hidden; }
+  .layar-ikon .ikon { width: 34px; height: 34px; }
+  .layar-ikon.berfoto { width: 84px; height: 100px; border-radius: 12px; border: 3px solid rgba(255, 255, 255, 0.9); }
+  .layar-ikon img { width: 100%; height: 100%; object-fit: cover; }
+  .layar-nama { font-size: 1.5rem; font-weight: 800; margin-top: 10px; line-height: 1.1; }
+  .layar-ket { color: var(--teks-2); margin-top: 4px; font-size: 0.85rem; }
+  .layar[data-keadaan='hadir'] { background: var(--hijau); color: var(--putih); border-color: var(--hijau); }
+  .layar[data-keadaan='galat'] { background: var(--merah); color: var(--putih); border-color: var(--merah); }
+  .layar[data-keadaan='hadir'] .layar-ket, .layar[data-keadaan='galat'] .layar-ket { color: rgba(255, 255, 255, 0.92); }
+  .layar[data-keadaan='hadir'] .layar-ikon, .layar[data-keadaan='galat'] .layar-ikon { background: rgba(255, 255, 255, 0.2); color: var(--putih); }
+  .layar.hidup[data-keadaan='tunggu'] .layar-ikon { animation: denyut 1.6s ease-out infinite; }
+  @keyframes denyut { 0% { box-shadow: 0 0 0 0 rgba(23, 71, 201, 0.4); } 100% { box-shadow: 0 0 0 18px rgba(23, 71, 201, 0); } }
+  .kontrak { margin-top: 10px; } .kontrak a { color: var(--biru); font-weight: 700; }
+  #tutup { margin-top: 14px; }
+  .tautan { display: block; margin: 8px auto 0; color: var(--teks-2); }
+  .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+</style>
+
+<script>
+  import { api, esc, jam, tanganiGalat } from '../lib/api';
+  import { ikon } from '../lib/ikon';
+  import { bacaKtm, nfcDidukung, pesanGalatNfc, type Berhenti } from '../lib/nfc';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
+  let acaraId = 0;
+  let berhenti: Berhenti | null = null;
+  let pantau: number | undefined;
+  let kembaliTunggu: number | undefined;
+  // Tanggal lokal (WIB), bukan UTC: toISOString() bisa mundur sehari di pagi hari.
+  const hariIni = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  ($('a-tgl') as HTMLInputElement).value = hariIni();
+
+  function layar(keadaan: string, nama: string, ket: string, foto?: string | null) {
+    $('layar').dataset.keadaan = keadaan;
+    $('l-ikon').classList.toggle('berfoto', !!foto);
+    $('l-ikon').innerHTML = foto ? `<img src="${esc(foto)}" alt="">` : ikon(keadaan === 'hadir' ? 'centang' : keadaan === 'galat' ? 'peringatan' : 'nfc');
+    $('l-nama').textContent = nama;
+    $('l-ket').textContent = ket;
+    clearTimeout(kembaliTunggu);
+    if (keadaan !== 'tunggu') kembaliTunggu = window.setTimeout(() => layar('tunggu', 'Tempelkan KTM', 'Sertifikat terbit otomatis'), 4000);
+  }
+
+  async function muatDaftar() {
+    try {
+      const r = await api<any>('/acara');
+      $('daftar').innerHTML = r.acara.length
+        ? r.acara.map((a: any) => `<li><button data-acara="${a.id}"><span class="isi"><b>${esc(a.nama)}</b>
+            <small>${esc(a.penyelenggara)} · ${esc(a.tanggal)}${a.tempat ? ` · ${esc(a.tempat)}` : ''}${a.dibuka ? '' : ' · <span class="tutup-label">ditutup</span>'}</small></span>
+            <span class="lencana-angka">${a.jumlah} sertifikat</span></button></li>`).join('')
+        : '<li class="kosong">Belum ada acara. Buat satu di atas.</li>';
+    } catch (e) { tanganiGalat(e, salah); }
+  }
+
+  function statusChain(p: any) {
+    if (p.link_tx) return `<a href="${esc(p.link_tx)}" target="_blank" rel="noopener">Etherscan ↗</a>`;
+    if (p.status === 'menunggu') return '<small>mengirim ke blockchain…</small>';
+    if (p.status === 'gagal') return '<small>gagal ke blockchain</small>';
+    return '';
+  }
+
+  async function muatAcara() {
+    try {
+      const a = await api<any>(`/acara/${acaraId}`);
+      $('judul').textContent = a.nama;
+      $('sub').textContent = `${a.penyelenggara} · ${a.tanggal}${a.tempat ? ` · ${a.tempat}` : ''}`;
+      $('jumlah').textContent = `${a.peserta.length} sertifikat terbit`;
+      $('peserta').innerHTML = a.peserta.length
+        ? a.peserta.map((p: any) => `<li class="baris"><span class="isi"><b>${esc(p.nama)}</b><small>${esc(jam(p.waktu))} · <a href="/sertifikat/?k=${esc(p.kode)}" target="_blank">lihat sertifikat</a></small></span>${statusChain(p)}</li>`).join('')
+        : '<li class="kosong">Belum ada peserta yang tap.</li>';
+      $('kontrak').innerHTML = a.kontrak?.startsWith('http') ? `Kontrak SertifikatKTM: <a href="${esc(a.kontrak)}" target="_blank" rel="noopener">lihat di Etherscan ↗</a>` : '';
+      if (!a.dibuka) { berhenti?.(); $('mulai').hidden = true; $('tutup').hidden = true; }
+    } catch (e) { tanganiGalat(e, salah); }
+  }
+
+  async function tap(uid: string) {
+    try {
+      const r = await api<any>(`/acara/${acaraId}/tap`, { uid });
+      if (r.status === 'sudah') layar('hadir', r.nama, `Sertifikat sudah terbit jam ${jam(r.waktu)}`, r.foto);
+      else layar('hadir', r.nama, 'Sertifikat terbit, dicatat ke blockchain', r.foto);
+      muatAcara();
+    } catch (e) {
+      navigator.vibrate?.([80, 60, 80]);
+      layar('galat', 'Tidak terbit', (e as Error).message);
+    }
+  }
+
+  function buka(id: number) {
+    acaraId = id;
+    $('daftar-tahap').hidden = true;
+    $('mesin-tahap').hidden = false;
+    $('mulai').hidden = !nfcDidukung();
+    $('tutup').hidden = false;
+    layar('tunggu', 'Tempelkan KTM', nfcDidukung() ? 'Sertifikat terbit otomatis' : 'Butuh Chrome Android dengan NFC');
+    muatAcara();
+    pantau = window.setInterval(muatAcara, 3000);
+  }
+
+  $('form-acara').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    try {
+      const d = Object.fromEntries(new FormData(ev.target as HTMLFormElement));
+      const r = await api<{ id: number }>('/acara', d);
+      (ev.target as HTMLFormElement).reset();
+      ($('a-tgl') as HTMLInputElement).value = hariIni();
+      buka(r.id);
+    } catch (e) { tanganiGalat(e, salah); }
+  });
+  $('daftar').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-acara]');
+    if (b) buka(Number(b.dataset.acara));
+  });
+  $('mulai').addEventListener('click', async () => {
+    try {
+      berhenti = await bacaKtm(tap, (t) => layar('galat', 'Coba lagi', t));
+      $('mulai').hidden = true;
+      $('layar').classList.add('hidup');
+    } catch (e) { salah(pesanGalatNfc(e)); }
+  });
+  $('tutup').addEventListener('click', async () => {
+    if (!confirm('Tutup check-in acara ini? Peserta tidak bisa tap lagi.')) return;
+    await api(`/acara/${acaraId}/tutup`, {}).catch((e) => salah(e.message));
+    muatAcara();
+  });
+  $('kembali').addEventListener('click', () => {
+    berhenti?.();
+    clearInterval(pantau);
+    $('layar').classList.remove('hidup');
+    $('mesin-tahap').hidden = true;
+    $('daftar-tahap').hidden = false;
+    $('judul').textContent = 'Acara & sertifikat';
+    $('sub').textContent = 'Peserta tap KTM, sertifikat langsung terbit di blockchain.';
+    muatDaftar();
+  });
+  muatDaftar();
+</script>

@@ -56,6 +56,13 @@ pub fn router() -> Router<App> {
         .route("/sinkron", post(sinkron_unpam))
         .route("/kehadiran/{id}", get(kehadiran))
         .route("/jadwal", get(jadwal_minggu))
+        .route("/ktm/hilang", post(lapor_hilang))
+        .route("/acara", get(daftar_acara).post(buat_acara))
+        .route("/acara/{id}", get(lihat_acara))
+        .route("/acara/{id}/tap", post(tap_acara))
+        .route("/acara/{id}/tutup", post(tutup_acara))
+        .route("/sertifikat", get(sertifikat_saya))
+        .route("/sertifikat/{kode}", get(lihat_sertifikat))
         .route("/kenalan", post(kenalan))
         .route("/verifikasi/{bukti}", get(verifikasi))
         .route("/dosen/kelas", get(dosen_kelas))
@@ -127,12 +134,17 @@ struct Uid {
 async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<Uid>) -> Hasil {
     let hash = uid_hash(&app, &b.uid)?;
     let c = app.db.lock().unwrap();
-    let r: Option<(i64, String, String)> =
-        c.query_row("SELECT id, nama, peran FROM users WHERE uid_hash = ?1", [&hash], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).optional()?;
+    let r: Option<(i64, String, String, bool, Option<String>)> = c
+        .query_row("SELECT id, nama, peran, hilang, hilang_pesan FROM users WHERE uid_hash = ?1", [&hash], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })
+        .optional()?;
     let sesi = pengguna(&c, &h).ok();
     Ok(Json(match r {
-        Some((id, n, p)) => json!({ "terdaftar": true, "nama": nama_depan(&n), "peran": p, "milik_sesi": sesi.is_some_and(|s| s.id == id) }),
-        None => json!({ "terdaftar": false, "milik_sesi": false }),
+        // KTM yang dilaporkan hilang tidak bisa dipakai masuk; penemu melihat cara menghubungi pemilik.
+        Some((_, n, _, true, pesan)) => json!({ "terdaftar": true, "hilang": true, "nama": nama_depan(&n), "pesan": pesan.unwrap_or_default(), "milik_sesi": false }),
+        Some((id, n, p, false, _)) => json!({ "terdaftar": true, "hilang": false, "nama": nama_depan(&n), "peran": p, "milik_sesi": sesi.is_some_and(|s| s.id == id) }),
+        None => json!({ "terdaftar": false, "hilang": false, "milik_sesi": false }),
     }))
 }
 
@@ -159,24 +171,25 @@ async fn daftar(State(app): State<App>, Json(b): Json<Daftar>) -> Hasil {
     if dipakai {
         return Err(galat(StatusCode::CONFLICT, "KTM ini sudah terdaftar"));
     }
-    let ada: Option<(i64, String, String, Option<String>, String)> = c
-        .query_row("SELECT id, peran, pin_hash, uid_hash, nama FROM users WHERE nim = ?1", [nim], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+    let ada: Option<(i64, String, String, Option<String>, String, bool)> = c
+        .query_row("SELECT id, peran, pin_hash, uid_hash, nama, hilang FROM users WHERE nim = ?1", [nim], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
         })
         .optional()?;
     let (id, nama) = match ada {
         // NIM sudah ada (mis. akun demo): KTM ditautkan setelah PIN cocok.
-        Some((id, peran, pin_hash, uid, nama)) => {
+        // Kalau KTM lama dilaporkan hilang, KTM baru menggantikannya.
+        Some((id, peran, pin_hash, uid, nama, hilang)) => {
             if peran != "mhs" {
                 return Err(galat(StatusCode::CONFLICT, "NIM ini bukan akun mahasiswa"));
             }
-            if uid.is_some() {
+            if uid.is_some() && !hilang {
                 return Err(galat(StatusCode::CONFLICT, "NIM ini sudah punya KTM terdaftar"));
             }
             if !db::cek_pin(&b.pin, &pin_hash) {
                 return Err(galat(StatusCode::UNAUTHORIZED, "PIN salah untuk NIM ini"));
             }
-            c.execute("UPDATE users SET uid_hash = ?1 WHERE id = ?2", params![h, id])?;
+            c.execute("UPDATE users SET uid_hash = ?1, hilang = 0, hilang_pesan = NULL WHERE id = ?2", params![h, id])?;
             (id, nama)
         }
         None => {
@@ -210,6 +223,10 @@ async fn masuk(State(app): State<App>, Json(b): Json<Masuk>) -> Hasil {
     let akun: Option<(i64, String, String, String)> = match (&b.uid, &b.nim) {
         (Some(uid), _) => {
             let h = uid_hash(&app, uid)?;
+            let hilang: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM users WHERE uid_hash = ?1 AND hilang = 1)", [&h], |r| r.get(0))?;
+            if hilang {
+                return Err(galat(StatusCode::FORBIDDEN, "KTM ini dilaporkan hilang dan sudah diblokir"));
+            }
             c.query_row(&format!("{cari}uid_hash = ?1"), [h], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).optional()?
         }
         (None, Some(nim)) => c.query_row(&format!("{cari}nim = ?1"), [nim.trim()], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).optional()?,
@@ -244,6 +261,8 @@ async fn saya(State(app): State<App>, h: HeaderMap) -> Hasil {
         "nama": u.nama, "nim": u.nim, "prodi": u.prodi, "peran": u.peran,
         "bio": bio, "github": github, "portofolio": portofolio, "publik": publik, "ktm": ktm,
         "foto": foto, "semester": semester,
+        "hilang": c.query_row("SELECT hilang FROM users WHERE id = ?1", [u.id], |r| r.get::<_, bool>(0))?,
+        "hilang_pesan": c.query_row("SELECT hilang_pesan FROM users WHERE id = ?1", [u.id], |r| r.get::<_, Option<String>>(0))?,
     })))
 }
 
@@ -361,6 +380,10 @@ async fn kenalan(State(app): State<App>, Json(b): Json<Uid>) -> Hasil {
     let Some((id, nama, prodi, bio, github, portofolio, publik, dibuat, foto)) = r else {
         return Err(galat(StatusCode::NOT_FOUND, "KTM ini belum terdaftar di Smart KTM"));
     };
+    let (hilang, pesan): (bool, Option<String>) = c.query_row("SELECT hilang, hilang_pesan FROM users WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    if hilang {
+        return Ok(Json(json!({ "hilang": true, "nama": nama_depan(&nama), "pesan": pesan.unwrap_or_default() })));
+    }
     if !publik {
         return Ok(Json(json!({ "privat": true, "nama": nama_depan(&nama) })));
     }
@@ -373,6 +396,10 @@ async fn kenalan(State(app): State<App>, Json(b): Json<Uid>) -> Hasil {
     let onchain: i64 = rekap.iter().map(|p| p["onchain"].as_i64().unwrap_or(0)).sum();
     if onchain > 0 {
         lencana.insert(0, format!("{onchain} presensi tercatat on-chain"));
+    }
+    let n_sertifikat: i64 = c.query_row("SELECT COUNT(*) FROM sertifikat WHERE user_id = ?1", [id], |r| r.get(0))?;
+    if n_sertifikat > 0 {
+        lencana.insert(0, format!("{n_sertifikat} sertifikat on-chain"));
     }
     Ok(Json(json!({
         "privat": false, "nama": nama, "prodi": prodi, "kampus": "Universitas Pamulang", "foto": foto,
@@ -526,12 +553,7 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
         if !terbuka {
             return Err(galat(StatusCode::CONFLICT, "Sesi sudah ditutup"));
         }
-        let mhs: Option<(i64, String, String, Option<String>)> = c
-            .query_row("SELECT id, nama, nim, foto FROM users WHERE uid_hash = ?1 AND peran = 'mhs'", [&mhs_hash], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
-            .optional()?;
-        let Some((mid, nama, nim, foto)) = mhs else {
-            return Err(galat(StatusCode::NOT_FOUND, "KTM belum terdaftar. Minta mahasiswa daftar dulu di Smart KTM."));
-        };
+        let (mid, nama, nim, foto) = mahasiswa_dari_ktm(&c, &mhs_hash)?;
         let ikut: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM ambil WHERE user_id = ?1 AND matkul_id = ?2)", params![mid, matkul_id], |r| r.get(0))?;
         if !ikut {
             // Belum sinkron MyUnpam tapi hadir di kelas: dosen yang melihat langsung, jadi dimasukkan ke kelas.
@@ -590,4 +612,250 @@ async fn tutup_sesi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -
     sesi_milik(&c, id, u.id)?;
     c.execute("UPDATE sesi SET ditutup = ?1 WHERE id = ?2 AND ditutup IS NULL", params![waktu::teks(&waktu::sekarang()), id])?;
     Ok(Json(json!({ "ok": true })))
+}
+
+/// Mahasiswa pemilik KTM untuk presensi/sertifikat; KTM hilang ditolak.
+fn mahasiswa_dari_ktm(c: &Connection, hash: &str) -> Result<(i64, String, String, Option<String>), Gagal> {
+    let mhs: Option<(i64, String, String, Option<String>, bool)> = c
+        .query_row("SELECT id, nama, nim, foto, hilang FROM users WHERE uid_hash = ?1 AND peran = 'mhs'", [hash], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })
+        .optional()?;
+    match mhs {
+        None => Err(galat(StatusCode::NOT_FOUND, "KTM belum terdaftar. Minta mahasiswa daftar dulu di Smart KTM.")),
+        Some((.., true)) => Err(galat(StatusCode::FORBIDDEN, "KTM ini dilaporkan hilang. Jangan dipakai, kembalikan ke pemiliknya.")),
+        Some((id, nama, nim, foto, false)) => Ok((id, nama, nim, foto)),
+    }
+}
+
+// ---------- KTM hilang ----------
+
+#[derive(Deserialize)]
+struct LaporHilang {
+    hilang: bool,
+    #[serde(default)]
+    pesan: String,
+}
+
+async fn lapor_hilang(State(app): State<App>, h: HeaderMap, Json(b): Json<LaporHilang>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    let pesan: String = b.pesan.trim().chars().take(160).collect();
+    c.execute(
+        "UPDATE users SET hilang = ?1, hilang_pesan = ?2 WHERE id = ?3",
+        params![b.hilang, if b.hilang && !pesan.is_empty() { Some(pesan) } else { None }, u.id],
+    )?;
+    Ok(Json(json!({ "hilang": b.hilang })))
+}
+
+// ---------- acara & sertifikat ----------
+
+#[derive(Deserialize)]
+struct AcaraBaru {
+    nama: String,
+    penyelenggara: String,
+    #[serde(default)]
+    tempat: String,
+    tanggal: String,
+}
+
+async fn buat_acara(State(app): State<App>, h: HeaderMap, Json(b): Json<AcaraBaru>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    let potong = |s: &str, n: usize| s.trim().chars().take(n).collect::<String>();
+    let (nama, penyelenggara) = (potong(&b.nama, 100), potong(&b.penyelenggara, 80));
+    if nama.is_empty() || penyelenggara.is_empty() {
+        return Err(galat(StatusCode::BAD_REQUEST, "Nama acara dan penyelenggara wajib diisi"));
+    }
+    if chrono::NaiveDate::parse_from_str(b.tanggal.trim(), "%Y-%m-%d").is_err() {
+        return Err(galat(StatusCode::BAD_REQUEST, "Tanggal harus YYYY-MM-DD"));
+    }
+    c.execute(
+        "INSERT INTO acara(nama, penyelenggara, tempat, tanggal, dibuat_oleh, dibuat) VALUES(?1, ?2, ?3, ?4, ?5, ?6)",
+        params![nama, penyelenggara, potong(&b.tempat, 80), b.tanggal.trim(), u.id, waktu::teks(&waktu::sekarang())],
+    )?;
+    Ok(Json(json!({ "id": c.last_insert_rowid() })))
+}
+
+async fn daftar_acara(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    let mut q = c.prepare(
+        "SELECT a.id, a.nama, a.penyelenggara, a.tempat, a.tanggal, a.dibuka, (SELECT COUNT(*) FROM sertifikat s WHERE s.acara_id = a.id)
+         FROM acara a WHERE a.dibuat_oleh = ?1 ORDER BY a.id DESC",
+    )?;
+    let acara = q
+        .query_map([u.id], |r| {
+            Ok(json!({ "id": r.get::<_, i64>(0)?, "nama": r.get::<_, String>(1)?, "penyelenggara": r.get::<_, String>(2)?,
+                       "tempat": r.get::<_, String>(3)?, "tanggal": r.get::<_, String>(4)?, "dibuka": r.get::<_, bool>(5)?,
+                       "jumlah": r.get::<_, i64>(6)? }))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(Json(json!({ "acara": acara })))
+}
+
+fn acara_milik(c: &Connection, id: i64, user: i64) -> Result<(String, String, String, String, bool), Gagal> {
+    c.query_row(
+        "SELECT nama, penyelenggara, tempat, tanggal, dibuka FROM acara WHERE id = ?1 AND dibuat_oleh = ?2",
+        params![id, user],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+    )
+    .optional()?
+    .ok_or_else(|| galat(StatusCode::NOT_FOUND, "Acara tidak ditemukan"))
+}
+
+async fn lihat_acara(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    let (nama, penyelenggara, tempat, tanggal, dibuka) = acara_milik(&c, id, u.id)?;
+    let mut q = c.prepare(
+        "SELECT u.nama, u.nim, s.waktu, s.status, s.tx, s.kode FROM sertifikat s JOIN users u ON u.id = s.user_id
+         WHERE s.acara_id = ?1 ORDER BY s.waktu DESC",
+    )?;
+    let peserta = q
+        .query_map([id], |r| {
+            let tx: Option<String> = r.get(4)?;
+            Ok(json!({ "nama": r.get::<_, String>(0)?, "nim": samarkan_nim(&r.get::<_, String>(1)?), "waktu": r.get::<_, String>(2)?,
+                       "status": r.get::<_, String>(3)?, "link_tx": tx.as_deref().and_then(|t| app.chain.as_ref().and_then(|c| c.link_tx(t))),
+                       "tx": tx, "kode": r.get::<_, String>(5)? }))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(Json(json!({
+        "id": id, "nama": nama, "penyelenggara": penyelenggara, "tempat": tempat, "tanggal": tanggal, "dibuka": dibuka,
+        "peserta": peserta, "kontrak": app.chain.as_ref().and_then(|c| c.link_kontrak_sertifikat()),
+    })))
+}
+
+async fn tap_acara(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>, Json(b): Json<Uid>) -> Hasil {
+    let hash = uid_hash(&app, &b.uid)?;
+    let (balasan, kirim) = {
+        let c = app.db.lock().unwrap();
+        let u = pengguna(&c, &h)?;
+        wajib(&u, "dosen")?;
+        let (.., dibuka) = acara_milik(&c, id, u.id)?;
+        if !dibuka {
+            return Err(galat(StatusCode::CONFLICT, "Check-in acara sudah ditutup"));
+        }
+        let (mid, nama, nim, foto) = mahasiswa_dari_ktm(&c, &hash)?;
+        let dasar = json!({ "nama": nama, "nim": samarkan_nim(&nim), "foto": foto });
+        let lama: Option<(String, String)> = c
+            .query_row("SELECT waktu, kode FROM sertifikat WHERE acara_id = ?1 AND user_id = ?2", params![id, mid], |r| Ok((r.get(0)?, r.get(1)?)))
+            .optional()?;
+        if let Some((saat, kode)) = lama {
+            let mut v = dasar;
+            v["status"] = json!("sudah");
+            v["waktu"] = json!(saat);
+            v["kode"] = json!(kode);
+            return Ok(Json(v));
+        }
+        let saat = waktu::teks(&waktu::sekarang());
+        let kode = db::sha(&format!("{}:sertifikat:{id}:{mid}:{saat}", app.rahasia));
+        let ke_chain = app.chain.as_ref().is_some_and(|c| c.ada_sertifikat());
+        c.execute(
+            "INSERT INTO sertifikat(acara_id, user_id, waktu, kode, status) VALUES(?1, ?2, ?3, ?4, ?5)",
+            params![id, mid, saat, kode, if ke_chain { "menunggu" } else { "lokal" }],
+        )?;
+        let sid = c.last_insert_rowid();
+        let mut v = dasar;
+        v["status"] = json!("terbit");
+        v["waktu"] = json!(saat);
+        v["kode"] = json!(kode);
+        (v, ke_chain.then(|| (sid, db::sha(&format!("{}:acara:{id}", app.rahasia)), kode)))
+    };
+    if let (Some(ch), Some((sid, acara_hash, kode))) = (app.chain.clone(), kirim) {
+        let db = app.db.clone();
+        tokio::spawn(async move {
+            let (tx, status) = match ch.terbitkan(&acara_hash, &hash, &kode).await {
+                Ok(tx) => (Some(tx), "onchain"),
+                Err(e) => {
+                    eprintln!("sertifikat gagal: {e:#}");
+                    (None, "gagal")
+                }
+            };
+            let _ = db.lock().unwrap().execute("UPDATE sertifikat SET tx = ?1, status = ?2 WHERE id = ?3", params![tx, status, sid]);
+        });
+    }
+    Ok(Json(balasan))
+}
+
+async fn tutup_acara(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    acara_milik(&c, id, u.id)?;
+    c.execute("UPDATE acara SET dibuka = 0 WHERE id = ?1", [id])?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+async fn sertifikat_saya(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    let mut q = c.prepare(
+        "SELECT s.kode, a.nama, a.penyelenggara, a.tanggal, s.status, s.tx FROM sertifikat s JOIN acara a ON a.id = s.acara_id
+         WHERE s.user_id = ?1 ORDER BY a.tanggal DESC, s.id DESC",
+    )?;
+    let daftar = q
+        .query_map([u.id], |r| {
+            let tx: Option<String> = r.get(5)?;
+            Ok(json!({ "kode": r.get::<_, String>(0)?, "acara": r.get::<_, String>(1)?, "penyelenggara": r.get::<_, String>(2)?,
+                       "tanggal": r.get::<_, String>(3)?, "status": r.get::<_, String>(4)?,
+                       "link_tx": tx.as_deref().and_then(|t| app.chain.as_ref().and_then(|c| c.link_tx(t))) }))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(Json(json!({ "sertifikat": daftar })))
+}
+
+/// Halaman publik sertifikat: siapa pun dengan tautannya bisa memverifikasi ke blockchain.
+async fn lihat_sertifikat(State(app): State<App>, Path(kode): Path<String>) -> Hasil {
+    let kode = kode.trim_start_matches("0x").to_lowercase();
+    if kode.len() != 64 || !kode.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(galat(StatusCode::BAD_REQUEST, "Kode sertifikat tidak valid"));
+    }
+    let rec: Option<(String, String, Option<String>, String, String, String, String, String, Option<String>, String)> = {
+        let c = app.db.lock().unwrap();
+        c.query_row(
+            "SELECT u.nama, u.prodi, u.foto, a.nama, a.penyelenggara, a.tempat, a.tanggal, s.waktu, s.tx, s.status
+             FROM sertifikat s JOIN users u ON u.id = s.user_id JOIN acara a ON a.id = s.acara_id WHERE s.kode = ?1",
+            [&kode],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?, r.get(9)?)),
+        )
+        .optional()?
+    };
+    let Some((nama, prodi, foto, acara, penyelenggara, tempat, tanggal, saat, tx, status)) = rec else {
+        return Err(galat(StatusCode::NOT_FOUND, "Sertifikat tidak ditemukan"));
+    };
+    let mut chain = Value::Null;
+    if let Some(ch) = app.chain.as_ref().filter(|c| c.ada_sertifikat()) {
+        chain = match ch.cek_sertifikat(&kode).await {
+            Ok(ts) => json!({ "tercatat": ts > 0, "timestamp": ts }),
+            Err(e) => json!({ "galat": e.to_string() }),
+        };
+    }
+    Ok(Json(json!({
+        "kode": kode, "nama": nama, "prodi": prodi, "foto": foto, "acara": acara, "penyelenggara": penyelenggara,
+        "tempat": tempat, "tanggal": tanggal, "waktu": saat, "status": status, "tx": tx,
+        "link_tx": tx.as_deref().and_then(|t| app.chain.as_ref().and_then(|c| c.link_tx(t))),
+        "kontrak": app.chain.as_ref().and_then(|c| c.link_kontrak_sertifikat()), "chain": chain,
+    })))
+}
+
+#[cfg(test)]
+mod tes {
+    use super::*;
+
+    #[test]
+    fn ktm_hilang_ditolak_untuk_presensi_dan_sertifikat() {
+        let c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        c.execute("INSERT INTO users(peran, nim, nama, pin_hash, uid_hash, dibuat) VALUES('mhs', '231011409998', 'Uji Hilang', 'x', 'abc', '2026-10-01 00:00')", []).unwrap();
+        assert!(mahasiswa_dari_ktm(&c, "abc").is_ok());
+        c.execute("UPDATE users SET hilang = 1 WHERE uid_hash = 'abc'", []).unwrap();
+        let Err(Gagal(kode, pesan)) = mahasiswa_dari_ktm(&c, "abc") else { panic!("KTM hilang harus ditolak") };
+        assert_eq!(kode, StatusCode::FORBIDDEN);
+        assert!(pesan.contains("hilang"));
+        assert!(mahasiswa_dari_ktm(&c, "tidak-ada").is_err());
+    }
 }

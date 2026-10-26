@@ -188,6 +188,11 @@ import { ikon } from '../lib/ikon';
     salah('');
     try {
       const p = await api<any>('/kenalan', { uid });
+      if (p.hilang) {
+        $('profil').hidden = true;
+        salah(`KTM milik ${p.nama} dilaporkan hilang.${p.pesan ? ` Pesan pemilik: "${p.pesan}"` : ''} Tolong kembalikan ke pemiliknya.`);
+        return;
+      }
       $('profil').hidden = false;
       pasangFoto($('inisial'), p.privat ? null : p.foto, p.nama);
       $('nama').textContent = p.nama;

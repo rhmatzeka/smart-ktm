@@ -12,6 +12,7 @@ import { ikon } from '../lib/ikon';
       </div>
       <h1 class="sapa-besar">Mode dosen</h1>
       <p class="sapa-kecil" id="nama-dosen"></p>
+      <a class="ke-acara" href="/acara/"><Fragment set:html={ikon('perisai')} /><span><b>Acara & sertifikat on-chain</b><small>Check-in seminar dengan tap KTM</small></span></a>
     </header>
     <section class="zona-biru">
       <p class="kartu-judul terang"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Pilih kelas untuk membuka presensi</p>
@@ -53,6 +54,10 @@ import { ikon } from '../lib/ikon';
 </Dasar>
 
 <style is:global>
+  .ke-acara { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--garis); border-radius: 14px; color: var(--teks); text-decoration: none; }
+  .ke-acara .ikon { width: 20px; height: 20px; color: var(--biru); }
+  .ke-acara span { display: flex; flex-direction: column; }
+  .ke-acara b { font-size: 0.88rem; } .ke-acara small { font-size: 0.75rem; color: var(--teks-2); }
   .tahap { display: flex; flex-direction: column; flex: 1; }
   .ikon-keluar, .ikon-kembali { width: 40px; height: 40px; border-radius: 12px; border: 0; display: grid; place-items: center; cursor: pointer; }
   .ikon-keluar { background: #ffe4e6; color: var(--merah); }

@@ -63,6 +63,14 @@ import { ikon } from '../lib/ikon';
       <button class="tautan" type="button" data-kembali>Batal</button>
     </form>
 
+    <div id="hilang" hidden>
+      <p class="judul-blok">KTM ini dilaporkan hilang</p>
+      <p class="redup kecil">Kartu milik <b id="hilang-nama"></b> sudah diblokir pemiliknya, jadi tidak bisa dipakai masuk.</p>
+      <p class="pesan-penemu" id="hilang-pesan" hidden></p>
+      <p class="redup kecil">Terima kasih sudah menemukannya. Tolong kembalikan ke pemilik atau titipkan ke BAAK.</p>
+      <button class="tautan" type="button" data-kembali>Kembali</button>
+    </div>
+
     <p id="pesan" class="pesan-galat" role="alert" hidden></p>
 
     <!-- Masuk pakai NIM: di kartu yang sama, dekat atas supaya tidak tertutup keyboard -->
@@ -134,6 +142,7 @@ import { ikon } from '../lib/ikon';
   .lanjut-teks > span { font-size: 0.75rem; color: var(--teks-2); }
   .lanjut-panah { transform: rotate(180deg); display: grid; color: var(--biru); }
 
+  .pesan-penemu { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #fef3c7; color: #92400e; font-size: 0.85rem; font-weight: 600; }
   .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
   .catatan-kecil { text-align: center; font-size: 0.75rem; color: var(--teks-2); margin: 16px 16px 28px; }
 </style>
@@ -144,7 +153,7 @@ import { ikon } from '../lib/ikon';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   // Blok yang bergantian di bagian atas; form NIM selalu ada.
-  const bagian = ['awal', 'menunggu', 'form-pin', 'form-daftar'];
+  const bagian = ['awal', 'menunggu', 'form-pin', 'form-daftar', 'hilang'];
   let uid = '';
   let berhenti: Berhenti | null = null;
 
@@ -155,7 +164,7 @@ import { ikon } from '../lib/ikon';
 
   function tampil(id: string) {
     bagian.forEach((b) => ($(b).hidden = b !== id));
-    $('form-nim').hidden = id === 'form-pin' || id === 'form-daftar';
+    $('form-nim').hidden = id === 'form-pin' || id === 'form-daftar' || id === 'hilang';
     salah('');
     const input = $(id).querySelector<HTMLInputElement>('input');
     if (input) setTimeout(() => input.focus(), 50);
@@ -171,7 +180,14 @@ import { ikon } from '../lib/ikon';
     berhenti = null;
     uid = u;
     try {
-      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean }>('/ktm/cek', { uid });
+      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean; hilang?: boolean; pesan?: string }>('/ktm/cek', { uid });
+      if (r.hilang) {
+        $('hilang-nama').textContent = r.nama ?? '';
+        $('hilang-pesan').textContent = r.pesan ? `Pesan dari pemilik: "${r.pesan}"` : '';
+        $('hilang-pesan').hidden = !r.pesan;
+        tampil('hilang');
+        return;
+      }
       // KTM pemilik sesi di HP ini: langsung buka beranda, tanpa PIN.
       if (r.milik_sesi) {
         location.href = tujuan(r.peran ?? 'mhs');

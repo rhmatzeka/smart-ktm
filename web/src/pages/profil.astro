@@ -23,6 +23,11 @@ const panah = ikon('kembali', 'ikon panah');
   </header>
 
   <section class="isi-profil">
+    <div class="banner-hilang" id="banner-hilang" hidden>
+      <b>KTM kamu sedang diblokir (dilaporkan hilang)</b>
+      <span>Tidak bisa dipakai masuk, presensi, atau check-in acara. Dapat KTM baru? Tap di halaman masuk, lalu isi NIM dan PIN.</span>
+      <button class="tombol kecil-saja" id="ketemu" type="button">KTM sudah ketemu</button>
+    </div>
     <!-- Aksi -->
     <p class="label-bagian">Akun</p>
     <ul class="daftar-aksi">
@@ -30,6 +35,7 @@ const panah = ikon('kembali', 'ikon panah');
       <li><button type="button" id="buka-ktm"><Fragment set:html={ikon('kartu')} /><span><b>KTM digital</b><small>Tampilkan kartu di layar · <span id="ktm-status"></span></small></span><Fragment set:html={panah} /></button></li>
       <li class="ktm-digital" id="ktm-digital" hidden><Kartu /></li>
       <li><button type="button" id="buka-publik"><Fragment set:html={ikon('orang')} /><span><b>Profil publik</b><small id="ringkas-publik">Bio, GitHub, dan portofolio di kartu nama</small></span><Fragment set:html={panah} /></button></li>
+      <li><a href="/sertifikat/"><Fragment set:html={ikon('perisai')} /><span><b>Sertifikat saya</b><small id="ringkas-sert">Sertifikat acara on-chain</small></span><Fragment set:html={panah} /></a></li>
       <li><a href="/verifikasi/"><Fragment set:html={ikon('rantai')} /><span><b>Cek bukti kehadiran</b><small>Lihat catatan presensi di blockchain</small></span><Fragment set:html={panah} /></a></li>
     </ul>
 
@@ -53,6 +59,17 @@ const panah = ikon('kembali', 'ikon panah');
         <span class="tersimpan" id="tersimpan" role="status"></span>
         <button class="tombol kecil-saja" type="submit">Simpan</button>
       </div>
+    </form>
+
+    <p class="label-bagian">Keamanan</p>
+    <ul class="daftar-aksi">
+      <li><button type="button" id="buka-hilang"><Fragment set:html={ikon('peringatan')} /><span><b>Laporkan KTM hilang</b><small>Blokir kartu dan tampilkan kontakmu ke penemu</small></span><Fragment set:html={panah} /></button></li>
+    </ul>
+    <form class="blok-form" id="form-hilang" hidden>
+      <p class="judul-form">Kalau KTM-mu ditemukan dan ditap orang lain, mereka akan melihat pesan ini.</p>
+      <label for="pesan-hilang">Pesan untuk penemu</label>
+      <textarea id="pesan-hilang" rows="2" maxlength="160" placeholder="Contoh: Tolong hubungi WA 08xx atau titip ke BAAK"></textarea>
+      <div class="baris-simpan"><button class="tombol kecil-saja merah" type="submit">Blokir KTM ini</button></div>
     </form>
 
     <button class="keluar" id="keluar" type="button"><Fragment set:html={ikon('keluar')} /> Keluar dari perangkat ini</button>
@@ -116,6 +133,11 @@ const panah = ikon('kembali', 'ikon panah');
   .baris-simpan { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px; }
   .tersimpan { color: var(--hijau); font-size: 0.8rem; font-weight: 700; }
 
+  .banner-hilang { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; margin-bottom: 4px; border-radius: 14px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+  .banner-hilang b { font-size: 0.9rem; }
+  .banner-hilang span { font-size: 0.78rem; }
+  .banner-hilang .tombol { align-self: flex-start; margin-top: 6px; }
+  .tombol.merah { background: var(--merah); }
   .keluar { margin-top: 18px; width: 100%; display: flex; gap: 8px; align-items: center; justify-content: center; padding: 12px; border-radius: 14px; border: 1px solid var(--garis); background: var(--putih); color: var(--merah); font: 700 0.88rem var(--font); cursor: pointer; }
   .keluar .ikon { width: 18px; height: 18px; }
   .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
@@ -147,11 +169,31 @@ const panah = ikon('kembali', 'ikon panah');
       $<HTMLInputElement>('github').value = s.github;
       $<HTMLInputElement>('portofolio').value = s.portofolio;
       $<HTMLInputElement>('publik').checked = s.publik;
+      $('banner-hilang').hidden = !s.hilang;
+      $('buka-hilang').closest('ul')!.hidden = !!s.hilang;
+      if (s.hilang_pesan) ($('pesan-hilang') as HTMLTextAreaElement).value = s.hilang_pesan;
       const isiPublik = [s.bio && 'bio', s.github && 'GitHub', s.portofolio && 'portofolio'].filter(Boolean);
       $('ringkas-publik').textContent = isiPublik.length ? `Terisi: ${isiPublik.join(', ')}` : 'Belum diisi: bio, GitHub, portofolio';
     })
     .catch((e) => tanganiGalat(e, salah));
 
+  $('buka-hilang').addEventListener('click', () => {
+    const f = $('form-hilang');
+    f.hidden = !f.hidden;
+    if (!f.hidden) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  async function aturHilang(hilang: boolean, pesan = '') {
+    try {
+      await api('/ktm/hilang', { hilang, pesan });
+      location.reload();
+    } catch (e) { tanganiGalat(e, salah); }
+  }
+  $('form-hilang').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    if (confirm('Blokir KTM ini? Kartu tidak bisa dipakai masuk, presensi, atau check-in sampai kamu buka lagi.')) aturHilang(true, ($('pesan-hilang') as HTMLTextAreaElement).value);
+  });
+  $('ketemu').addEventListener('click', () => aturHilang(false));
+  api<any>('/sertifikat').then((r) => ($('ringkas-sert').textContent = r.sertifikat.length ? `${r.sertifikat.length} sertifikat on-chain` : 'Belum ada, dapatkan lewat tap KTM di acara')).catch(() => {});
   $('buka-publik').addEventListener('click', () => {
     const f = $('form');
     f.hidden = !f.hidden;

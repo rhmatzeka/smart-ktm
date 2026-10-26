@@ -32,6 +32,12 @@ CREATE TABLE IF NOT EXISTS pertemuan_unpam(
   user_id INTEGER NOT NULL REFERENCES users(id), matkul_id INTEGER NOT NULL REFERENCES matkul(id), ke INTEGER NOT NULL,
   jenis TEXT NOT NULL DEFAULT '', mulai TEXT NOT NULL, akhir TEXT NOT NULL, status TEXT, waktu TEXT,
   PRIMARY KEY(user_id, matkul_id, ke));
+CREATE TABLE IF NOT EXISTS acara(
+  id INTEGER PRIMARY KEY, nama TEXT NOT NULL, penyelenggara TEXT NOT NULL, tempat TEXT NOT NULL DEFAULT '',
+  tanggal TEXT NOT NULL, dibuat_oleh INTEGER NOT NULL REFERENCES users(id), dibuka INTEGER NOT NULL DEFAULT 1, dibuat TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sertifikat(
+  id INTEGER PRIMARY KEY, acara_id INTEGER NOT NULL REFERENCES acara(id), user_id INTEGER NOT NULL REFERENCES users(id),
+  waktu TEXT NOT NULL, kode TEXT NOT NULL UNIQUE, tx TEXT, status TEXT NOT NULL, UNIQUE(acara_id, user_id));
 CREATE TABLE IF NOT EXISTS pengingat(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), teks TEXT NOT NULL, waktu TEXT NOT NULL, dibuat TEXT NOT NULL);
 ";
 
@@ -82,7 +88,7 @@ pub fn siapkan(c: &Connection) -> rusqlite::Result<()> {
         c.execute("ALTER TABLE matkul ADD COLUMN dosen_nama TEXT", [])?;
     }
     // Foto profil & semester dari MyUnpam.
-    for (kolom, tipe) in [("foto", "TEXT"), ("semester", "TEXT")] {
+    for (kolom, tipe) in [("foto", "TEXT"), ("semester", "TEXT"), ("hilang", "INTEGER NOT NULL DEFAULT 0"), ("hilang_pesan", "TEXT")] {
         let ada: bool = c.query_row("SELECT COUNT(*) > 0 FROM pragma_table_info('users') WHERE name = ?1", [kolom], |r| r.get(0))?;
         if !ada {
             c.execute(&format!("ALTER TABLE users ADD COLUMN {kolom} {tipe}"), [])?;

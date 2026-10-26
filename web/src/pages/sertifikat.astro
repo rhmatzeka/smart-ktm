@@ -1,0 +1,160 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Sertifikat">
+  <header class="pita-sert">
+    <div class="pita-atas"><a href="/profil/" id="kembali">← Profil</a><span>Sertifikat on-chain</span></div>
+    <h1 id="judul">Sertifikat saya</h1>
+    <p id="sub">Sertifikat acara dari tap KTM, tercatat di blockchain.</p>
+  </header>
+
+  <section class="isi-sert">
+    <!-- Satu sertifikat (publik) -->
+    <article class="sertifikat" id="satu" hidden>
+      <div class="sert-atas">
+        <span>Sertifikat Kehadiran</span>
+        <span class="sert-segel"><Fragment set:html={ikon('perisai')} /></span>
+      </div>
+      <p class="sert-label">Diberikan kepada</p>
+      <div class="sert-penerima">
+        <span class="sert-foto" id="s-foto"></span>
+        <div><h2 id="s-nama"></h2><p id="s-prodi"></p></div>
+      </div>
+      <p class="sert-label">atas kehadirannya pada</p>
+      <h3 id="s-acara"></h3>
+      <p class="sert-detail" id="s-detail"></p>
+      <div class="sert-kaki"><span>Diterbitkan lewat tap KTM</span><span id="s-waktu"></span></div>
+    </article>
+
+    <section class="verif" id="verif" hidden>
+      <p class="verif-judul" id="v-judul"></p>
+      <ul class="verif-daftar" id="v-daftar"></ul>
+      <button class="tombol garis-biru" id="bagikan" type="button"><Fragment set:html={ikon('tautan')} /> Bagikan tautan sertifikat</button>
+      <p class="tersalin" id="tersalin" role="status"></p>
+    </section>
+
+    <!-- Daftar milik sendiri -->
+    <ul class="daftar-sert" id="daftar" hidden></ul>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
+  </section>
+</Dasar>
+
+<style is:global>
+  body:has(.isi-sert) .halaman { background: var(--latar); }
+  .pita-sert { position: relative; overflow: hidden; color: var(--putih); padding: 14px 16px 18px; border-radius: 0 0 22px 22px; background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua)); }
+  .pita-sert::after { content: ''; position: absolute; inset: -60% -20%; pointer-events: none; background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%); }
+  .pita-sert > * { position: relative; z-index: 1; }
+  .pita-sert .pita-atas { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.9; }
+  .pita-sert .pita-atas a { color: inherit; text-decoration: none; font-weight: 700; }
+  .pita-sert h1 { font-size: 1.35rem; font-weight: 800; margin-top: 10px; }
+  .pita-sert p { font-size: 0.82rem; opacity: 0.88; }
+  .isi-sert { padding: 14px 16px 40px; }
+
+  .sertifikat { background: var(--putih); border: 1px solid var(--garis); border-radius: 18px; padding: 18px; position: relative; overflow: hidden; }
+  .sertifikat::before { content: ''; position: absolute; inset: 6px; border: 1px solid #dbe4f7; border-radius: 13px; pointer-events: none; }
+  .sertifikat > * { position: relative; }
+  .sert-atas { display: flex; justify-content: space-between; align-items: center; font-weight: 800; color: var(--biru); font-size: 0.85rem; }
+  .sert-segel { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--biru); color: var(--putih); }
+  .sert-segel .ikon { width: 18px; height: 18px; }
+  .sert-label { font-size: 0.75rem; color: var(--teks-2); margin-top: 14px; }
+  .sert-penerima { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+  .sert-foto { width: 46px; height: 54px; border-radius: 8px; overflow: hidden; flex: none; background: var(--biru-pudar); display: grid; place-items: center; font-weight: 800; color: var(--biru); }
+  .sert-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .sert-penerima h2 { font-size: 1.2rem; font-weight: 800; }
+  .sert-penerima p { font-size: 0.78rem; color: var(--teks-2); }
+  .sertifikat h3 { font-size: 1.05rem; font-weight: 800; margin-top: 4px; }
+  .sert-detail { font-size: 0.8rem; color: var(--teks-2); margin-top: 2px; }
+  .sert-kaki { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--garis); font-size: 0.72rem; color: var(--teks-2); }
+
+  .verif { margin-top: 12px; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 14px; }
+  .verif-judul { display: flex; gap: 8px; align-items: center; font-weight: 800; font-size: 0.92rem; }
+  .verif-judul .ikon { width: 18px; height: 18px; }
+  .verif-judul.sah { color: var(--hijau); } .verif-judul.tunggu { color: #b45309; }
+  .verif-daftar { list-style: none; margin: 10px 0 0; padding: 0; }
+  .verif-daftar li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid #eef1f6; font-size: 0.8rem; }
+  .verif-daftar li span:first-child { color: var(--teks-2); }
+  .verif-daftar a, .verif-daftar b { color: var(--biru); font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .verif .tombol { margin-top: 12px; }
+  .tersalin { text-align: center; color: var(--hijau); font-size: 0.8rem; font-weight: 700; min-height: 1.2em; margin-top: 6px; }
+
+  .daftar-sert { list-style: none; margin: 0; padding: 0; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; overflow: hidden; }
+  .daftar-sert li + li { border-top: 1px solid #eef1f6; }
+  .daftar-sert a { display: flex; gap: 12px; align-items: center; padding: 12px 14px; color: var(--teks); text-decoration: none; }
+  .daftar-sert .tanda { width: 36px; height: 36px; border-radius: 10px; background: var(--biru-pudar); color: var(--biru); display: grid; place-items: center; flex: none; }
+  .daftar-sert .tanda .ikon { width: 18px; height: 18px; }
+  .daftar-sert .isi { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .daftar-sert b { font-size: 0.9rem; }
+  .daftar-sert small { font-size: 0.75rem; color: var(--teks-2); }
+  .daftar-sert .on { font-size: 0.72rem; font-weight: 700; color: var(--hijau); white-space: nowrap; }
+  .daftar-sert .kosong { padding: 16px; text-align: center; color: var(--teks-2); font-size: 0.85rem; }
+  .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+</style>
+
+<script>
+  import { api, esc, tanganiGalat } from '../lib/api';
+  import { ikon } from '../lib/ikon';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
+  const BLN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const tglPanjang = (t: string) => `${+t.slice(8, 10)} ${BLN[+t.slice(5, 7) - 1]} ${t.slice(0, 4)}`;
+  const pendek = (h: string) => `${h.slice(0, 10)}…${h.slice(-6)}`;
+  const kode = new URLSearchParams(location.search).get('k');
+
+  async function tampilSatu(k: string) {
+    try {
+      const s = await api<any>(`/sertifikat/${encodeURIComponent(k)}`);
+      $('kembali').textContent = '← Smart KTM';
+      ($('kembali') as HTMLAnchorElement).href = '/';
+      $('judul').textContent = 'Sertifikat kehadiran';
+      $('sub').textContent = 'Keasliannya bisa dicek siapa pun di blockchain.';
+      if (s.foto) $('s-foto').innerHTML = `<img src="${esc(s.foto)}" alt="">`;
+      else $('s-foto').textContent = s.nama.charAt(0);
+      $('s-nama').textContent = s.nama;
+      $('s-prodi').textContent = `${s.prodi}, Universitas Pamulang`;
+      $('s-acara').textContent = s.acara;
+      $('s-detail').textContent = [s.penyelenggara, tglPanjang(s.tanggal), s.tempat].filter(Boolean).join(' · ');
+      $('s-waktu').textContent = `${s.waktu} WIB`;
+      $('satu').hidden = false;
+
+      const sah = s.chain && s.chain.tercatat;
+      $('v-judul').className = `verif-judul ${sah ? 'sah' : 'tunggu'}`;
+      $('v-judul').innerHTML = sah ? `${ikon('perisai')} Asli, tercatat di Ethereum Sepolia` : `${ikon('peringatan')} ${s.status === 'menunggu' ? 'Sedang dicatat ke blockchain…' : 'Belum tercatat di blockchain'}`;
+      const baris: string[] = [`<li><span>Kode sertifikat</span><b>${esc(pendek(s.kode))}</b></li>`];
+      if (sah) baris.push(`<li><span>Waktu blok</span><b>${new Date(s.chain.timestamp * 1000).toLocaleString('id-ID')}</b></li>`);
+      if (s.link_tx) baris.push(`<li><span>Transaksi</span><a href="${esc(s.link_tx)}" target="_blank" rel="noopener">${esc(pendek(s.tx))} ↗</a></li>`);
+      if (s.kontrak?.startsWith('http')) baris.push(`<li><span>Kontrak</span><a href="${esc(s.kontrak)}" target="_blank" rel="noopener">SertifikatKTM ↗</a></li>`);
+      $('v-daftar').innerHTML = baris.join('');
+      $('verif').hidden = false;
+      if (s.status === 'menunggu') setTimeout(() => tampilSatu(k), 4000);
+    } catch (e) {
+      salah((e as Error).message);
+    }
+  }
+
+  async function tampilDaftar() {
+    try {
+      const r = await api<any>('/sertifikat');
+      $('daftar').innerHTML = r.sertifikat.length
+        ? r.sertifikat.map((s: any) => `<li><a href="/sertifikat/?k=${esc(s.kode)}"><span class="tanda">${ikon('perisai')}</span>
+            <span class="isi"><b>${esc(s.acara)}</b><small>${esc(s.penyelenggara)} · ${esc(tglPanjang(s.tanggal))}</small></span>
+            ${s.status === 'onchain' ? '<span class="on">on-chain ✓</span>' : ''}</a></li>`).join('')
+        : '<li class="kosong">Belum ada sertifikat. Tap KTM-mu di check-in acara untuk mendapatkannya.</li>';
+      $('daftar').hidden = false;
+    } catch (e) {
+      tanganiGalat(e, salah);
+    }
+  }
+
+  $('bagikan').addEventListener('click', async () => {
+    const url = location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Sertifikat kehadiran', url });
+      else { await navigator.clipboard.writeText(url); $('tersalin').textContent = 'Tautan disalin'; }
+    } catch { /* dibatalkan */ }
+  });
+
+  if (kode) tampilSatu(kode);
+  else tampilDaftar();
+</script>
