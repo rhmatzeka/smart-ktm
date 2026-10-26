@@ -3,22 +3,16 @@ import Dasar from '../layouts/Dasar.astro';
 import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Tanya" nav="tanya">
-  <header class="kepala-chat">
-    <span class="tanda-ktm" aria-hidden="true"><Fragment set:html={ikon('kartu')} /></span>
-    <div>
-      <h1>Asisten KTM</h1>
-      <p>Menjawab dari jadwal dan presensi MyUnpam kamu</p>
-    </div>
-    <button class="hapus-obrolan" id="hapus" type="button" title="Mulai obrolan baru" aria-label="Mulai obrolan baru" hidden>Baru</button>
+  <header class="pita-tanya">
+    <div class="pita-atas"><span>Asisten KTM</span><button class="hapus-obrolan" id="hapus" type="button" hidden>Obrolan baru</button></div>
+    <h1>Tanya soal kuliahmu</h1>
+    <p>Jawaban dari jadwal dan presensi MyUnpam kamu</p>
+    <div class="chip-konteks" id="konteks"><span>Memuat data kamu…</span></div>
   </header>
 
   <section class="isi-chat">
     <!-- Konteks + saran, hanya saat obrolan masih kosong -->
     <div id="kosong">
-      <p class="label-bagian">Hari ini</p>
-      <div class="konteks" id="konteks">
-        <div class="konteks-baris"><span class="redup">Memuat data kamu…</span></div>
-      </div>
       <p class="label-bagian">Coba tanyakan</p>
       <ul class="saran" id="saran"></ul>
     </div>
@@ -34,16 +28,21 @@ import { ikon } from '../lib/ikon';
 </Dasar>
 
 <style is:global>
-  body:has(.kepala-chat) .halaman { background: var(--latar); }
-  .kepala-chat {
-    position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center;
-    padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis);
+  body:has(.pita-tanya) .halaman { background: var(--latar); }
+  .pita-tanya {
+    position: relative; overflow: hidden; color: var(--putih); padding: 14px 16px 16px;
+    border-radius: 0 0 22px 22px; background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
   }
-  .tanda-ktm { width: 36px; height: 36px; border-radius: 12px; background: var(--biru); color: var(--putih); display: grid; place-items: center; flex: none; }
-  .tanda-ktm .ikon { width: 22px; height: 22px; }
-  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
-  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
-  .hapus-obrolan { margin-left: auto; border: 1px solid var(--garis); background: var(--putih); color: var(--teks); font: 700 0.8rem var(--font); padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+  .pita-tanya::after { content: ''; position: absolute; inset: -60% -20%; pointer-events: none; background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%); }
+  .pita-tanya > * { position: relative; z-index: 1; }
+  .pita-tanya .pita-atas { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; opacity: 0.9; min-height: 26px; }
+  .pita-tanya h1 { font-size: 1.35rem; font-weight: 800; margin-top: 8px; }
+  .pita-tanya p { font-size: 0.82rem; opacity: 0.88; }
+  .hapus-obrolan { border: 0; background: rgba(255, 255, 255, 0.18); color: var(--putih); font: 700 0.75rem var(--font); padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+  .chip-konteks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip-konteks span { display: inline-flex; align-items: center; gap: 5px; background: rgba(255, 255, 255, 0.16); border-radius: 8px; padding: 4px 9px; font-size: 0.75rem; font-weight: 600; }
+  .chip-konteks .ikon { width: 13px; height: 13px; }
+  .chip-konteks .merah { background: rgba(229, 72, 77, 0.35); }
 
   .isi-chat { flex: 1; padding: 16px 16px 150px; }
   .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 4px 2px 8px; }
@@ -150,13 +149,12 @@ import { ikon } from '../lib/ikon';
       const b = await api<any>('/beranda');
       const k = b.kelas_berlangsung || b.kelas_berikut || (b.momen === 'malam' ? b.jadwal_besok[0] : null);
       const terlewat = b.presensi.filter((p: any) => p.belum_presensi?.length);
-      const baris: string[] = [];
-      if (k) baris.push(`${ikon('kalender')}<span>${b.kelas_berlangsung ? 'Sekarang' : b.momen === 'malam' ? 'Besok' : 'Berikutnya'}: <b>${esc(k.nama)}</b>, ${k.mulai.replace(':', '.')} di ${esc(k.ruang)}</span>`);
-      else baris.push(`${ikon('kalender')}<span>Tidak ada kelas lagi hari ini</span>`);
       const nTerlewat = terlewat.reduce((n: number, p: any) => n + p.belum_presensi.length, 0);
-      baris.push(`${ikon('peringatan')}<span>${nTerlewat ? `<b class="merah">${nTerlewat} pertemuan</b> terlewat belum presensi` : 'Tidak ada pertemuan yang terlewat'}</span>`);
-      baris.push(`${ikon('tugas')}<span>${b.tugas.length ? `<b>${b.tugas.length} tugas</b>, terdekat ${esc(b.tugas[0].judul)} (${esc(b.tugas[0].sisa)})` : 'Belum ada tugas tercatat'}</span>`);
-      $('konteks').innerHTML = baris.map((x) => `<div class="konteks-baris">${x}</div>`).join('');
+      const chip: string[] = [];
+      chip.push(k ? `<span>${ikon('kalender')}${b.kelas_berlangsung ? 'Sekarang' : b.momen === 'malam' ? 'Besok' : 'Berikutnya'}: ${esc(k.nama.split(' ').slice(0, 3).join(' '))} ${k.mulai.replace(':', '.')}</span>` : `<span>${ikon('kalender')}Tidak ada kelas lagi hari ini</span>`);
+      chip.push(`<span class="${nTerlewat ? 'merah' : ''}">${ikon('peringatan')}${nTerlewat} pertemuan terlewat</span>`);
+      chip.push(`<span>${ikon('tugas')}${b.tugas.length} tugas</span>`);
+      $('konteks').innerHTML = chip.join('');
 
       const saran: [string, string][] = [];
       if (terlewat[0]) saran.push(['peringatan', `${terlewat[0].matkul}: pertemuan ${terlewat[0].belum_presensi.join(', ')} belum presensi, aku harus apa?`]);

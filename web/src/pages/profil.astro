@@ -5,40 +5,37 @@ import { ikon } from '../lib/ikon';
 const panah = ikon('kembali', 'ikon panah');
 ---
 <Dasar judul="Profil" nav="profil">
-  <header class="kepala-chat">
-    <div>
-      <h1>Profil</h1>
-      <p>Akun, KTM, dan data dari MyUnpam</p>
-    </div>
-  </header>
-
-  <section class="isi-profil">
-    <!-- Identitas -->
-    <article class="identitas">
+  <header class="pita-profil">
+    <div class="pita-atas"><span>Universitas Pamulang</span><span>Kartu Tanda Mahasiswa</span></div>
+    <div class="pp-id">
       <span class="foto-profil" id="foto">·</span>
       <div class="identitas-teks">
         <b id="nama">Memuat…</b>
         <span id="nim"></span>
         <span id="prodi"></span>
       </div>
-    </article>
-    <ul class="daftar-info">
-      <li><Fragment set:html={ikon('nfc')} /><span>KTM fisik</span><b id="ktm-status">–</b></li>
-      <li><Fragment set:html={ikon('sekolah')} /><span>Kampus</span><b>Universitas Pamulang</b></li>
-    </ul>
+    </div>
+    <div class="pp-angka">
+      <div><b id="a-hadir">–</b><span>Kehadiran</span></div>
+      <div><b id="a-sks">–</b><span>SKS</span></div>
+      <div><b id="a-chain">–</b><span>On-chain</span></div>
+    </div>
+  </header>
 
+  <section class="isi-profil">
     <!-- Aksi -->
     <p class="label-bagian">Akun</p>
     <ul class="daftar-aksi">
       <li><a href="/sinkron/"><Fragment set:html={ikon('kalender')} /><span><b>Sinkron jadwal MyUnpam</b><small>Ambil jadwal, presensi, dan foto terbaru</small></span><Fragment set:html={panah} /></a></li>
-      <li><button type="button" id="buka-ktm"><Fragment set:html={ikon('kartu')} /><span><b>KTM digital</b><small>Tampilkan kartu di layar</small></span><Fragment set:html={panah} /></button></li>
+      <li><button type="button" id="buka-ktm"><Fragment set:html={ikon('kartu')} /><span><b>KTM digital</b><small>Tampilkan kartu di layar · <span id="ktm-status"></span></small></span><Fragment set:html={panah} /></button></li>
       <li class="ktm-digital" id="ktm-digital" hidden><Kartu /></li>
+      <li><button type="button" id="buka-publik"><Fragment set:html={ikon('orang')} /><span><b>Profil publik</b><small id="ringkas-publik">Bio, GitHub, dan portofolio di kartu nama</small></span><Fragment set:html={panah} /></button></li>
       <li><a href="/verifikasi/"><Fragment set:html={ikon('rantai')} /><span><b>Cek bukti kehadiran</b><small>Lihat catatan presensi di blockchain</small></span><Fragment set:html={panah} /></a></li>
     </ul>
 
-    <!-- Profil publik -->
-    <p class="label-bagian">Profil publik, terlihat saat KTM-mu ditap orang lain</p>
-    <form class="blok-form" id="form">
+    <!-- Profil publik (dibuka dari daftar Akun) -->
+    <form class="blok-form" id="form" hidden>
+      <p class="judul-form">Profil publik, terlihat saat KTM-mu ditap orang lain</p>
       <label for="bio">Bio singkat</label>
       <textarea id="bio" name="bio" rows="2" maxlength="160" placeholder="Contoh: Suka web3, IoT, dan AI agent"></textarea>
       <div class="dua-kolom">
@@ -65,14 +62,27 @@ const panah = ikon('kembali', 'ikon panah');
 
 <style is:global>
   body:has(.isi-profil) .halaman { background: var(--latar); }
-  .kepala-chat { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis); }
-  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
-  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
-
+  .pita-profil {
+    position: relative; overflow: hidden; color: var(--putih); padding: 14px 16px 16px;
+    border-radius: 0 0 22px 22px; background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
+  }
+  .pita-profil::after { content: ''; position: absolute; inset: -60% -20%; pointer-events: none; background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%); }
+  .pita-profil > * { position: relative; z-index: 1; }
+  .pita-profil .pita-atas { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.85; }
+  .pp-id { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+  .pita-profil .foto-profil { border: 2px solid rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.18); color: var(--putih); }
+  .pita-profil .identitas-teks span { color: rgba(255, 255, 255, 0.9); }
+  .pp-angka { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .pp-angka div { background: rgba(255, 255, 255, 0.16); border-radius: 11px; padding: 8px; text-align: center; }
+  .pp-angka b { display: block; font-size: 1.1rem; font-weight: 800; }
+  .pp-angka span { font-size: 0.7rem; opacity: 0.85; }
+  .judul-form { font-size: 0.8rem; font-weight: 700; color: var(--teks-2); margin-top: 10px; }
+  .daftar-info { border-top: 1px solid var(--garis) !important; border-radius: 16px !important; margin-top: 2px; }
+  .daftar-info li:first-child { border-top: 0; }
   .isi-profil { flex: 1; padding: 14px 16px 100px; }
   .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 18px 2px 8px; }
 
-  .identitas { display: flex; gap: 12px; align-items: center; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px 16px 0 0; padding: 14px; }
+  .identitas-tidak-dipakai { display: flex; gap: 12px; align-items: center; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px 16px 0 0; padding: 14px; }
   .foto-profil { width: 56px; height: 66px; border-radius: 10px; overflow: hidden; flex: none; display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; background: var(--biru-pudar); color: var(--biru); }
   .foto-profil img { width: 100%; height: 100%; object-fit: cover; }
   .identitas-teks { display: flex; flex-direction: column; min-width: 0; }
@@ -97,7 +107,7 @@ const panah = ikon('kembali', 'ikon panah');
   .daftar-aksi .panah { transform: rotate(180deg); color: var(--teks-2); width: 16px; height: 16px; }
   .ktm-digital { padding: 12px 14px; }
 
-  .blok-form { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 4px 14px 14px; }
+  .blok-form { margin-top: 12px; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 4px 14px 14px; }
   .blok-form label { font-size: 0.8rem; margin: 10px 0 5px; }
   .blok-form textarea { min-height: 0; }
   .dua-kolom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -128,7 +138,7 @@ const panah = ikon('kembali', 'ikon panah');
       $('nama').textContent = s.nama;
       $('nim').textContent = s.nim;
       $('prodi').textContent = [s.prodi || (s.peran === 'dosen' ? 'Dosen' : ''), s.semester && `Semester ${s.semester}`].filter(Boolean).join(' · ');
-      $('ktm-status').textContent = s.ktm ? 'Tertaut' : 'Belum tertaut';
+      $('ktm-status').textContent = s.ktm ? 'KTM fisik tertaut' : 'KTM fisik belum tertaut';
       const isi = (k: string, v: string) => (document.querySelector(`[data-isi=${k}]`)!.textContent = v);
       isi('nama', s.nama);
       isi('nim', s.nim);
@@ -137,9 +147,25 @@ const panah = ikon('kembali', 'ikon panah');
       $<HTMLInputElement>('github').value = s.github;
       $<HTMLInputElement>('portofolio').value = s.portofolio;
       $<HTMLInputElement>('publik').checked = s.publik;
+      const isiPublik = [s.bio && 'bio', s.github && 'GitHub', s.portofolio && 'portofolio'].filter(Boolean);
+      $('ringkas-publik').textContent = isiPublik.length ? `Terisi: ${isiPublik.join(', ')}` : 'Belum diisi: bio, GitHub, portofolio';
     })
     .catch((e) => tanganiGalat(e, salah));
 
+  $('buka-publik').addEventListener('click', () => {
+    const f = $('form');
+    f.hidden = !f.hidden;
+    if (!f.hidden) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  Promise.all([api<any>('/beranda'), api<any>('/jadwal')])
+    .then(([b, j]) => {
+      const hadir = b.presensi.reduce((n: number, p: any) => n + p.hadir, 0);
+      const total = b.presensi.reduce((n: number, p: any) => n + p.total, 0);
+      $('a-hadir').textContent = total ? `${Math.round((hadir / total) * 100)}%` : '–';
+      $('a-sks').textContent = String(j.kelas.reduce((n: number, k: any) => n + (k.sks || 0), 0));
+      $('a-chain').textContent = String(b.onchain);
+    })
+    .catch(() => {});
   $('buka-ktm').addEventListener('click', () => ($('ktm-digital').hidden = !$('ktm-digital').hidden));
 
   $<HTMLFormElement>('form').addEventListener('submit', async (ev) => {
