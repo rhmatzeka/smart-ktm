@@ -3,87 +3,165 @@ import Dasar from '../layouts/Dasar.astro';
 import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Kenalan" nav="kenalan">
-  <header class="atas-putih">
-    <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
-    <h1 class="sapa-besar">Kenalan</h1>
-    <p class="sapa-kecil">Tempelkan KTM teman untuk melihat profil publiknya.</p>
+  <header class="kepala-chat">
+    <span class="tanda-ktm" aria-hidden="true"><Fragment set:html={ikon('nfc')} /></span>
+    <div>
+      <h1>Kenalan</h1>
+      <p>Tukar profil cukup dengan tap KTM</p>
+    </div>
   </header>
 
-  <section class="zona-biru">
-    <div class="radar" id="radar">
-      <span></span><span></span>
-      <div class="radar-ikon"><Fragment set:html={ikon('nfc')} /></div>
+  <section class="isi-kenalan">
+    <!-- Aksi utama -->
+    <div class="kotak-aksi">
+      <button class="tombol" id="mulai" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM teman</button>
+      <div class="menunggu" id="tunggu" hidden>
+        <span class="denyut" aria-hidden="true"></span>
+        <div><b>Tempelkan KTM teman ke belakang HP</b><span>Tahan sebentar sampai HP bergetar.</span></div>
+        <button class="tautan" id="berhenti" type="button">Batal</button>
+      </div>
+      <div class="info-nfc" id="tanpa-nfc" hidden>
+        <p id="tanpa-nfc-teks">Membaca KTM butuh Chrome di HP Android dengan NFC menyala.</p>
+        <a class="tombol garis-biru" id="ke-chrome" href="#" hidden>Buka di Chrome</a>
+      </div>
     </div>
-    <button class="tombol kuning" id="mulai" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM teman</button>
-    <p class="ket-tunggu" id="tunggu" hidden>Menunggu kartu… tempel di belakang HP.</p>
 
-    <article class="kartu profil-publik" id="profil" hidden>
-      <div class="avatar besar" id="inisial"></div>
-      <h2 id="nama"></h2>
-      <p class="redup" id="prodi"></p>
+    <!-- Profil teman yang baru ditap -->
+    <article class="profil-teman" id="profil" hidden>
+      <div class="profil-atas">
+        <div class="foto-inisial" id="inisial"></div>
+        <div><h2 id="nama"></h2><p id="prodi"></p></div>
+      </div>
       <p class="bio" id="bio"></p>
       <ul class="info" id="tautan"></ul>
       <ul class="lencana" id="lencana"></ul>
     </article>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
 
-    <p class="catatan-privasi"><Fragment set:html={ikon('perisai')} /> Jadwal, tugas, dan kehadiran tidak pernah ditampilkan ke orang lain.</p>
-    <p id="pesan" class="galat" role="alert"></p>
+    <!-- Kartu sendiri -->
+    <p class="label-bagian">Kartu kamu, seperti yang dilihat orang lain</p>
+    <article class="profil-teman sendiri" id="sendiri">
+      <div class="profil-atas">
+        <div class="foto-inisial" id="s-inisial">·</div>
+        <div><h2 id="s-nama">Memuat…</h2><p id="s-prodi"></p></div>
+      </div>
+      <p class="bio" id="s-bio"></p>
+      <ul class="info" id="s-tautan"></ul>
+      <div class="kaki-sendiri"><span id="s-status"></span><a href="/profil/">Ubah</a></div>
+    </article>
+
+    <!-- Riwayat di perangkat ini -->
+    <div id="riwayat-bagian" hidden>
+      <p class="label-bagian">Baru kamu temui</p>
+      <ul class="riwayat" id="riwayat"></ul>
+    </div>
   </section>
 </Dasar>
 
 <style is:global>
-  .radar { position: relative; width: 150px; height: 150px; margin: 4px auto 18px; display: grid; place-items: center; }
-  .radar span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); }
-  .radar span:nth-child(2) { inset: 24px; }
-  .radar.hidup span { animation: denyut 2s ease-out infinite; border-color: var(--kuning); }
-  .radar.hidup span:nth-child(2) { animation-delay: 1s; }
-  @keyframes denyut { from { transform: scale(0.6); opacity: 1; } to { transform: scale(1.2); opacity: 0; } }
-  .radar-ikon { width: 74px; height: 74px; border-radius: 50%; background: var(--putih); color: var(--biru); display: grid; place-items: center; box-shadow: var(--bayang); }
-  .radar-ikon .ikon { width: 34px; height: 34px; }
-  .ket-tunggu { text-align: center; margin-top: 12px; color: rgba(255, 255, 255, 0.85); }
-  .profil-publik { margin-top: 18px; text-align: center; }
-  .avatar.besar { width: 88px; height: 88px; font-size: 2.2rem; margin: 0 auto 12px; }
-  .profil-publik h2 { font-size: 1.4rem; font-weight: 800; }
-  .bio { margin: 10px 0 4px; }
-  .info { list-style: none; margin: 14px 0 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 8px; }
-  .info li { display: flex; gap: 10px; align-items: center; background: var(--latar); padding: 10px 12px; border-radius: 14px; }
-  .info a { color: var(--biru); font-weight: 700; margin-left: auto; overflow-wrap: anywhere; }
-  .lencana { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .lencana li { background: #fef3c7; color: #92400e; border-radius: 99px; padding: 6px 12px; font-weight: 700; font-size: 0.8rem; }
-  .catatan-privasi { display: flex; gap: 8px; align-items: flex-start; font-size: 0.82rem; color: rgba(255, 255, 255, 0.8); margin-top: 18px; }
-  .catatan-privasi .ikon { width: 16px; height: 16px; margin-top: 2px; }
+  body:has(.isi-kenalan) .halaman { background: var(--latar); }
+  .kepala-chat { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 16px 18px; background: var(--putih); border-bottom: 1px solid var(--garis); }
+  .tanda-ktm { width: 40px; height: 40px; border-radius: 12px; background: var(--biru); color: var(--putih); display: grid; place-items: center; flex: none; }
+  .tanda-ktm .ikon { width: 22px; height: 22px; }
+  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
+  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
+
+  .isi-kenalan { flex: 1; padding: 16px 16px 110px; }
+  .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 20px 2px 8px; }
+
+  .kotak-aksi { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 14px; }
+  .menunggu { display: flex; gap: 12px; align-items: center; }
+  .menunggu b { display: block; font-size: 0.9rem; }
+  .menunggu span { font-size: 0.8rem; color: var(--teks-2); }
+  .menunggu .tautan { margin-left: auto; color: var(--teks-2); font-size: 0.85rem; }
+  .denyut { width: 14px; height: 14px; border-radius: 50%; background: var(--biru); flex: none; animation: denyut 1.4s ease-out infinite; }
+  @keyframes denyut { 0% { box-shadow: 0 0 0 0 rgba(23, 71, 201, 0.45); } 100% { box-shadow: 0 0 0 14px rgba(23, 71, 201, 0); } }
+  .info-nfc p { font-size: 0.85rem; color: var(--teks-2); }
+  .info-nfc .tombol { margin-top: 10px; }
+  .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+
+  .profil-teman { margin-top: 12px; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 16px; }
+  .profil-teman.sendiri { margin-top: 0; }
+  .profil-atas { display: flex; gap: 12px; align-items: center; }
+  .foto-inisial { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; background: var(--biru-pudar); color: var(--biru); flex: none; overflow: hidden; }
+  .foto-inisial img { width: 100%; height: 100%; object-fit: cover; }
+  .profil-teman h2 { font-size: 1.05rem; font-weight: 800; }
+  .profil-teman .profil-atas p { font-size: 0.8rem; color: var(--teks-2); }
+  .bio { margin-top: 10px; font-size: 0.88rem; }
+  .bio:empty { display: none; }
+  .ajakan { font-size: 0.82rem; color: var(--teks-2); }
+  .ajakan a { color: var(--biru); font-weight: 700; }
+  .info { list-style: none; margin: 10px 0 0; padding: 0; }
+  .info:empty { display: none; }
+  .info li { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #eef1f6; font-size: 0.85rem; }
+  .info li .ikon { width: 16px; height: 16px; color: var(--teks-2); }
+  .info a { color: var(--biru); font-weight: 700; margin-left: auto; overflow-wrap: anywhere; text-decoration: none; }
+  .lencana { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .lencana:empty { display: none; }
+  .lencana li { border: 1px solid var(--garis); border-radius: 8px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; color: var(--teks-2); }
+  .kaki-sendiri { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #eef1f6; font-size: 0.8rem; color: var(--teks-2); }
+  .kaki-sendiri a { color: var(--biru); font-weight: 700; text-decoration: none; }
+
+  .riwayat { list-style: none; margin: 0; padding: 0; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; }
+  .riwayat li { display: flex; gap: 10px; align-items: center; padding: 10px 14px; }
+  .riwayat li + li { border-top: 1px solid #eef1f6; }
+  .riwayat .foto-inisial { width: 36px; height: 36px; border-radius: 11px; font-size: 0.9rem; }
+  .riwayat b { display: block; font-size: 0.88rem; }
+  .riwayat span { font-size: 0.75rem; color: var(--teks-2); }
+  .riwayat time { margin-left: auto; font-size: 0.75rem; color: var(--teks-2); white-space: nowrap; }
 </style>
 
 <script>
-  import { api, esc } from '../lib/api';
+  import { api, esc, tanganiGalat } from '../lib/api';
   import { ikon } from '../lib/ikon';
-  import { bacaKtm, nfcDidukung, pesanGalatNfc } from '../lib/nfc';
+  import { bacaKtm, diAndroid, diBrave, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
 
   const $ = (id: string) => document.getElementById(id)!;
-  const salah = (t: string) => ($('pesan').textContent = t);
+  const KUNCI = 'smartktm.kenalan';
+  let berhenti: Berhenti | null = null;
+
+  function salah(t: string) {
+    $('pesan').textContent = t;
+    $('pesan').hidden = !t;
+  }
+
+  const inisial = (nama: string) => nama.split(/\s+/).slice(0, 2).map((k) => k.charAt(0).toUpperCase()).join('');
+  const tautan = (p: any) => [
+    p.github && `<li>${ikon('kode')}GitHub<a href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
+    p.portofolio && `<li>${ikon('tautan')}Portofolio<a href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${esc(p.portofolio)}</a></li>`,
+  ].filter(Boolean).join('');
+
+  // Riwayat orang yang ditap, hanya di perangkat ini.
+  function bacaRiwayat(): any[] {
+    try { return JSON.parse(localStorage.getItem(KUNCI) || '[]'); } catch { return []; }
+  }
+  function tampilRiwayat() {
+    const r = bacaRiwayat();
+    $('riwayat-bagian').hidden = !r.length;
+    $('riwayat').innerHTML = r
+      .map((o) => `<li><div class="foto-inisial">${esc(inisial(o.nama))}</div><div><b>${esc(o.nama)}</b><span>${esc(o.prodi || 'Profil disembunyikan')}</span></div>
+        <time>${new Date(o.waktu).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</time></li>`)
+      .join('');
+  }
+  function catatRiwayat(p: any) {
+    const r = bacaRiwayat().filter((o) => o.nama !== p.nama);
+    r.unshift({ nama: p.nama, prodi: p.privat ? '' : p.prodi, waktu: Date.now() });
+    try { localStorage.setItem(KUNCI, JSON.stringify(r.slice(0, 10))); } catch { /* abaikan */ }
+    tampilRiwayat();
+  }
 
   async function tampilkan(uid: string) {
     salah('');
     try {
       const p = await api<any>('/kenalan', { uid });
       $('profil').hidden = false;
-      $('inisial').textContent = p.nama.charAt(0).toUpperCase();
+      $('inisial').textContent = inisial(p.nama);
       $('nama').textContent = p.nama;
-      if (p.privat) {
-        $('prodi').textContent = 'Profil ini disembunyikan pemiliknya.';
-        $('bio').textContent = '';
-        $('tautan').innerHTML = '';
-        $('lencana').innerHTML = '';
-        return;
-      }
-      $('prodi').textContent = `${p.prodi}, ${p.kampus}`;
-      $('bio').textContent = p.bio;
-      const tautan = [
-        p.github && `<li><span class="titik-ikon t-ungu">${ikon('kode')}</span>GitHub<a href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
-        p.portofolio && `<li><span class="titik-ikon t-biru">${ikon('tautan')}</span>Portofolio<a href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${esc(p.portofolio)}</a></li>`,
-      ].filter(Boolean);
-      $('tautan').innerHTML = tautan.join('');
-      $('lencana').innerHTML = p.lencana.map((l: string) => `<li>🏅 ${esc(l)}</li>`).join('');
+      $('prodi').textContent = p.privat ? 'Profil ini disembunyikan pemiliknya.' : `${p.prodi}, ${p.kampus}`;
+      $('bio').textContent = p.privat ? '' : p.bio;
+      $('tautan').innerHTML = p.privat ? '' : tautan(p);
+      $('lencana').innerHTML = p.privat ? '' : p.lencana.map((l: string) => `<li>${esc(l)}</li>`).join('');
+      catatRiwayat(p);
       $('profil').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
       $('profil').hidden = true;
@@ -91,18 +169,44 @@ import { ikon } from '../lib/ikon';
     }
   }
 
+  function siaga(menunggu: boolean) {
+    $('mulai').hidden = menunggu;
+    $('tunggu').hidden = !menunggu;
+  }
+
   $('mulai').addEventListener('click', async () => {
     try {
-      await bacaKtm(tampilkan, salah);
-      $('mulai').hidden = true;
-      $('tunggu').hidden = false;
-      $('radar').classList.add('hidup');
+      berhenti = await bacaKtm(tampilkan, salah);
+      siaga(true);
     } catch (e) {
       salah(pesanGalatNfc(e));
     }
   });
+  $('berhenti').addEventListener('click', () => { berhenti?.(); berhenti = null; siaga(false); });
+
   if (!nfcDidukung()) {
-    ($('mulai') as HTMLButtonElement).disabled = true;
-    salah('Fitur ini butuh Chrome di Android dengan NFC menyala.');
+    $('mulai').hidden = true;
+    $('tanpa-nfc').hidden = false;
+    if (diAndroid()) {
+      ($('ke-chrome') as HTMLAnchorElement).href = tautanChrome();
+      $('ke-chrome').hidden = false;
+      if (diBrave()) $('tanpa-nfc-teks').textContent = 'Brave tidak bisa membaca NFC dari web. Buka halaman ini di Chrome untuk tap KTM teman.';
+    }
   }
+
+  // Pratinjau kartu sendiri
+  api<any>('/saya')
+    .then((s) => {
+      $('s-inisial').textContent = inisial(s.nama);
+      $('s-nama').textContent = s.nama;
+      $('s-prodi').textContent = `${s.prodi || 'Dosen'}, Universitas Pamulang`;
+      $('s-bio').textContent = s.bio || '';
+      if (!s.bio && !s.github && !s.portofolio) {
+        $('s-bio').innerHTML = '<span class="ajakan">Belum ada bio atau link. <a href="/profil/">Tambahkan GitHub atau portofolio</a> supaya teman bisa langsung mengikutimu.</span>';
+      }
+      $('s-tautan').innerHTML = tautan(s);
+      $('s-status').textContent = s.publik ? 'Ditampilkan saat KTM-mu ditap' : 'Disembunyikan dari orang lain';
+    })
+    .catch((e) => tanganiGalat(e, () => {}));
+  tampilRiwayat();
 </script>
