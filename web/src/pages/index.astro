@@ -3,13 +3,13 @@ import Dasar from '../layouts/Dasar.astro';
 import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Masuk">
-  <section class="masuk">
-    <header class="kepala-masuk">
-      <p class="wordmark"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
-      <h1>Masuk</h1>
-      <p class="redup">Kartu mahasiswamu adalah kuncinya. Tap KTM, atau pakai NIM dan PIN.</p>
-    </header>
+  <header class="pita-masuk">
+    <div class="pita-atas"><span>Universitas Pamulang</span><span>Smart KTM</span></div>
+    <h1>Masuk</h1>
+    <p>Tap KTM, atau pakai NIM dan PIN</p>
+  </header>
 
+  <section class="kartu-masuk">
     <!-- Sudah pernah masuk di perangkat ini -->
     <a class="lanjut" id="lanjut" href="/beranda/" hidden>
       <span class="lanjut-foto" id="lanjut-foto">·</span>
@@ -18,22 +18,19 @@ import { ikon } from '../lib/ikon';
     </a>
 
     <!-- Tap KTM -->
-    <div class="blok" id="awal">
+    <div id="awal">
       <div class="tap-baris">
         <div class="ktm-mini" aria-hidden="true"><span class="chip-mini"></span><span class="gel-mini"><Fragment set:html={ikon('nfc')} /></span></div>
-        <div class="tap-teks">
-          <b>Tap KTM</b>
-          <span>Tempel kartu ke belakang HP. Hanya nomor seri yang dibaca, data parkir aman.</span>
-        </div>
+        <div class="tap-teks"><b>Tap KTM</b><span>Hanya nomor seri yang dibaca, data parkir di kartu aman.</span></div>
       </div>
       <button class="tombol" id="mulai-tap" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM</button>
       <div class="info-nfc" id="tanpa-nfc" hidden>
-        <p id="tanpa-nfc-teks">Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM di bawah.</p>
+        <p id="tanpa-nfc-teks">Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM.</p>
         <a class="tombol garis-biru" id="ke-chrome" href="#" hidden>Buka di Chrome</a>
       </div>
     </div>
 
-    <div class="blok" id="menunggu" hidden>
+    <div id="menunggu" hidden>
       <div class="tap-baris">
         <span class="denyut" aria-hidden="true"></span>
         <div class="tap-teks"><b>Tempelkan KTM ke belakang HP</b><span>Tahan sebentar sampai HP bergetar.</span></div>
@@ -42,7 +39,7 @@ import { ikon } from '../lib/ikon';
     </div>
 
     <!-- KTM terdaftar: PIN -->
-    <form class="blok" id="form-pin" hidden>
+    <form id="form-pin" hidden>
       <p class="judul-blok">Halo, <span id="pin-nama"></span>. Masukkan PIN.</p>
       <label for="pin">PIN 6 angka</label>
       <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
@@ -51,7 +48,7 @@ import { ikon } from '../lib/ikon';
     </form>
 
     <!-- KTM baru: daftar -->
-    <form class="blok" id="form-daftar" hidden>
+    <form id="form-daftar" hidden>
       <p class="judul-blok">✓ KTM terbaca. Daftar sekali saja.</p>
       <p class="redup kecil">Kalau NIM kamu sudah ada di sistem, isi NIM dan PIN saja.</p>
       <label for="d-nim">NIM</label>
@@ -68,9 +65,9 @@ import { ikon } from '../lib/ikon';
 
     <p id="pesan" class="pesan-galat" role="alert" hidden></p>
 
-    <!-- Masuk pakai NIM: selalu terlihat, dekat atas supaya tidak tertutup keyboard -->
-    <form class="blok" id="form-nim">
-      <p class="judul-blok">Masuk pakai NIM</p>
+    <!-- Masuk pakai NIM: di kartu yang sama, dekat atas supaya tidak tertutup keyboard -->
+    <form id="form-nim">
+      <p class="atau">atau pakai NIM</p>
       <div class="dua-kolom">
         <div>
           <label for="m-nim">NIM atau NIDN</label>
@@ -83,54 +80,62 @@ import { ikon } from '../lib/ikon';
       </div>
       <button class="tombol garis-biru" type="submit">Masuk</button>
     </form>
-
-    <p class="catatan-kecil">Smart KTM tidak menulis apa pun ke kartu atau ke sistem kampus.</p>
   </section>
+  <p class="catatan-kecil">Smart KTM tidak menulis apa pun ke kartu atau ke sistem kampus.</p>
 </Dasar>
 
 <style is:global>
-  body:has(.masuk) .halaman { background: var(--latar); }
-  .masuk { padding: 18px 16px 32px; display: flex; flex-direction: column; gap: 12px; }
-  .kepala-masuk { margin-bottom: 4px; }
-  .wordmark { display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--biru); font-size: 0.95rem; }
-  .wordmark .ikon { width: 20px; height: 20px; }
-  .kepala-masuk h1 { font-size: 1.6rem; font-weight: 800; margin-top: 14px; }
-  .kepala-masuk p.redup { font-size: 0.9rem; margin-top: 2px; }
+  body:has(.kartu-masuk) .halaman { background: var(--latar); }
+  .pita-masuk {
+    position: relative; overflow: hidden; color: var(--putih); padding: 16px 18px 60px;
+    border-radius: 0 0 26px 26px;
+    background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
+  }
+  .pita-masuk::after {
+    content: ''; position: absolute; inset: -60% -20%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%);
+  }
+  .pita-masuk .pita-atas { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.85; position: relative; z-index: 1; }
+  .pita-masuk h1 { font-size: 1.7rem; font-weight: 800; margin-top: 18px; position: relative; z-index: 1; }
+  .pita-masuk p { font-size: 0.88rem; opacity: 0.9; position: relative; z-index: 1; }
 
-  .blok { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 14px; scroll-margin: 16px; }
-  .blok .tombol { margin-top: 12px; }
-  .blok .tautan { display: block; margin: 6px auto 0; color: var(--teks-2); font-size: 0.85rem; }
+  .kartu-masuk {
+    position: relative; z-index: 2; margin: -42px 14px 0; padding: 14px;
+    background: var(--putih); border-radius: 18px; box-shadow: 0 14px 30px -20px rgba(15, 54, 153, 0.5);
+    scroll-margin: 12px;
+  }
+  .kartu-masuk .tombol { margin-top: 12px; }
+  .kartu-masuk .tautan { display: block; margin: 6px auto 0; color: var(--teks-2); font-size: 0.85rem; }
   .judul-blok { font-weight: 800; font-size: 0.98rem; margin-bottom: 2px; }
-  .blok label { margin-top: 10px; font-size: 0.82rem; }
+  .kartu-masuk label { margin-top: 10px; font-size: 0.8rem; }
   .dua-kolom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+  .atau { display: flex; align-items: center; gap: 10px; margin: 16px 0 2px; font-size: 0.75rem; color: var(--teks-2); }
+  .atau::before, .atau::after { content: ''; flex: 1; height: 1px; background: var(--garis); }
 
   .tap-baris { display: flex; gap: 12px; align-items: center; }
   .tap-teks { flex: 1; min-width: 0; }
   .tap-teks b { display: block; font-size: 0.95rem; }
   .tap-teks span { font-size: 0.8rem; color: var(--teks-2); }
   .tap-baris .tautan { margin: 0 0 0 auto; }
-  .ktm-mini {
-    width: 76px; aspect-ratio: 1.586; border-radius: 9px; flex: none; position: relative;
-    background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
-  }
-  .chip-mini { position: absolute; left: 9px; top: 15px; width: 14px; height: 11px; border-radius: 3px; background: linear-gradient(135deg, #fde68a, #f59e0b); }
-  .gel-mini { position: absolute; right: 6px; top: 5px; color: rgba(255, 255, 255, 0.9); }
-  .gel-mini .ikon { width: 14px; height: 14px; }
+  .ktm-mini { width: 64px; aspect-ratio: 1.586; border-radius: 8px; flex: none; position: relative; background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua)); }
+  .chip-mini { position: absolute; left: 8px; top: 13px; width: 12px; height: 9px; border-radius: 2px; background: linear-gradient(135deg, #fde68a, #f59e0b); }
+  .gel-mini { position: absolute; right: 5px; top: 4px; color: rgba(255, 255, 255, 0.9); }
+  .gel-mini .ikon { width: 12px; height: 12px; }
   .denyut { width: 14px; height: 14px; border-radius: 50%; background: var(--biru); flex: none; margin: 0 6px; animation: denyut 1.4s ease-out infinite; }
   @keyframes denyut { 0% { box-shadow: 0 0 0 0 rgba(23, 71, 201, 0.45); } 100% { box-shadow: 0 0 0 14px rgba(23, 71, 201, 0); } }
-  .info-nfc { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f6; }
-  .info-nfc p { font-size: 0.82rem; color: var(--teks-2); }
+  .info-nfc { margin-top: 10px; }
+  .info-nfc p { font-size: 0.8rem; color: var(--teks-2); background: var(--latar); padding: 10px 12px; border-radius: 10px; }
 
-  .lanjut { display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: var(--biru); color: var(--putih); border-radius: 16px; text-decoration: none; }
-  .lanjut-foto { width: 42px; height: 42px; border-radius: 12px; overflow: hidden; flex: none; display: grid; place-items: center; font-weight: 800; background: rgba(255, 255, 255, 0.2); }
+  .lanjut { display: flex; gap: 12px; align-items: center; padding: 10px 12px; margin-bottom: 14px; background: var(--latar); color: var(--teks); border-radius: 14px; text-decoration: none; }
+  .lanjut-foto { width: 40px; height: 40px; border-radius: 11px; overflow: hidden; flex: none; display: grid; place-items: center; font-weight: 800; background: var(--biru-pudar); color: var(--biru); }
   .lanjut-foto img { width: 100%; height: 100%; object-fit: cover; }
   .lanjut-teks { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .lanjut-teks b { font-size: 0.95rem; }
-  .lanjut-teks > span { font-size: 0.78rem; opacity: 0.85; }
-  .lanjut-panah { transform: rotate(180deg); display: grid; }
+  .lanjut-teks b { font-size: 0.9rem; }
+  .lanjut-teks > span { font-size: 0.75rem; color: var(--teks-2); }
+  .lanjut-panah { transform: rotate(180deg); display: grid; color: var(--biru); }
 
-  .pesan-galat { padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
-  .catatan-kecil { text-align: center; font-size: 0.75rem; color: var(--teks-2); margin-top: 4px; }
+  .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+  .catatan-kecil { text-align: center; font-size: 0.75rem; color: var(--teks-2); margin: 16px 16px 28px; }
 </style>
 
 <script>
@@ -200,7 +205,7 @@ import { ikon } from '../lib/ikon';
   // Kolom yang sedang diisi digeser ke area terlihat saat keyboard muncul.
   document.addEventListener('focusin', (e) => {
     const el = e.target as HTMLElement;
-    if (el.matches('input')) setTimeout(() => el.closest('.blok')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
+    if (el.matches('input')) setTimeout(() => el.closest('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300);
   });
 
   function kirim(form: HTMLFormElement, jalan: (d: Record<string, string>) => Promise<void>) {

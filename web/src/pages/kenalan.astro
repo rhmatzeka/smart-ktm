@@ -12,6 +12,18 @@ import { ikon } from '../lib/ikon';
   </header>
 
   <section class="isi-kenalan">
+    <!-- Kartu nama sendiri -->
+    <article class="kartu-nama" id="sendiri">
+      <div class="kn-atas"><span>Kartu nama digital</span><a href="/profil/">Ubah</a></div>
+      <div class="kn-id">
+        <span class="kn-foto" id="s-inisial">·</span>
+        <div><b id="s-nama">Memuat…</b><span id="s-prodi"></span><span>Universitas Pamulang</span></div>
+      </div>
+      <p class="kn-bio" id="s-bio"></p>
+      <div class="kn-link" id="s-tautan"></div>
+      <p class="kn-status" id="s-status"></p>
+    </article>
+
     <!-- Aksi utama -->
     <div class="kotak-aksi">
       <button class="tombol" id="mulai" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM teman</button>
@@ -21,34 +33,26 @@ import { ikon } from '../lib/ikon';
         <button class="tautan" id="berhenti" type="button">Batal</button>
       </div>
       <div class="info-nfc" id="tanpa-nfc" hidden>
-        <p id="tanpa-nfc-teks">Membaca KTM butuh Chrome di HP Android dengan NFC menyala.</p>
+        <p id="tanpa-nfc-teks">Membaca KTM teman butuh Chrome di HP Android dengan NFC menyala.</p>
         <a class="tombol garis-biru" id="ke-chrome" href="#" hidden>Buka di Chrome</a>
       </div>
     </div>
-
-    <!-- Profil teman yang baru ditap -->
-    <article class="profil-teman" id="profil" hidden>
-      <div class="profil-atas">
-        <div class="foto-inisial" id="inisial"></div>
-        <div><h2 id="nama"></h2><p id="prodi"></p></div>
-      </div>
-      <p class="bio" id="bio"></p>
-      <ul class="info" id="tautan"></ul>
-      <ul class="lencana" id="lencana"></ul>
-    </article>
     <p id="pesan" class="pesan-galat" role="alert" hidden></p>
 
-    <!-- Kartu sendiri -->
-    <p class="label-bagian">Kartu kamu, seperti yang dilihat orang lain</p>
-    <article class="profil-teman sendiri" id="sendiri">
-      <div class="profil-atas">
-        <div class="foto-inisial" id="s-inisial">·</div>
-        <div><h2 id="s-nama">Memuat…</h2><p id="s-prodi"></p></div>
-      </div>
-      <p class="bio" id="s-bio"></p>
-      <ul class="info" id="s-tautan"></ul>
-      <div class="kaki-sendiri"><span id="s-status"></span><a href="/profil/">Ubah</a></div>
-    </article>
+    <!-- Kartu nama teman yang baru ditap -->
+    <div id="profil" hidden>
+      <p class="label-bagian">Baru saja ditap</p>
+      <article class="kartu-nama teman">
+        <div class="kn-atas"><span>Kartu nama digital</span><span>Smart KTM</span></div>
+        <div class="kn-id">
+          <span class="kn-foto" id="inisial"></span>
+          <div><b id="nama"></b><span id="prodi"></span></div>
+        </div>
+        <p class="kn-bio" id="bio"></p>
+        <div class="kn-link" id="tautan"></div>
+        <div class="kn-lencana" id="lencana"></div>
+      </article>
+    </div>
 
     <!-- Riwayat di perangkat ini -->
     <div id="riwayat-bagian" hidden>
@@ -69,7 +73,29 @@ import { ikon } from '../lib/ikon';
   .isi-kenalan { flex: 1; padding: 16px 16px 110px; }
   .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 20px 2px 8px; }
 
-  .kotak-aksi { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 14px; }
+  .kartu-nama {
+    position: relative; overflow: hidden; color: var(--putih); border-radius: 18px; padding: 14px 16px;
+    background: linear-gradient(135deg, #3b7bf6, var(--biru) 60%, var(--biru-tua));
+  }
+  .kartu-nama::after { content: ''; position: absolute; inset: -60% -20%; pointer-events: none; background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%); }
+  .kartu-nama > * { position: relative; z-index: 1; }
+  .kn-atas { display: flex; justify-content: space-between; font-size: 0.72rem; opacity: 0.85; }
+  .kn-atas a { color: inherit; font-weight: 700; }
+  .kn-id { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+  .kn-foto { width: 54px; height: 64px; border-radius: 9px; overflow: hidden; flex: none; display: grid; place-items: center; font-weight: 800; border: 2px solid rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.18); }
+  .kn-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .kn-id b { display: block; font-size: 1.05rem; font-weight: 800; }
+  .kn-id span { display: block; font-size: 0.78rem; opacity: 0.9; }
+  .kn-bio { margin-top: 10px; font-size: 0.85rem; opacity: 0.95; }
+  .kn-bio:empty { display: none; }
+  .kn-bio a { color: inherit; font-weight: 700; }
+  .kn-link, .kn-lencana { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .kn-link:empty, .kn-lencana:empty { display: none; }
+  .kn-link a, .kn-lencana span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 8px; background: rgba(255, 255, 255, 0.16); color: inherit; font-size: 0.75rem; font-weight: 600; text-decoration: none; }
+  .kn-link .ikon { width: 13px; height: 13px; }
+  .kn-status { margin-top: 10px; font-size: 0.72rem; opacity: 0.75; }
+  .kotak-aksi { margin-top: 12px; }
+  .kotak-aksi .menunggu, .kotak-aksi .info-nfc { background: var(--putih); border: 1px solid var(--garis); border-radius: 14px; padding: 12px 14px; }
   .menunggu { display: flex; gap: 12px; align-items: center; }
   .menunggu b { display: block; font-size: 0.9rem; }
   .menunggu span { font-size: 0.8rem; color: var(--teks-2); }
@@ -135,8 +161,8 @@ import { ikon } from '../lib/ikon';
   };
   const inisial = (nama: string) => nama.split(/\s+/).slice(0, 2).map((k) => k.charAt(0).toUpperCase()).join('');
   const tautan = (p: any) => [
-    p.github && `<li>${ikon('kode')}GitHub<a href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
-    p.portofolio && `<li>${ikon('tautan')}Portofolio<a href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${esc(p.portofolio)}</a></li>`,
+    p.github && `<a href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${ikon('kode')}${esc(p.github)}</a>`,
+    p.portofolio && `<a href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${ikon('tautan')}${esc(p.portofolio)}</a>`,
   ].filter(Boolean).join('');
 
   // Riwayat orang yang ditap, hanya di perangkat ini.
@@ -168,7 +194,7 @@ import { ikon } from '../lib/ikon';
       $('prodi').textContent = p.privat ? 'Profil ini disembunyikan pemiliknya.' : `${p.prodi}, ${p.kampus}`;
       $('bio').textContent = p.privat ? '' : p.bio;
       $('tautan').innerHTML = p.privat ? '' : tautan(p);
-      $('lencana').innerHTML = p.privat ? '' : p.lencana.map((l: string) => `<li>${esc(l)}</li>`).join('');
+      $('lencana').innerHTML = p.privat ? '' : p.lencana.map((l: string) => `<span>${esc(l)}</span>`).join('');
       catatRiwayat(p);
       $('profil').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
@@ -207,13 +233,13 @@ import { ikon } from '../lib/ikon';
     .then((s) => {
       pasangFoto($('s-inisial'), s.foto, s.nama);
       $('s-nama').textContent = s.nama;
-      $('s-prodi').textContent = `${s.prodi || 'Dosen'}, Universitas Pamulang`;
+      $('s-prodi').textContent = [s.prodi || 'Dosen', s.semester && `Semester ${s.semester}`].filter(Boolean).join(' · ');
       $('s-bio').textContent = s.bio || '';
       if (!s.bio && !s.github && !s.portofolio) {
-        $('s-bio').innerHTML = '<span class="ajakan">Belum ada bio atau link. <a href="/profil/">Tambahkan GitHub atau portofolio</a> supaya teman bisa langsung mengikutimu.</span>';
+        $('s-bio').innerHTML = 'Belum ada bio atau link. <a href="/profil/">Tambahkan GitHub atau portofolio</a> supaya teman bisa langsung mengikutimu.';
       }
       $('s-tautan').innerHTML = tautan(s);
-      $('s-status').textContent = s.publik ? 'Ditampilkan saat KTM-mu ditap' : 'Disembunyikan dari orang lain';
+      $('s-status').textContent = s.publik ? 'Kartu ini muncul di HP teman saat mereka tap KTM-mu.' : 'Kartu ini disembunyikan dari orang lain.';
     })
     .catch((e) => tanganiGalat(e, () => {}));
   tampilRiwayat();
