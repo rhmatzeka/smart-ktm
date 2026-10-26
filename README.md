@@ -49,7 +49,7 @@ cp server/.env.contoh server/.env      # add GROQ_API_KEY (optional: GEMINI_API_
 
 Testing on a phone over USB: `adb reverse tcp:8080 tcp:8080`, then open `localhost:8080` in Chrome on the phone (Web NFC needs a secure context, and `localhost` counts as one).
 
-Going online through Cloudflare Tunnel: `./scripts/deploy-tunnel.sh` (installs systemd user services for Anvil, the server, and the tunnel).
+Deploying to a VPS: `./scripts/deploy-vps.sh` (first time: `--pindah` moves the data and the Cloudflare Tunnel from the laptop). Running from the laptop instead: `./scripts/deploy-tunnel.sh`.
 
 Importing a saved MyUnpam schedule from the command line: `cd server && cargo run -- --sinkron schedule.json`.
 

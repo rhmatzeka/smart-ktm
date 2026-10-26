@@ -34,7 +34,7 @@ cp server/.env.contoh server/.env      # isi GROQ_API_KEY
 ```
 
 Tes di HP lewat kabel: `adb reverse tcp:8080 tcp:8080`, lalu buka `localhost:8080` di Chrome HP.
-Online lewat Cloudflare Tunnel: `./scripts/deploy-tunnel.sh`.
+Deploy ke VPS: `./scripts/deploy-vps.sh` (pertama kali: `--pindah`). Jalan dari laptop: `./scripts/deploy-tunnel.sh`.
 
 Tes: `cd server && cargo test`, `cd contracts && forge test`.
 
