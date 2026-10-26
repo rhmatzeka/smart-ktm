@@ -1,112 +1,173 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
-import { ikon, ikonApp } from '../lib/ikon';
+import { ikon } from '../lib/ikon';
 ---
-<Dasar judul="Tanya AI" nav="tanya">
-  <header class="atas-putih kepala-ai">
-    <Fragment set:html={ikonApp('kilau', 'oranye')} />
+<Dasar judul="Tanya" nav="tanya">
+  <header class="kepala-chat">
+    <span class="tanda-ktm" aria-hidden="true"><Fragment set:html={ikon('kartu')} /></span>
     <div>
-      <h1 class="judul-ai">AI Agent</h1>
-      <p class="redup kecil"><span class="titik-hidup"></span> Bisa lihat jadwal, tugas, kehadiran, dan buat pengingat</p>
+      <h1>Asisten KTM</h1>
+      <p>Menjawab dari jadwal dan presensi MyUnpam kamu</p>
     </div>
+    <button class="hapus-obrolan" id="hapus" type="button" title="Mulai obrolan baru" aria-label="Mulai obrolan baru" hidden>Baru</button>
   </header>
 
-  <section class="zona-biru zona-chat">
-    <div class="obrolan" id="obrolan" aria-live="polite">
-      <div class="gelembung ai">Hai! Aku AI agent Smart KTM. Mau tanya jadwal, deadline, atau minta diingatkan sesuatu?</div>
+  <section class="isi-chat">
+    <!-- Konteks + saran, hanya saat obrolan masih kosong -->
+    <div id="kosong">
+      <p class="label-bagian">Hari ini</p>
+      <div class="konteks" id="konteks">
+        <div class="konteks-baris"><span class="redup">Memuat data kamu…</span></div>
+      </div>
+      <p class="label-bagian">Coba tanyakan</p>
+      <ul class="saran" id="saran"></ul>
     </div>
 
-    <div class="saran" id="saran">
-      <button type="button">Minggu ini deadline apa aja?</button>
-      <button type="button">Besok kuliah jam berapa?</button>
-      <button type="button">Absenku aman nggak?</button>
-      <button type="button">Ingatkan aku ngerjain ERD jam 7 malam ini</button>
-    </div>
-
-    <form id="form" class="ketik">
-      <label for="isi" class="sr">Pesan</label>
-      <input id="isi" name="isi" placeholder="Tulis pertanyaan…" autocomplete="off" required />
-      <button class="kirim" type="submit" aria-label="Kirim"><Fragment set:html={ikon('kirim')} /></button>
-    </form>
+    <div class="obrolan" id="obrolan" aria-live="polite"></div>
   </section>
+
+  <form id="form" class="ketik">
+    <label for="isi" class="sr">Pesan</label>
+    <input id="isi" name="isi" placeholder="Tulis pertanyaan…" autocomplete="off" required />
+    <button class="kirim" type="submit" aria-label="Kirim"><Fragment set:html={ikon('kirim')} /></button>
+  </form>
 </Dasar>
 
 <style is:global>
-  .kepala-ai { display: flex; gap: 14px; align-items: center; }
-  .kepala-ai .app-ikon { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--garis); }
-  .kepala-ai .app-ikon .ikon { width: 26px; height: 26px; }
-  .judul-ai { font-size: 1.5rem; font-weight: 800; }
-  .titik-hidup { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hijau); margin-right: 4px; }
-  .zona-chat { display: flex; flex-direction: column; }
-  .obrolan { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-  .gelembung { max-width: 86%; padding: 11px 14px; border-radius: 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92rem; line-height: 1.45; }
-  .gelembung.saya { align-self: flex-end; background: var(--kuning); color: #1f2a44; border-bottom-right-radius: 6px; font-weight: 600; }
-  .gelembung.ai { align-self: flex-start; background: var(--putih); color: var(--teks); border-bottom-left-radius: 6px; box-shadow: var(--bayang); }
-  .gelembung.menunggu { color: var(--teks-2); }
-  .aksi { align-self: flex-start; display: flex; gap: 6px; align-items: center; font-size: 0.82rem; font-weight: 700; background: #dcfce7; color: var(--hijau); padding: 6px 12px; border-radius: 99px; }
-  .aksi .ikon { width: 15px; height: 15px; stroke-width: 3; }
-  .mode { align-self: flex-start; font-size: 0.75rem; color: rgba(255, 255, 255, 0.7); }
-  .saran { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; }
+  body:has(.kepala-chat) .halaman { background: var(--latar); }
+  .kepala-chat {
+    position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center;
+    padding: 16px 18px; background: var(--putih); border-bottom: 1px solid var(--garis);
+  }
+  .tanda-ktm { width: 40px; height: 40px; border-radius: 12px; background: var(--biru); color: var(--putih); display: grid; place-items: center; flex: none; }
+  .tanda-ktm .ikon { width: 22px; height: 22px; }
+  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
+  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
+  .hapus-obrolan { margin-left: auto; border: 1px solid var(--garis); background: var(--putih); color: var(--teks); font: 700 0.8rem var(--font); padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+
+  .isi-chat { flex: 1; padding: 16px 16px 150px; }
+  .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 4px 2px 8px; }
+  .konteks { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; margin-bottom: 18px; }
+  .konteks-baris { display: flex; gap: 10px; align-items: center; padding: 12px 14px; font-size: 0.86rem; }
+  .konteks-baris + .konteks-baris { border-top: 1px solid #eef1f6; }
+  .konteks-baris .ikon { width: 18px; height: 18px; color: var(--biru); }
+  .konteks-baris b { font-weight: 700; }
+  .konteks-baris .merah { color: var(--merah); }
+
+  .saran { list-style: none; margin: 0; padding: 0; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; }
+  .saran li + li { border-top: 1px solid #eef1f6; }
   .saran button {
-    border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.1); color: var(--putih);
-    border-radius: 99px; padding: 8px 14px; font: 600 0.85rem var(--font); cursor: pointer;
+    width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; cursor: pointer;
+    background: none; border: 0; padding: 13px 14px; font: 600 0.88rem var(--font); color: var(--teks);
   }
+  .saran button .ikon { width: 18px; height: 18px; color: var(--teks-2); flex: none; }
+  .saran button span { flex: 1; }
+  .saran button .panah { transform: rotate(180deg); }
+
+  .obrolan { display: flex; flex-direction: column; gap: 10px; }
+  .gelembung { max-width: 85%; padding: 10px 14px; border-radius: 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92rem; line-height: 1.5; }
+  .gelembung.saya { align-self: flex-end; background: var(--biru); color: var(--putih); border-bottom-right-radius: 6px; }
+  .gelembung.ai { align-self: flex-start; background: var(--putih); color: var(--teks); border: 1px solid var(--garis); border-bottom-left-radius: 6px; }
+  .gelembung.menunggu { color: var(--teks-2); }
+  .gelembung.menunggu::after { content: ''; display: inline-block; width: 1em; animation: titik 1.2s steps(4) infinite; }
+  @keyframes titik { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+  .aksi { align-self: flex-start; display: flex; gap: 8px; align-items: center; font-size: 0.8rem; font-weight: 600; color: var(--teks); background: var(--putih); border: 1px solid var(--garis); border-left: 3px solid var(--hijau); padding: 8px 12px; border-radius: 10px; }
+  .aksi .ikon { width: 15px; height: 15px; color: var(--hijau); stroke-width: 3; flex: none; }
+  .mode { align-self: flex-start; font-size: 0.75rem; color: var(--teks-2); }
+
   .ketik {
-    position: sticky; bottom: 86px; display: flex; gap: 8px; padding: 6px;
-    background: var(--putih); border-radius: 18px; box-shadow: var(--bayang);
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 76px; z-index: 15;
+    width: 100%; max-width: 480px; display: flex; gap: 8px; padding: 10px 14px;
+    background: var(--latar);
   }
-  .ketik input { background: transparent; border: 0; min-height: 46px; }
-  .kirim { width: 46px; height: 46px; border: 0; border-radius: 14px; background: var(--biru); color: var(--putih); display: grid; place-items: center; cursor: pointer; flex: none; }
+  .ketik input { flex: 1; background: var(--putih); border: 1px solid var(--garis); border-radius: 14px; min-height: 48px; }
+  .kirim { width: 48px; height: 48px; border: 0; border-radius: 14px; background: var(--biru); color: var(--putih); display: grid; place-items: center; cursor: pointer; flex: none; }
+  .kirim:disabled { opacity: 0.5; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 
 <script>
-  import { api, tanganiGalat } from '../lib/api';
+  import { api, esc, tanganiGalat } from '../lib/api';
   import { ikon } from '../lib/ikon';
 
   type Pesan = { peran: 'user' | 'model'; teks: string };
   const KUNCI = 'smartktm.obrolan';
-  const obrolan = document.getElementById('obrolan')!;
-  const form = document.getElementById('form') as HTMLFormElement;
-  const isi = document.getElementById('isi') as HTMLInputElement;
+  const $ = (id: string) => document.getElementById(id)!;
+  const obrolan = $('obrolan');
+  const form = $('form') as HTMLFormElement;
+  const isi = $('isi') as HTMLInputElement;
   let riwayat: Pesan[] = [];
   try { riwayat = JSON.parse(sessionStorage.getItem(KUNCI) || '[]'); } catch { riwayat = []; }
 
-  function tambah(kelas: string, teks: string, html = false) {
+  // Model kadang menjawab dengan markdown ringan: **tebal** dan daftar "- ".
+  const rapikan = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*[-*] /gm, '• ');
+
+  function tambah(kelas: string, isiHtml: string) {
     const el = document.createElement('div');
     el.className = kelas;
-    if (html) el.innerHTML = teks; else el.textContent = teks;
+    el.innerHTML = isiHtml;
     obrolan.appendChild(el);
     el.scrollIntoView({ block: 'end', behavior: 'smooth' });
     return el;
   }
   const simpan = () => { try { sessionStorage.setItem(KUNCI, JSON.stringify(riwayat.slice(-20))); } catch { /* abaikan */ } };
-  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
-  // Model kadang menjawab dengan markdown ringan: **tebal** dan daftar "- ".
-  const rapikan = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*[-*] /gm, '• ');
-  const balasanAi = (teks: string) => tambah('gelembung ai', rapikan(teks), true);
+  const keadaanKosong = () => {
+    const kosong = riwayat.length === 0 && !obrolan.children.length;
+    $('kosong').hidden = !kosong;
+    $('hapus').hidden = kosong;
+  };
 
-  riwayat.forEach((p) => (p.peran === 'user' ? tambah('gelembung saya', p.teks) : balasanAi(p.teks)));
+  riwayat.forEach((p) => tambah(`gelembung ${p.peran === 'user' ? 'saya' : 'ai'}`, p.peran === 'user' ? esc(p.teks) : rapikan(p.teks)));
+  keadaanKosong();
 
   async function kirim(teks: string) {
-    tambah('gelembung saya', teks);
-    const tunggu = tambah('gelembung ai menunggu', 'Sedang mengecek data kamu…');
+    tambah('gelembung saya', esc(teks));
+    keadaanKosong();
+    const tunggu = tambah('gelembung ai menunggu', 'Membuka data kamu');
     isi.value = '';
     isi.disabled = true;
     try {
       const r = await api<{ balasan: string; aksi: string[]; mode: string }>('/chat', { pesan: teks, riwayat });
       tunggu.remove();
-      r.aksi.forEach((a) => tambah('aksi', `${ikon('centang')} ${esc(a)}`, true));
-      balasanAi(r.balasan);
+      r.aksi.forEach((a) => tambah('aksi', `${ikon('centang')}<span>${esc(a)}</span>`));
+      tambah('gelembung ai', rapikan(r.balasan));
       if (r.mode === 'offline') tambah('mode', 'Mode offline: kunci AI belum diatur di server.');
       riwayat.push({ peran: 'user', teks }, { peran: 'model', teks: r.balasan });
       simpan();
     } catch (e) {
       tunggu.remove();
-      tanganiGalat(e, (t) => tambah('gelembung ai', `Gagal: ${t}`));
+      tanganiGalat(e, (t) => tambah('gelembung ai', `Gagal: ${esc(t)}`));
     } finally {
       isi.disabled = false;
       isi.focus();
+      keadaanKosong();
+    }
+  }
+
+  // Konteks hari ini + saran pertanyaan dari data mahasiswa sendiri.
+  async function muatKonteks() {
+    try {
+      const b = await api<any>('/beranda');
+      const k = b.kelas_berlangsung || b.kelas_berikut || (b.momen === 'malam' ? b.jadwal_besok[0] : null);
+      const terlewat = b.presensi.filter((p: any) => p.belum_presensi?.length);
+      const baris: string[] = [];
+      if (k) baris.push(`${ikon('kalender')}<span>${b.kelas_berlangsung ? 'Sekarang' : b.momen === 'malam' ? 'Besok' : 'Berikutnya'}: <b>${esc(k.nama)}</b>, ${k.mulai.replace(':', '.')} di ${esc(k.ruang)}</span>`);
+      else baris.push(`${ikon('kalender')}<span>Tidak ada kelas lagi hari ini</span>`);
+      const nTerlewat = terlewat.reduce((n: number, p: any) => n + p.belum_presensi.length, 0);
+      baris.push(`${ikon('peringatan')}<span>${nTerlewat ? `<b class="merah">${nTerlewat} pertemuan</b> terlewat belum presensi` : 'Tidak ada pertemuan yang terlewat'}</span>`);
+      baris.push(`${ikon('tugas')}<span>${b.tugas.length ? `<b>${b.tugas.length} tugas</b>, terdekat ${esc(b.tugas[0].judul)} (${esc(b.tugas[0].sisa)})` : 'Belum ada tugas tercatat'}</span>`);
+      $('konteks').innerHTML = baris.map((x) => `<div class="konteks-baris">${x}</div>`).join('');
+
+      const saran: [string, string][] = [];
+      if (terlewat[0]) saran.push(['peringatan', `${terlewat[0].matkul}: pertemuan ${terlewat[0].belum_presensi.join(', ')} belum presensi, aku harus apa?`]);
+      saran.push(['kalender', b.momen === 'malam' ? 'Besok kuliah apa aja dan di ruang mana?' : 'Habis ini kuliah apa dan di ruang mana?']);
+      saran.push(['tugas', 'Catat tugas: ']);
+      saran.push(['jam', 'Ingatkan aku belajar jam 7 malam ini']);
+      $('saran').innerHTML = saran
+        .map(([i, t]) => `<li><button type="button" data-teks="${esc(t)}">${ikon(i)}<span>${esc(t.endsWith(': ') ? 'Catat tugas baru…' : t)}</span>${ikon('kembali', 'ikon panah')}</button></li>`)
+        .join('');
+    } catch (e) {
+      tanganiGalat(e, () => ($('konteks').innerHTML = '<div class="konteks-baris redup">Data belum bisa dimuat.</div>'));
     }
   }
 
@@ -115,8 +176,21 @@ import { ikon, ikonApp } from '../lib/ikon';
     const t = isi.value.trim();
     if (t) kirim(t);
   });
-  document.getElementById('saran')!.addEventListener('click', (ev) => {
-    const b = (ev.target as HTMLElement).closest('button');
-    if (b) kirim(b.textContent!.trim());
+  $('saran').addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-teks]');
+    if (!b) return;
+    const t = b.dataset.teks!;
+    // "Catat tugas: " diisi sendiri oleh pengguna.
+    if (t.endsWith(': ')) { isi.value = t; isi.focus(); return; }
+    kirim(t);
   });
+  $('hapus').addEventListener('click', () => {
+    riwayat = [];
+    simpan();
+    obrolan.innerHTML = '';
+    keadaanKosong();
+  });
+
+  if (!riwayat.length) muatKonteks();
+  else { muatKonteks(); }
 </script>
