@@ -17,7 +17,7 @@ import { ikon, ikonApp } from '../lib/ikon';
   </header>
   <div class="atas-menu">
     <nav class="menu-cepat" aria-label="Menu cepat">
-      <a href="#jadwal"><Fragment set:html={ikonApp('kalender', 'biru')} /><span>Jadwal</span></a>
+      <a href="/jadwal/"><Fragment set:html={ikonApp('kalender', 'biru')} /><span>Jadwal</span></a>
       <a href="#tugas"><Fragment set:html={ikonApp('tugas', 'teal')} /><span>Tugas</span></a>
       <a href="/tanya/"><Fragment set:html={ikonApp('kilau', 'oranye')} /><span>Tanya AI</span></a>
       <a href="/kenalan/"><Fragment set:html={ikonApp('nfc', 'hijau')} /><span>Kenalan</span></a>
@@ -39,6 +39,7 @@ import { ikon, ikonApp } from '../lib/ikon';
     <article class="kartu bagian" id="jadwal">
       <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span><span id="judul-jadwal">Jadwal hari ini</span></p>
       <ol class="garis-waktu" id="daftar-jadwal"></ol>
+      <a class="lihat-semua" href="/jadwal/">Lihat jadwal seminggu</a>
     </article>
 
     <!-- Angka ringkas -->
@@ -200,6 +201,7 @@ import { ikon, ikonApp } from '../lib/ikon';
   .awas-teks { color: var(--merah); font-weight: 700; }
   .bisa-teks { color: #b45309; font-weight: 700; }
   .sumber-data { font-size: 0.75rem; color: var(--teks-2); margin-top: 8px; }
+  a.lihat-semua { display: inline-block; text-decoration: none; }
   .lihat-semua { margin-top: 12px; border: 0; background: none; color: var(--biru); font: 700 0.85rem var(--font); cursor: pointer; padding: 4px 0; }
   #pesan { margin-top: 12px; }
 </style>

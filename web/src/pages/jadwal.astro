@@ -1,0 +1,120 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Jadwal" nav="beranda">
+  <header class="kepala-chat">
+    <a class="tombol-kembali" href="/beranda/" aria-label="Kembali ke beranda"><Fragment set:html={ikon('kembali')} /></a>
+    <div>
+      <h1>Jadwal kuliah</h1>
+      <p id="ringkas">Memuat…</p>
+    </div>
+  </header>
+
+  <section class="isi-jadwal">
+    <div class="pilih-hari" id="hari" role="tablist" aria-label="Pilih hari"></div>
+    <p class="label-bagian" id="judul-hari"></p>
+    <ol class="kelas-hari" id="kelas"></ol>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
+  </section>
+</Dasar>
+
+<style is:global>
+  body:has(.isi-jadwal) .halaman { background: var(--latar); }
+  .kepala-chat { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis); }
+  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
+  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
+  .tombol-kembali { width: 36px; height: 36px; border-radius: 11px; border: 1px solid var(--garis); display: grid; place-items: center; color: var(--teks); flex: none; }
+  .tombol-kembali .ikon { width: 18px; height: 18px; }
+
+  .isi-jadwal { flex: 1; padding: 14px 16px 100px; }
+  .pilih-hari { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .pilih-hari button {
+    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px;
+    border: 1px solid var(--garis); border-radius: 12px; background: var(--putih); color: var(--teks);
+    font: 700 0.78rem var(--font); cursor: pointer;
+  }
+  .pilih-hari button small { font-weight: 600; font-size: 0.68rem; color: var(--teks-2); }
+  .pilih-hari button i { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+  .pilih-hari button.ada i { background: var(--biru-muda); }
+  .pilih-hari button[aria-selected='true'] { background: var(--biru); border-color: var(--biru); color: var(--putih); }
+  .pilih-hari button[aria-selected='true'] small { color: rgba(255, 255, 255, 0.8); }
+  .pilih-hari button[aria-selected='true'] i { background: var(--kuning); }
+  .pilih-hari button.hari-ini:not([aria-selected='true']) { border-color: var(--biru-muda); }
+
+  .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 18px 2px 8px; }
+  .kelas-hari { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .kelas-hari li { display: grid; grid-template-columns: 54px 1fr; gap: 12px; background: var(--putih); border: 1px solid var(--garis); border-radius: 14px; padding: 12px; }
+  .kelas-hari li.sekarang { border-color: var(--hijau); box-shadow: inset 3px 0 0 var(--hijau); }
+  .kelas-hari li.lewat { opacity: 0.55; }
+  .jam-kolom { display: flex; flex-direction: column; font-size: 0.8rem; color: var(--teks-2); }
+  .jam-kolom b { font-size: 0.95rem; color: var(--teks); }
+  .kelas-hari h3 { font-size: 0.95rem; font-weight: 700; }
+  .kelas-hari .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-size: 0.78rem; color: var(--teks-2); }
+  .kelas-hari .meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .kelas-hari .meta .ikon { width: 13px; height: 13px; }
+  .status-kelas { display: inline-block; margin-top: 6px; font-size: 0.72rem; font-weight: 700; color: var(--hijau); }
+  .kosong-hari { background: var(--putih); border: 1px dashed var(--garis); border-radius: 14px; padding: 18px; text-align: center; color: var(--teks-2); font-size: 0.88rem; }
+  .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+</style>
+
+<script>
+  import { api, esc, tanganiGalat } from '../lib/api';
+  import { ikon } from '../lib/ikon';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  const titik = (j: string) => j.replace(':', '.');
+  let data: { hari_ini: number; kelas: any[] } = { hari_ini: 1, kelas: [] };
+  let pilih = 1;
+
+  const menit = (j: string) => { const [h, m] = j.split(':').map(Number); return h * 60 + m; };
+
+  function render() {
+    $('hari').innerHTML = HARI.map((h, i) => {
+      const n = i + 1;
+      const ada = data.kelas.some((k) => k.hari_ke === n);
+      return `<button type="button" role="tab" data-hari="${n}" aria-selected="${n === pilih}" class="${ada ? 'ada' : ''} ${n === data.hari_ini ? 'hari-ini' : ''}">
+        ${h.slice(0, 3)}<small>${n === data.hari_ini ? 'hari ini' : '&nbsp;'}</small><i></i></button>`;
+    }).join('');
+
+    const kelas = data.kelas.filter((k) => k.hari_ke === pilih);
+    const sks = kelas.reduce((s, k) => s + (k.sks || 0), 0);
+    $('judul-hari').textContent = `${HARI[pilih - 1]}${pilih === data.hari_ini ? ' (hari ini)' : ''} · ${kelas.length ? `${kelas.length} kelas, ${sks} SKS` : 'libur kuliah'}`;
+
+    const kini = new Date();
+    const m = kini.getHours() * 60 + kini.getMinutes();
+    $('kelas').innerHTML = kelas.length
+      ? kelas.map((k) => {
+          let kelasCss = '';
+          let status = '';
+          if (pilih === data.hari_ini && k.mulai) {
+            if (m >= menit(k.mulai) && m < menit(k.selesai)) { kelasCss = 'sekarang'; status = '<span class="status-kelas">Sedang berlangsung</span>'; }
+            else if (m >= menit(k.selesai)) kelasCss = 'lewat';
+          }
+          return `<li class="${kelasCss}"><div class="jam-kolom"><b>${titik(k.mulai)}</b>${titik(k.selesai)}</div>
+            <div><h3>${esc(k.nama)}</h3><div class="meta">
+              <span>${ikon('lokasi')}${esc(k.ruang)}</span><span>${ikon('profil')}${esc(k.dosen)}</span>${k.sks ? `<span>${k.sks} SKS</span>` : ''}
+            </div>${status}</div></li>`;
+        }).join('')
+      : '<li class="kosong-hari">Tidak ada kuliah di hari ini.</li>';
+  }
+
+  $('hari').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-hari]');
+    if (!b) return;
+    pilih = Number(b.dataset.hari);
+    render();
+  });
+
+  api<{ hari_ini: number; kelas: any[] }>('/jadwal')
+    .then((d) => {
+      data = d;
+      pilih = d.hari_ini;
+      const total = d.kelas.reduce((s, k) => s + (k.sks || 0), 0);
+      const hari = new Set(d.kelas.map((k) => k.hari_ke)).size;
+      $('ringkas').textContent = d.kelas.length ? `${d.kelas.length} mata kuliah · ${total} SKS · ${hari} hari kuliah` : 'Belum ada jadwal. Sinkronkan dari MyUnpam di Profil.';
+      render();
+    })
+    .catch((e) => tanganiGalat(e, (t) => { $('pesan').textContent = t; $('pesan').hidden = false; }));
+</script>

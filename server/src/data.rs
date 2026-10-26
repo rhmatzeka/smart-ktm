@@ -15,6 +15,7 @@ pub struct Kelas {
     pub selesai: String,
     pub ruang: String,
     pub dosen: String,
+    pub sks: i64,
 }
 
 impl Kelas {
@@ -22,6 +23,7 @@ impl Kelas {
         json!({
             "id": self.id, "kode": self.kode, "nama": self.nama, "hari": waktu::nama_hari(self.hari),
             "mulai": self.mulai, "selesai": self.selesai, "ruang": self.ruang, "dosen": self.dosen,
+            "hari_ke": self.hari, "sks": self.sks,
         })
     }
 }
@@ -29,7 +31,7 @@ impl Kelas {
 /// `hari` None = semua hari.
 pub fn jadwal(c: &Connection, user: i64, hari: Option<u32>) -> rusqlite::Result<Vec<Kelas>> {
     let mut q = c.prepare(
-        "SELECT m.id, m.kode, m.nama, m.hari, m.mulai, m.selesai, m.ruang, COALESCE(NULLIF(m.dosen_nama, ''), d.nama) FROM matkul m
+        "SELECT m.id, m.kode, m.nama, m.hari, m.mulai, m.selesai, m.ruang, COALESCE(NULLIF(m.dosen_nama, ''), d.nama), m.sks FROM matkul m
          JOIN ambil a ON a.matkul_id = m.id JOIN users d ON d.id = m.dosen_id
          WHERE a.user_id = ?1 AND (?2 IS NULL OR m.hari = ?2) ORDER BY m.hari, m.mulai",
     )?;
@@ -43,6 +45,7 @@ pub fn jadwal(c: &Connection, user: i64, hari: Option<u32>) -> rusqlite::Result<
             selesai: r.get(5)?,
             ruang: r.get(6)?,
             dosen: r.get(7)?,
+            sks: r.get(8)?,
         })
     })?;
     baris.collect()

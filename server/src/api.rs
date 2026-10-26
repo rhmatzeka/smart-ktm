@@ -55,6 +55,7 @@ pub fn router() -> Router<App> {
         .route("/chat", post(chat))
         .route("/sinkron", post(sinkron_unpam))
         .route("/kehadiran/{id}", get(kehadiran))
+        .route("/jadwal", get(jadwal_minggu))
         .route("/kenalan", post(kenalan))
         .route("/verifikasi/{bukti}", get(verifikasi))
         .route("/dosen/kelas", get(dosen_kelas))
@@ -313,6 +314,14 @@ async fn chat(State(app): State<App>, h: HeaderMap, Json(b): Json<Chat>) -> Hasi
         return Err(galat(StatusCode::BAD_REQUEST, "Pesan kosong"));
     }
     Ok(Json(ai::chat(&app, &u, &pesan, &b.riwayat).await))
+}
+
+/// Jadwal satu minggu (Senin..Minggu) milik pengguna.
+async fn jadwal_minggu(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    let kelas: Vec<Value> = data::jadwal(&c, u.id, None)?.iter().map(|k| k.json()).collect();
+    Ok(Json(json!({ "hari_ini": waktu::hari_ke(&waktu::sekarang()), "kelas": kelas })))
 }
 
 async fn kehadiran(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
