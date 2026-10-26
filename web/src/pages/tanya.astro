@@ -1,50 +1,66 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
+import { ikon, ikonApp } from '../lib/ikon';
 ---
 <Dasar judul="Tanya AI" nav="tanya">
-  <h1>Tanya AI</h1>
-  <p class="redup intro">Agent ini bisa lihat jadwal, tugas, dan kehadiranmu, juga bisa membuat pengingat dan menandai tugas selesai.</p>
+  <header class="atas-putih kepala-ai">
+    <Fragment set:html={ikonApp('kilau', 'oranye')} />
+    <div>
+      <h1 class="judul-ai">AI Agent</h1>
+      <p class="redup kecil"><span class="titik-hidup"></span> Bisa lihat jadwal, tugas, kehadiran, dan buat pengingat</p>
+    </div>
+  </header>
 
-  <div class="obrolan" id="obrolan" aria-live="polite"></div>
+  <section class="zona-biru zona-chat">
+    <div class="obrolan" id="obrolan" aria-live="polite">
+      <div class="gelembung ai">Hai! Aku AI agent Smart KTM. Mau tanya jadwal, deadline, atau minta diingatkan sesuatu?</div>
+    </div>
 
-  <div class="saran" id="saran">
-    <button type="button">Minggu ini deadline apa aja?</button>
-    <button type="button">Besok kuliah jam berapa?</button>
-    <button type="button">Absenku aman nggak?</button>
-    <button type="button">Ingatkan aku ngerjain ERD jam 7 malam ini</button>
-  </div>
+    <div class="saran" id="saran">
+      <button type="button">Minggu ini deadline apa aja?</button>
+      <button type="button">Besok kuliah jam berapa?</button>
+      <button type="button">Absenku aman nggak?</button>
+      <button type="button">Ingatkan aku ngerjain ERD jam 7 malam ini</button>
+    </div>
 
-  <form id="form" class="ketik">
-    <label for="isi" class="sr">Pesan</label>
-    <input id="isi" name="isi" placeholder="Tulis pertanyaan…" autocomplete="off" required />
-    <button class="tombol" type="submit">Kirim</button>
-  </form>
+    <form id="form" class="ketik">
+      <label for="isi" class="sr">Pesan</label>
+      <input id="isi" name="isi" placeholder="Tulis pertanyaan…" autocomplete="off" required />
+      <button class="kirim" type="submit" aria-label="Kirim"><Fragment set:html={ikon('kirim')} /></button>
+    </form>
+  </section>
 </Dasar>
 
 <style is:global>
-  .intro { margin: 8px 0 18px; }
-  .obrolan { display: flex; flex-direction: column; gap: 10px; }
-  .gelembung { max-width: 88%; padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .saya { align-self: flex-end; background: var(--tinta); color: var(--kertas); border-bottom-right-radius: 4px; }
-  .ai { align-self: flex-start; background: var(--kertas); border-bottom-left-radius: 4px; }
-  .ai.menunggu { color: var(--redup); }
-  .aksi { align-self: flex-start; font-size: 0.875rem; font-weight: 700; color: var(--hadir); padding-left: 4px; }
-  .mode { align-self: flex-start; font-size: 0.8rem; color: var(--redup); padding-left: 4px; }
-  .saran { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 12px; }
+  .kepala-ai { display: flex; gap: 14px; align-items: center; }
+  .judul-ai { font-size: 1.5rem; font-weight: 800; }
+  .titik-hidup { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--hijau); margin-right: 4px; }
+  .zona-chat { display: flex; flex-direction: column; }
+  .obrolan { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .gelembung { max-width: 86%; padding: 11px 14px; border-radius: 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92rem; line-height: 1.45; }
+  .gelembung.saya { align-self: flex-end; background: var(--kuning); color: #1f2a44; border-bottom-right-radius: 6px; font-weight: 600; }
+  .gelembung.ai { align-self: flex-start; background: var(--putih); color: var(--teks); border-bottom-left-radius: 6px; box-shadow: var(--bayang); }
+  .gelembung.menunggu { color: var(--teks-2); }
+  .aksi { align-self: flex-start; display: flex; gap: 6px; align-items: center; font-size: 0.82rem; font-weight: 700; background: #dcfce7; color: var(--hijau); padding: 6px 12px; border-radius: 99px; }
+  .aksi .ikon { width: 15px; height: 15px; stroke-width: 3; }
+  .mode { align-self: flex-start; font-size: 0.75rem; color: rgba(255, 255, 255, 0.7); }
+  .saran { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; }
   .saran button {
-    border: 2px solid var(--garis); background: transparent; color: var(--tinta);
-    border-radius: 999px; padding: 8px 14px; font: 1rem var(--isi); cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.1); color: var(--putih);
+    border-radius: 99px; padding: 8px 14px; font: 600 0.85rem var(--font); cursor: pointer;
   }
   .ketik {
-    position: sticky; bottom: 76px; display: flex; gap: 8px;
-    padding: 10px 0; background: var(--plastik);
+    position: sticky; bottom: 86px; display: flex; gap: 8px; padding: 6px;
+    background: var(--putih); border-radius: 18px; box-shadow: var(--bayang);
   }
-  .ketik .tombol { width: auto; }
+  .ketik input { background: transparent; border: 0; min-height: 46px; }
+  .kirim { width: 46px; height: 46px; border: 0; border-radius: 14px; background: var(--biru); color: var(--putih); display: grid; place-items: center; cursor: pointer; flex: none; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 
 <script>
   import { api, tanganiGalat } from '../lib/api';
+  import { ikon } from '../lib/ikon';
 
   type Pesan = { peran: 'user' | 'model'; teks: string };
   const KUNCI = 'smartktm.obrolan';
@@ -54,15 +70,16 @@ import Dasar from '../layouts/Dasar.astro';
   let riwayat: Pesan[] = [];
   try { riwayat = JSON.parse(sessionStorage.getItem(KUNCI) || '[]'); } catch { riwayat = []; }
 
-  function tambah(kelas: string, teks: string) {
+  function tambah(kelas: string, teks: string, html = false) {
     const el = document.createElement('div');
     el.className = kelas;
-    el.textContent = teks;
+    if (html) el.innerHTML = teks; else el.textContent = teks;
     obrolan.appendChild(el);
     el.scrollIntoView({ block: 'end', behavior: 'smooth' });
     return el;
   }
   const simpan = () => { try { sessionStorage.setItem(KUNCI, JSON.stringify(riwayat.slice(-20))); } catch { /* abaikan */ } };
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
   riwayat.forEach((p) => tambah(`gelembung ${p.peran === 'user' ? 'saya' : 'ai'}`, p.teks));
 
@@ -74,7 +91,7 @@ import Dasar from '../layouts/Dasar.astro';
     try {
       const r = await api<{ balasan: string; aksi: string[]; mode: string }>('/chat', { pesan: teks, riwayat });
       tunggu.remove();
-      r.aksi.forEach((a) => tambah('aksi', `✓ ${a}`));
+      r.aksi.forEach((a) => tambah('aksi', `${ikon('centang')} ${esc(a)}`, true));
       tambah('gelembung ai', r.balasan);
       if (r.mode === 'offline') tambah('mode', 'Mode offline: kunci Gemini belum diatur di server.');
       riwayat.push({ peran: 'user', teks }, { peran: 'model', teks: r.balasan });

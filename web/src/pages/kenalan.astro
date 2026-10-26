@@ -1,43 +1,62 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Kenalan" nav="kenalan">
-  <h1>Kenalan</h1>
-  <p class="redup intro">Tempelkan KTM teman ke HP-mu untuk melihat profil publiknya. Jadwal dan kehadiran tidak pernah ditampilkan.</p>
+  <header class="atas-putih">
+    <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+    <h1 class="sapa-besar">Kenalan</h1>
+    <p class="sapa-kecil">Tempelkan KTM teman untuk melihat profil publiknya.</p>
+  </header>
 
-  <button class="tombol sinyal" id="mulai" type="button">Tap KTM teman</button>
-  <p class="redup tunggu" id="tunggu" hidden>Menunggu kartu… tempel di belakang HP.</p>
+  <section class="zona-biru">
+    <div class="radar" id="radar">
+      <span></span><span></span>
+      <div class="radar-ikon"><Fragment set:html={ikon('nfc')} /></div>
+    </div>
+    <button class="tombol kuning" id="mulai" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM teman</button>
+    <p class="ket-tunggu" id="tunggu" hidden>Menunggu kartu… tempel di belakang HP.</p>
 
-  <article class="profil" id="profil" hidden>
-    <div class="inisial" id="inisial" aria-hidden="true"></div>
-    <h2 id="nama"></h2>
-    <p class="redup" id="prodi"></p>
-    <p class="bio" id="bio"></p>
-    <ul class="baris" id="tautan"></ul>
-    <ul class="lencana" id="lencana"></ul>
-  </article>
+    <article class="kartu profil-publik" id="profil" hidden>
+      <div class="avatar besar" id="inisial"></div>
+      <h2 id="nama"></h2>
+      <p class="redup" id="prodi"></p>
+      <p class="bio" id="bio"></p>
+      <ul class="info" id="tautan"></ul>
+      <ul class="lencana" id="lencana"></ul>
+    </article>
 
-  <p id="pesan" class="galat" role="alert"></p>
+    <p class="catatan-privasi"><Fragment set:html={ikon('perisai')} /> Jadwal, tugas, dan kehadiran tidak pernah ditampilkan ke orang lain.</p>
+    <p id="pesan" class="galat" role="alert"></p>
+  </section>
 </Dasar>
 
 <style is:global>
-  .intro { margin: 8px 0 20px; }
-  .tunggu { margin-top: 12px; text-align: center; }
-  .profil { margin-top: 24px; text-align: center; }
-  .inisial {
-    width: 96px; height: 96px; margin: 0 auto 12px; border-radius: 50%;
-    display: grid; place-items: center; font: 800 2.4rem var(--judul);
-    background: var(--tinta); color: var(--sinyal);
-  }
-  .profil h2 { font-size: 1.8rem; margin: 0; }
-  .bio { margin: 12px 0 16px; }
-  .profil .baris { text-align: left; }
-  .lencana { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .lencana li { background: var(--kertas); border: 2px solid var(--sinyal); border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 0.9rem; }
+  .radar { position: relative; width: 150px; height: 150px; margin: 4px auto 18px; display: grid; place-items: center; }
+  .radar span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); }
+  .radar span:nth-child(2) { inset: 24px; }
+  .radar.hidup span { animation: denyut 2s ease-out infinite; border-color: var(--kuning); }
+  .radar.hidup span:nth-child(2) { animation-delay: 1s; }
+  @keyframes denyut { from { transform: scale(0.6); opacity: 1; } to { transform: scale(1.2); opacity: 0; } }
+  .radar-ikon { width: 74px; height: 74px; border-radius: 50%; background: var(--putih); color: var(--biru); display: grid; place-items: center; box-shadow: var(--bayang); }
+  .radar-ikon .ikon { width: 34px; height: 34px; }
+  .ket-tunggu { text-align: center; margin-top: 12px; color: rgba(255, 255, 255, 0.85); }
+  .profil-publik { margin-top: 18px; text-align: center; }
+  .avatar.besar { width: 88px; height: 88px; font-size: 2.2rem; margin: 0 auto 12px; }
+  .profil-publik h2 { font-size: 1.4rem; font-weight: 800; }
+  .bio { margin: 10px 0 4px; }
+  .info { list-style: none; margin: 14px 0 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 8px; }
+  .info li { display: flex; gap: 10px; align-items: center; background: var(--latar); padding: 10px 12px; border-radius: 14px; }
+  .info a { color: var(--biru); font-weight: 700; margin-left: auto; overflow-wrap: anywhere; }
+  .lencana { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .lencana li { background: #fef3c7; color: #92400e; border-radius: 99px; padding: 6px 12px; font-weight: 700; font-size: 0.8rem; }
+  .catatan-privasi { display: flex; gap: 8px; align-items: flex-start; font-size: 0.82rem; color: rgba(255, 255, 255, 0.8); margin-top: 18px; }
+  .catatan-privasi .ikon { width: 16px; height: 16px; margin-top: 2px; }
 </style>
 
 <script>
   import { api, esc } from '../lib/api';
+  import { ikon } from '../lib/ikon';
   import { bacaKtm, nfcDidukung, pesanGalatNfc } from '../lib/nfc';
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -60,11 +79,12 @@ import Dasar from '../layouts/Dasar.astro';
       $('prodi').textContent = `${p.prodi}, ${p.kampus}`;
       $('bio').textContent = p.bio;
       const tautan = [
-        p.github && `<li><span class="isi">GitHub</span><a class="ujung" href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
-        p.portofolio && `<li><span class="isi">Portofolio</span><a class="ujung" href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${esc(p.portofolio)}</a></li>`,
+        p.github && `<li><span class="titik-ikon t-ungu">${ikon('kode')}</span>GitHub<a href="https://github.com/${encodeURIComponent(p.github)}" target="_blank" rel="noopener">${esc(p.github)}</a></li>`,
+        p.portofolio && `<li><span class="titik-ikon t-biru">${ikon('tautan')}</span>Portofolio<a href="${esc(p.portofolio.startsWith('http') ? p.portofolio : `https://${p.portofolio}`)}" target="_blank" rel="noopener">${esc(p.portofolio)}</a></li>`,
       ].filter(Boolean);
       $('tautan').innerHTML = tautan.join('');
-      $('lencana').innerHTML = p.lencana.map((l: string) => `<li>${esc(l)}</li>`).join('');
+      $('lencana').innerHTML = p.lencana.map((l: string) => `<li>🏅 ${esc(l)}</li>`).join('');
+      $('profil').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
       $('profil').hidden = true;
       salah((e as Error).message);
@@ -76,6 +96,7 @@ import Dasar from '../layouts/Dasar.astro';
       await bacaKtm(tampilkan, salah);
       $('mulai').hidden = true;
       $('tunggu').hidden = false;
+      $('radar').classList.add('hidup');
     } catch (e) {
       salah(pesanGalatNfc(e));
     }

@@ -1,36 +1,79 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
 import Kartu from '../components/Kartu.astro';
+import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Profil" nav="profil">
-  <Kartu />
-  <p class="redup kecil ktm-status" id="ktm-status"></p>
+  <header class="atas-putih kepala-profil">
+    <div class="baris-atas">
+      <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+      <button class="ikon-keluar" id="keluar" type="button" aria-label="Keluar" title="Keluar"><Fragment set:html={ikon('keluar')} /></button>
+    </div>
+    <div class="avatar raksasa" id="inisial">·<span class="lencana-ktm" id="lencana-ktm" hidden><Fragment set:html={ikon('centang')} /></span></div>
+    <h1 class="nama-profil" id="nama">Memuat…</h1>
+    <p class="redup" id="prodi"></p>
+    <div class="info-kotak">
+      <div><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kartu')} /></span><span><b>NIM</b><span id="nim"></span></span></div>
+      <div><span class="titik-ikon t-ungu"><Fragment set:html={ikon('nfc')} /></span><span><b>KTM fisik</b><span id="ktm-status"></span></span></div>
+    </div>
+  </header>
 
-  <form id="form">
-    <h2>Profil publik</h2>
-    <p class="redup kecil">Ini yang muncul saat KTM-mu ditap di HP orang lain.</p>
-    <label for="bio">Bio singkat</label>
-    <textarea id="bio" name="bio" rows="2" maxlength="160" placeholder="Contoh: Suka web3, IoT, dan AI agent"></textarea>
-    <label for="github">Username GitHub</label>
-    <input id="github" name="github" autocomplete="off" />
-    <label for="portofolio">Portofolio</label>
-    <input id="portofolio" name="portofolio" placeholder="contoh.my.id" />
-    <label class="centang"><input type="checkbox" id="publik" name="publik" /> Tampilkan profil saat KTM ditap orang lain</label>
-    <button class="tombol" type="submit">Simpan profil</button>
-    <p class="hijau" id="tersimpan" role="status"></p>
-  </form>
+  <section class="zona-biru naik-sedikit">
+    <div class="dua-tombol">
+      <button class="tombol garis" id="buka-ktm" type="button"><Fragment set:html={ikon('kartu')} /> KTM Digital</button>
+      <a class="tombol garis" href="/verifikasi/"><Fragment set:html={ikon('rantai')} /> Cek bukti</a>
+    </div>
+    <div class="ktm-digital" id="ktm-digital" hidden><Kartu /></div>
 
-  <button class="tombol garis keluar" id="keluar" type="button">Keluar dari perangkat ini</button>
-  <p id="pesan" class="galat" role="alert"></p>
+    <ul class="info-biru">
+      <li><span class="titik-ikon t-hijau"><Fragment set:html={ikon('sekolah')} /></span><span><b>Universitas</b>Universitas Pamulang</span></li>
+      <li><span class="titik-ikon t-biru"><Fragment set:html={ikon('tugas')} /></span><span><b>Program studi</b><span id="prodi-2"></span></span></li>
+    </ul>
+
+    <form class="kartu" id="form">
+      <p class="kartu-judul"><span class="titik-ikon t-kuning"><Fragment set:html={ikon('orang')} /></span>Profil publik (saat KTM ditap orang lain)</p>
+      <label for="bio">Bio singkat</label>
+      <textarea id="bio" name="bio" rows="2" maxlength="160" placeholder="Contoh: Suka web3, IoT, dan AI agent"></textarea>
+      <label for="github">Username GitHub</label>
+      <input id="github" name="github" autocomplete="off" />
+      <label for="portofolio">Portofolio</label>
+      <input id="portofolio" name="portofolio" placeholder="contoh.my.id" />
+      <label class="centang"><input type="checkbox" id="publik" name="publik" /> Tampilkan profil saat KTM ditap orang lain</label>
+      <button class="tombol" type="submit">Simpan profil</button>
+      <p class="tersimpan" id="tersimpan" role="status"></p>
+    </form>
+    <p id="pesan" class="galat" role="alert"></p>
+  </section>
 </Dasar>
 
-<style>
-  .ktm-status { margin-top: 10px; }
-  form .tombol { margin-top: 18px; }
-  .centang { display: flex; gap: 10px; align-items: center; font-weight: 400; }
-  .centang input { width: 22px; min-height: 22px; height: 22px; }
-  .hijau { color: var(--hadir); font-weight: 700; margin-top: 8px; min-height: 1.5em; }
-  .keluar { margin-top: 28px; }
+<style is:global>
+  .kepala-profil { text-align: center; }
+  .kepala-profil .baris-atas { text-align: left; }
+  .ikon-keluar { width: 40px; height: 40px; border-radius: 12px; border: 0; background: #ffe4e6; color: var(--merah); display: grid; place-items: center; cursor: pointer; }
+  .avatar.raksasa { width: 104px; height: 104px; font-size: 2.6rem; margin: 18px auto 12px; }
+  .avatar.raksasa .lencana-ktm { width: 28px; height: 28px; right: 2px; bottom: 2px; }
+  .avatar.raksasa .lencana-ktm .ikon { width: 16px; height: 16px; }
+  .nama-profil { font-size: 1.5rem; font-weight: 800; }
+  .info-kotak {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; padding: 14px;
+    background: var(--putih); border-radius: var(--r); box-shadow: 0 16px 36px -16px rgba(15, 54, 153, 0.35);
+    text-align: left; position: relative; z-index: 2;
+  }
+  .info-kotak > div { display: flex; gap: 8px; align-items: flex-start; }
+  .info-kotak b { display: block; font-size: 0.82rem; }
+  .info-kotak span span { font-size: 0.85rem; color: var(--teks-2); overflow-wrap: anywhere; }
+  .naik-sedikit { margin-top: -40px; padding-top: 58px; }
+  .dua-tombol { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dua-tombol .tombol { font-size: 0.9rem; padding: 0 10px; }
+  .ktm-digital { margin-top: 16px; }
+  .info-biru { list-style: none; margin: 20px 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .info-biru li { display: flex; gap: 12px; align-items: flex-start; }
+  .info-biru b { display: block; font-size: 0.95rem; }
+  .info-biru span span, .info-biru li > span:last-child { color: rgba(255, 255, 255, 0.85); font-size: 0.9rem; }
+  #form .tombol { margin-top: 18px; }
+  .centang { display: flex; gap: 10px; align-items: center; font-weight: 500; }
+  .centang input { width: 20px; min-height: 20px; height: 20px; }
+  .tersimpan { color: var(--hijau); font-weight: 700; margin-top: 8px; min-height: 1.4em; }
 </style>
 
 <script>
@@ -38,15 +81,20 @@ import Kartu from '../components/Kartu.astro';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const salah = (t: string) => ($('pesan').textContent = t);
-  const form = $<HTMLFormElement>('form');
 
   api<any>('/saya')
     .then((s) => {
+      $('inisial').firstChild!.textContent = s.nama.charAt(0).toUpperCase();
+      $('lencana-ktm').hidden = !s.ktm;
+      $('nama').textContent = s.nama;
+      $('prodi').textContent = s.prodi || 'Dosen';
+      $('prodi-2').textContent = s.prodi || '-';
+      $('nim').textContent = s.nim;
+      $('ktm-status').textContent = s.ktm ? 'Tertaut ✓' : 'Belum tertaut';
       const isi = (k: string, v: string) => (document.querySelector(`[data-isi=${k}]`)!.textContent = v);
       isi('nama', s.nama);
       isi('nim', s.nim);
-      isi('prodi', s.prodi || 'Dosen');
-      $('ktm-status').textContent = s.ktm ? 'KTM fisik sudah tertaut ke akun ini.' : 'Belum ada KTM yang tertaut. Masuk lewat tap KTM untuk menautkan.';
+      isi('prodi', s.prodi);
       $<HTMLTextAreaElement>('bio').value = s.bio;
       $<HTMLInputElement>('github').value = s.github;
       $<HTMLInputElement>('portofolio').value = s.portofolio;
@@ -54,7 +102,9 @@ import Kartu from '../components/Kartu.astro';
     })
     .catch((e) => tanganiGalat(e, salah));
 
-  form.addEventListener('submit', async (ev) => {
+  $('buka-ktm').addEventListener('click', () => ($('ktm-digital').hidden = !$('ktm-digital').hidden));
+
+  $<HTMLFormElement>('form').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     $('tersimpan').textContent = '';
     try {

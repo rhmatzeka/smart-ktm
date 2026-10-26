@@ -1,8 +1,14 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Halaman tidak ada">
-  <h1>Halaman ini tidak ada.</h1>
-  <p class="redup" style="margin: 12px 0 24px">Mungkin tautannya salah ketik.</p>
-  <a class="tombol" href="/">Ke halaman tap KTM</a>
+  <header class="atas-putih">
+    <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+    <h1 class="sapa-besar">Halaman ini tidak ada</h1>
+    <p class="sapa-kecil">Mungkin tautannya salah ketik.</p>
+  </header>
+  <section class="zona-biru">
+    <a class="tombol kuning" href="/">Ke halaman tap KTM</a>
+  </section>
 </Dasar>

@@ -1,36 +1,45 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Cek bukti kehadiran">
-  <a class="redup kecil" href="/">Smart KTM</a>
-  <h1 class="judul">Cek bukti kehadiran</h1>
-  <p class="redup">Setiap kehadiran punya kode bukti. Tempel kodenya untuk memastikan catatan itu asli dan sudah tercatat di blockchain.</p>
+  <header class="atas-putih">
+    <a class="merek" href="/" style="text-decoration:none"><Fragment set:html={ikon('kartu')} /> Smart KTM</a>
+    <h1 class="sapa-besar">Cek bukti kehadiran</h1>
+    <p class="sapa-kecil">Pastikan catatan kehadiran asli dan sudah tercatat di blockchain.</p>
+  </header>
 
-  <form id="form">
-    <label for="b">Kode bukti</label>
-    <input id="b" name="b" placeholder="64 karakter, boleh diawali 0x" autocomplete="off" required />
-    <button class="tombol" type="submit">Cek bukti</button>
-  </form>
+  <section class="zona-biru">
+    <form class="kartu" id="form">
+      <label for="b" style="margin-top:0">Kode bukti</label>
+      <input id="b" name="b" placeholder="64 karakter, boleh diawali 0x" autocomplete="off" required />
+      <button class="tombol" type="submit" style="margin-top:14px">Cek bukti</button>
+    </form>
 
-  <section id="hasil" hidden>
-    <p class="vonis" id="vonis"></p>
-    <ul class="baris" id="rincian"></ul>
+    <article class="kartu hasil" id="hasil" hidden>
+      <div class="vonis" id="vonis"></div>
+      <ul class="rincian" id="rincian"></ul>
+    </article>
+    <p id="pesan" class="galat" role="alert" style="margin-top:12px"></p>
   </section>
-  <p id="pesan" class="galat" role="alert"></p>
 </Dasar>
 
 <style is:global>
-  .judul { margin: 10px 0 8px; }
-  form .tombol { margin-top: 16px; }
-  #hasil { margin-top: 28px; }
-  .vonis { font-family: var(--judul); font-size: 1.6rem; font-weight: 800; margin-bottom: 12px; }
-  .vonis.sah { color: var(--hadir); }
-  .vonis.lokal { color: var(--kuning-teks); }
-  .baris .ujung { white-space: normal; overflow-wrap: anywhere; max-width: 60%; }
+  .hasil { margin-top: 14px; }
+  .vonis { display: flex; gap: 12px; align-items: center; font-size: 1.15rem; font-weight: 800; margin-bottom: 12px; }
+  .vonis .ikon-besar { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: var(--putih); flex: none; }
+  .vonis.sah .ikon-besar { background: var(--hijau); }
+  .vonis.lokal .ikon-besar { background: #f59e0b; }
+  .rincian { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .rincian li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--latar); border-radius: 12px; font-size: 0.88rem; }
+  .rincian li span:first-child { color: var(--teks-2); }
+  .rincian li span:last-child, .rincian li a { font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .rincian a { color: var(--biru); }
 </style>
 
 <script>
   import { api, esc } from '../lib/api';
+  import { ikon } from '../lib/ikon';
 
   const $ = (id: string) => document.getElementById(id)!;
   const input = $('b') as HTMLInputElement;
@@ -41,9 +50,9 @@ import Dasar from '../layouts/Dasar.astro';
     try {
       const r = await api<any>(`/verifikasi/${encodeURIComponent(kode.trim())}`);
       const onchain = r.chain && r.chain.tercatat;
-      const vonis = $('vonis');
-      vonis.className = `vonis ${onchain ? 'sah' : 'lokal'}`;
-      vonis.textContent = onchain ? 'Asli dan tercatat di blockchain.' : r.status === 'riwayat' ? 'Asli, dari riwayat sebelum blockchain aktif.' : 'Asli, tapi belum tercatat di blockchain.';
+      const teks = onchain ? 'Asli dan tercatat di blockchain' : r.status === 'riwayat' ? 'Asli, dari riwayat sebelum blockchain aktif' : 'Asli, tapi belum tercatat di blockchain';
+      $('vonis').className = `vonis ${onchain ? 'sah' : 'lokal'}`;
+      $('vonis').innerHTML = `<span class="ikon-besar">${ikon(onchain ? 'perisai' : 'peringatan')}</span><span>${teks}</span>`;
       const baris: [string, string][] = [
         ['Mahasiswa', `${r.mahasiswa} (${r.nim})`],
         ['Mata kuliah', r.matkul],
@@ -51,9 +60,10 @@ import Dasar from '../layouts/Dasar.astro';
         ['Waktu tap', `${r.waktu} WIB`],
       ];
       if (onchain) baris.push(['Waktu blok', new Date(r.chain.timestamp * 1000).toLocaleString('id-ID')]);
+      if (r.tx) baris.push(['Transaksi', `${r.tx.slice(0, 10)}…${r.tx.slice(-6)}`]);
       $('rincian').innerHTML =
-        baris.map(([k, v]) => `<li><span class="isi">${esc(k)}</span><span class="ujung">${esc(v)}</span></li>`).join('') +
-        (r.link_tx ? `<li><span class="isi">Transaksi</span><a class="ujung" href="${esc(r.link_tx)}" target="_blank" rel="noopener">buka di explorer</a></li>` : '');
+        baris.map(([k, v]) => `<li><span>${esc(k)}</span><span>${esc(v)}</span></li>`).join('') +
+        (r.link_tx ? `<li><span>Explorer</span><a href="${esc(r.link_tx)}" target="_blank" rel="noopener">buka transaksi</a></li>` : '');
       $('hasil').hidden = false;
     } catch (e) {
       $('pesan').textContent = (e as Error).message;

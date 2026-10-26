@@ -1,15 +1,16 @@
 ---
+import { ikon } from '../lib/ikon';
+
 interface Props {
   judul: string;
   nav?: 'beranda' | 'tanya' | 'kenalan' | 'profil';
-  gelap?: boolean;
 }
-const { judul, nav, gelap = false } = Astro.props;
+const { judul, nav } = Astro.props;
 const menu = [
-  { id: 'beranda', href: '/beranda/', label: 'Hari ini' },
-  { id: 'tanya', href: '/tanya/', label: 'Tanya AI' },
-  { id: 'kenalan', href: '/kenalan/', label: 'Kenalan' },
-  { id: 'profil', href: '/profil/', label: 'Profil' },
+  { id: 'beranda', href: '/beranda/', label: 'Beranda', ikon: 'rumah' },
+  { id: 'tanya', href: '/tanya/', label: 'Tanya AI', ikon: 'chat' },
+  { id: 'kenalan', href: '/kenalan/', label: 'Kenalan', ikon: 'nfc' },
+  { id: 'profil', href: '/profil/', label: 'Profil', ikon: 'profil' },
 ];
 ---
 <!doctype html>
@@ -17,23 +18,22 @@ const menu = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content={gelap ? '#0E2A47' : '#E8EDF4'} />
+    <meta name="theme-color" content="#ffffff" />
     <title>{judul} · Smart KTM</title>
     <link rel="icon" href="/ikon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
-  <body class:list={[{ gelap, 'ada-nav': !!nav }]}>
-    <main><slot /></main>
+  <body class:list={{ 'ada-nav': !!nav }}>
+    <main class="halaman"><slot /></main>
     {nav && (
       <nav class="nav-bawah" aria-label="Menu utama">
         {menu.map((m) => (
-          <a href={m.href} aria-current={nav === m.id ? 'page' : undefined}>{m.label}</a>
+          <a href={m.href} aria-label={m.label} title={m.label} aria-current={nav === m.id ? 'page' : undefined}>
+            <Fragment set:html={ikon(m.ikon)} />
+          </a>
         ))}
       </nav>
     )}
@@ -42,83 +42,136 @@ const menu = [
 
 <style is:global>
   :root {
-    --tinta: #0e2a47;
-    --tinta-2: #3d5672;
-    --redup: #6b7f95;
-    --plastik: #e8edf4;
-    --kertas: #ffffff;
-    --garis: #cfd8e3;
-    --sinyal: #f2b01e;
-    --hadir: #1f7a52;
-    --awas: #b8432f;
-    --kuning-teks: #8a5a00;
-    --judul: 'Bricolage Grotesque', system-ui, sans-serif;
-    --isi: 'Atkinson Hyperlegible', system-ui, sans-serif;
-    --r-kartu: 18px;
-    --r-kecil: 10px;
+    --biru: #1747c9;
+    --biru-tua: #0f3699;
+    --biru-muda: #3b7bf6;
+    --biru-pudar: #e8efff;
+    --latar: #f2f5fb;
+    --putih: #ffffff;
+    --teks: #101828;
+    --teks-2: #5b6475;
+    --garis: #e4e9f2;
+    --kuning: #fbbf24;
+    --oranye: #f97316;
+    --hijau: #16a34a;
+    --merah: #e5484d;
+    --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --r: 22px;
+    --r-kecil: 14px;
+    --bayang: 0 12px 32px -14px rgba(23, 71, 201, 0.35);
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0;
-    font-family: var(--isi);
-    font-size: 16px;
-    line-height: 1.5;
-    color: var(--tinta);
-    background: var(--plastik);
+    margin: 0; font-family: var(--font); font-size: 15px; line-height: 1.5;
+    color: var(--teks); background: #dfe6f3;
   }
-  body.gelap { background: var(--tinta); color: var(--plastik); }
-  main { max-width: 480px; margin: 0 auto; padding: 20px 16px 32px; }
-  body.ada-nav main { padding-bottom: 96px; }
-  h1, h2, h3 { font-family: var(--judul); line-height: 1.1; margin: 0; }
-  h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
-  h2 { font-size: 1.15rem; font-weight: 700; margin: 28px 0 10px; }
+  .halaman {
+    max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
+    background: var(--putih); display: flex; flex-direction: column;
+  }
+  body.ada-nav .zona-biru { padding-bottom: 110px; }
+  h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.01em; }
   p { margin: 0; }
   a { color: inherit; }
-  :focus-visible { outline: 3px solid var(--sinyal); outline-offset: 2px; border-radius: 4px; }
-
-  .redup { color: var(--redup); }
-  .kecil { font-size: 0.875rem; }
-  .galat { color: var(--awas); font-weight: 700; }
+  button { font-family: inherit; }
+  :focus-visible { outline: 3px solid var(--kuning); outline-offset: 2px; border-radius: 8px; }
   [hidden] { display: none !important; }
 
+  .ikon { width: 22px; height: 22px; flex: none; }
+
+  /* Bagian atas putih + zona biru di bawahnya (pola utama tiap halaman). */
+  .atas-putih { padding: 22px 20px 20px; position: relative; z-index: 1; }
+  .zona-biru {
+    flex: 1; background: var(--biru); color: var(--putih);
+    border-radius: 28px 28px 0 0; padding: 22px 16px 28px;
+    background-image: radial-gradient(120% 60% at 100% 0%, var(--biru-muda) 0%, transparent 55%);
+  }
+  .zona-biru.naik { margin-top: -46px; padding-top: 66px; }
+
+  .baris-atas { display: flex; justify-content: space-between; align-items: center; }
+  .merek { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; color: var(--biru); }
+  .merek .ikon { width: 26px; height: 26px; }
+  .sapa-besar { font-size: 1.9rem; font-weight: 800; margin-top: 18px; }
+  .sapa-kecil { font-size: 1.1rem; font-weight: 500; color: var(--teks-2); margin-top: 2px; }
+
+  .avatar {
+    width: 48px; height: 48px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; color: var(--putih);
+    background: linear-gradient(135deg, var(--biru-muda), var(--biru-tua));
+    box-shadow: 0 0 0 3px var(--putih), 0 6px 16px -6px rgba(15, 54, 153, 0.6);
+    position: relative;
+  }
+  .avatar .lencana-ktm {
+    position: absolute; right: -2px; bottom: -2px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--hijau); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--putih);
+  }
+  .avatar .lencana-ktm .ikon { width: 12px; height: 12px; stroke-width: 3; }
+
+  /* Kartu putih di zona biru */
+  .kartu {
+    background: var(--putih); color: var(--teks); border-radius: var(--r);
+    padding: 16px; box-shadow: var(--bayang);
+  }
+  .kartu-judul { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; margin-bottom: 10px; }
+  .titik-ikon { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--putih); flex: none; }
+  .titik-ikon .ikon { width: 15px; height: 15px; }
+  .t-oranye { background: var(--oranye); } .t-ungu { background: #8b5cf6; } .t-merah { background: var(--merah); }
+  .t-hijau { background: var(--hijau); } .t-biru { background: var(--biru-muda); } .t-kuning { background: #eab308; }
+  .redup { color: var(--teks-2); }
+  .kecil { font-size: 0.85rem; }
+
+  /* Ikon aplikasi mengkilap */
+  .app-ikon {
+    width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--putih);
+    position: relative; overflow: hidden; box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+  }
+  .app-ikon::after { content: ''; position: absolute; inset: 0 0 50% 0; background: linear-gradient(rgba(255, 255, 255, 0.35), transparent); }
+  .app-ikon .ikon { width: 26px; height: 26px; position: relative; z-index: 1; }
+  .app-ikon.biru { background: linear-gradient(145deg, #4f8bff, #1c3fae); }
+  .app-ikon.teal { background: linear-gradient(145deg, #2dd4bf, #0e7490); }
+  .app-ikon.oranye { background: linear-gradient(145deg, #fdba74, #ea580c); }
+  .app-ikon.hijau { background: linear-gradient(145deg, #86efac, #15803d); }
+  .app-ikon.ungu { background: linear-gradient(145deg, #c084fc, #6d28d9); }
+  .app-ikon.merah { background: linear-gradient(145deg, #fca5a5, #b91c1c); }
+
+  /* Tombol */
   .tombol {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    min-height: 52px; padding: 0 22px; width: 100%;
-    border: 0; border-radius: 999px; cursor: pointer;
-    font: 700 1.05rem var(--isi); text-decoration: none;
-    background: var(--tinta); color: var(--kertas);
+    min-height: 52px; padding: 0 22px; width: 100%; border: 0; border-radius: 16px; cursor: pointer;
+    font: 700 1rem var(--font); text-decoration: none; background: var(--biru); color: var(--putih);
+    box-shadow: 0 10px 20px -10px rgba(23, 71, 201, 0.7);
   }
-  .tombol.sinyal { background: var(--sinyal); color: var(--tinta); }
-  .tombol.garis { background: transparent; color: var(--tinta); box-shadow: inset 0 0 0 2px var(--tinta); }
-  .tombol:disabled { opacity: 0.55; cursor: wait; }
-  .tautan { background: none; border: 0; padding: 8px 0; font: 700 1rem var(--isi); color: var(--tinta-2); text-decoration: underline; cursor: pointer; }
+  .tombol.kuning { background: var(--kuning); color: #1f2a44; box-shadow: 0 10px 20px -10px rgba(234, 179, 8, 0.8); }
+  .tombol.putih { background: var(--putih); color: var(--biru); }
+  .tombol.garis { background: transparent; color: var(--putih); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55); }
+  .tombol.garis-biru { background: transparent; color: var(--biru); box-shadow: inset 0 0 0 1.5px var(--biru); }
+  .tombol.kecil-saja { min-height: 36px; width: auto; padding: 0 14px; font-size: 0.85rem; border-radius: 12px; }
+  .tombol:disabled { opacity: 0.6; cursor: wait; }
+  .tautan { background: none; border: 0; padding: 8px 0; font: 600 0.95rem var(--font); color: inherit; text-decoration: underline; cursor: pointer; }
 
-  label { display: block; font-weight: 700; margin: 14px 0 6px; }
-  input, textarea, select {
-    width: 100%; min-height: 50px; padding: 12px 14px;
-    font: 1rem var(--isi); color: var(--tinta);
-    background: var(--kertas); border: 2px solid var(--garis); border-radius: var(--r-kecil);
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 6px; }
+  input, textarea {
+    width: 100%; min-height: 50px; padding: 12px 14px; font: 1rem var(--font); color: var(--teks);
+    background: var(--latar); border: 1.5px solid var(--garis); border-radius: var(--r-kecil);
   }
-  input:focus, textarea:focus { border-color: var(--tinta); outline: none; }
+  input:focus, textarea:focus { border-color: var(--biru); outline: none; background: var(--putih); }
 
-  /* Daftar baris: struktur utama halaman, bukan tumpukan kartu. */
-  .baris { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--tinta); }
-  .baris > li { display: flex; gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--garis); }
-  .baris .isi { flex: 1; min-width: 0; }
-  .baris .ujung { text-align: right; white-space: nowrap; font-weight: 700; }
+  .galat { color: var(--merah); font-weight: 600; }
+  .zona-biru .galat { color: #ffd2d4; }
 
+  /* Navigasi bawah */
   .nav-bawah {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-    display: flex; justify-content: center; gap: 4px;
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-    background: var(--kertas); border-top: 1px solid var(--garis);
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 20;
+    width: 100%; max-width: 480px; display: flex; justify-content: space-around; align-items: center;
+    padding: 10px 18px calc(12px + env(safe-area-inset-bottom));
+    background: var(--biru-tua); border-radius: 26px 26px 0 0;
   }
   .nav-bawah a {
-    flex: 1; max-width: 120px; text-align: center; padding: 10px 4px; border-radius: 999px;
-    text-decoration: none; font-weight: 700; font-size: 0.9rem; color: var(--redup);
+    width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center;
+    color: rgba(255, 255, 255, 0.75); text-decoration: none;
   }
-  .nav-bawah a[aria-current='page'] { background: var(--tinta); color: var(--kertas); }
+  .nav-bawah a[aria-current='page'] { background: var(--biru-muda); color: var(--kuning); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }

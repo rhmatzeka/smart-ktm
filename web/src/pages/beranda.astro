@@ -1,130 +1,216 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
+import { ikon, ikonApp } from '../lib/ikon';
 ---
-<Dasar judul="Hari ini" nav="beranda">
-  <p class="redup" id="tanggal">Memuat…</p>
-  <p class="sapa" id="sapa"></p>
+<Dasar judul="Beranda" nav="beranda">
+  <header class="atas-putih">
+    <div class="baris-atas">
+      <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+      <a class="avatar" href="/profil/" aria-label="Profil" id="avatar">
+        <span id="inisial">·</span>
+        <span class="lencana-ktm" id="lencana-ktm" hidden title="KTM tertaut"><Fragment set:html={ikon('centang')} /></span>
+      </a>
+    </div>
+    <h1 class="sapa-besar" id="sapa">Hai!</h1>
+    <p class="sapa-kecil" id="sapa-waktu">Memuat…</p>
 
-  <section class="sekarang" aria-live="polite">
-    <h1 id="judul-momen"></h1>
-    <p class="detail" id="detail-momen"></p>
+    <nav class="menu-cepat" aria-label="Menu cepat">
+      <a href="#kehadiran"><Fragment set:html={ikonApp('kalender', 'biru')} /><span>Presensi</span></a>
+      <a href="#tugas"><Fragment set:html={ikonApp('tugas', 'teal')} /><span>Tugas</span></a>
+      <a href="/tanya/"><Fragment set:html={ikonApp('kilau', 'oranye')} /><span>Tanya AI</span></a>
+      <a href="/kenalan/"><Fragment set:html={ikonApp('nfc', 'hijau')} /><span>Kenalan</span></a>
+    </nav>
+  </header>
+
+  <section class="zona-biru naik">
+    <div class="grid">
+      <article class="kartu-jadwal">
+        <p class="kartu-judul terang"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span><span id="judul-jadwal">Jadwal hari ini</span></p>
+        <div class="geser" id="jadwal"></div>
+        <div class="titik-geser" id="titik"></div>
+      </article>
+
+      <article class="kartu cincin">
+        <p class="kartu-judul"><span class="titik-ikon t-ungu"><Fragment set:html={ikon('centang')} /></span>Kehadiran</p>
+        <svg viewBox="0 0 100 100" class="cincin-svg" aria-hidden="true">
+          <defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24" /><stop offset="1" stop-color="#e5484d" /></linearGradient></defs>
+          <circle cx="50" cy="50" r="40" class="jalur" />
+          <circle cx="50" cy="50" r="40" class="isi" id="cincin" stroke-dasharray="251.3" stroke-dashoffset="251.3" />
+          <text x="50" y="56" text-anchor="middle" id="persen">–</text>
+        </svg>
+        <p class="angka" id="hadir-angka">–</p>
+        <p class="redup kecil" id="hadir-ket">pertemuan</p>
+      </article>
+
+      <article class="kartu ai">
+        <p class="kartu-judul"><span class="titik-ikon t-biru"><Fragment set:html={ikon('kilau')} /></span><span id="sumber">AI agent</span></p>
+        <p class="ai-teks" id="ringkasan">Menyiapkan ringkasan…</p>
+        <a class="tombol kecil-saja" href="/tanya/">Tanya AI</a>
+      </article>
+
+      <article class="kartu chain">
+        <p class="kartu-judul"><span class="titik-ikon t-merah"><Fragment set:html={ikon('rantai')} /></span>On-chain</p>
+        <p class="angka besar" id="onchain">0</p>
+        <p class="redup kecil">presensi tercatat di blockchain</p>
+      </article>
+    </div>
+
+    <article class="kartu daftar" id="tugas">
+      <p class="kartu-judul"><span class="titik-ikon t-hijau"><Fragment set:html={ikon('tugas')} /></span>Tugas belum dikumpulkan</p>
+      <ul id="daftar-tugas"></ul>
+    </article>
+
+    <article class="kartu daftar" id="kehadiran">
+      <p class="kartu-judul"><span class="titik-ikon t-kuning"><Fragment set:html={ikon('kalender')} /></span>Kehadiran per mata kuliah</p>
+      <ul id="daftar-presensi"></ul>
+    </article>
+
+    <p id="pesan" class="galat" role="alert"></p>
   </section>
-
-  <section class="ringkas" id="ringkas" hidden>
-    <p class="sumber" id="sumber-ringkas"></p>
-    <p id="isi-ringkas"></p>
-  </section>
-
-  <h2 id="judul-jadwal">Jadwal hari ini</h2>
-  <ol class="baris jadwal" id="jadwal"></ol>
-
-  <h2>Tugas yang belum dikumpulkan</h2>
-  <ul class="baris" id="tugas"></ul>
-
-  <h2>Kehadiran</h2>
-  <ul class="baris" id="presensi"></ul>
-  <p class="redup kecil chain" id="chain"></p>
-
-  <p id="pesan" class="galat" role="alert"></p>
 </Dasar>
 
 <style is:global>
-  .sapa { font-family: var(--judul); font-weight: 700; font-size: 1.1rem; margin-top: 2px; }
-  .sekarang { margin: 22px 0 18px; padding-left: 14px; border-left: 6px solid var(--sinyal); }
-  .sekarang h1 { font-size: 2.2rem; }
-  .detail { margin-top: 8px; color: var(--tinta-2); font-size: 1.05rem; }
-  .ringkas { background: var(--kertas); border-radius: var(--r-kartu); padding: 14px 16px; }
-  .sumber { font-size: 0.85rem; font-weight: 700; color: var(--tinta-2); margin-bottom: 4px; }
-  .jadwal li.selesai { color: var(--redup); }
-  .jadwal li.berlangsung .isi strong::after { content: ' sedang berlangsung'; font-weight: 400; color: var(--hadir); }
-  .jam { font-family: var(--judul); font-weight: 700; min-width: 3.4em; }
-  .merah { color: var(--awas); }
-  .kuning { color: var(--kuning-teks); }
-  .hijau { color: var(--hadir); }
-  .tombol.kumpul { margin-top: 8px; font-size: 0.9rem; padding: 0 14px; min-height: 36px; width: auto; }
+
+  .avatar { text-decoration: none; }
+  .menu-cepat {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    margin-top: 20px; padding: 16px 8px 14px; background: var(--putih);
+    border-radius: var(--r); box-shadow: 0 16px 36px -16px rgba(15, 54, 153, 0.35);
+    position: relative; z-index: 2;
+  }
+  .menu-cepat a { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; font-size: 0.78rem; font-weight: 600; color: var(--teks-2); }
+
+  .grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 12px; }
+  .kartu-jadwal {
+    background: var(--biru-tua); border-radius: var(--r); padding: 14px 12px 10px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); min-width: 0;
+  }
+  .kartu-judul.terang { color: var(--putih); }
+  .geser { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .geser::-webkit-scrollbar { display: none; }
+  .kelas { flex: 0 0 100%; scroll-snap-align: start; background: var(--putih); color: var(--teks); border-radius: 16px; padding: 12px; }
+  .kelas-tgl { display: flex; gap: 10px; align-items: flex-start; }
+  .kelas-tgl .hari { text-align: center; line-height: 1; }
+  .kelas-tgl .hari b { display: block; font-size: 1.5rem; font-weight: 800; }
+  .kelas-tgl .hari span { font-size: 0.7rem; font-weight: 700; color: var(--teks-2); }
+  .kelas-tgl h3 { font-size: 0.95rem; font-weight: 700; }
+  .kelas .jam { font-size: 0.8rem; color: var(--teks-2); margin-top: 2px; }
+  .kelas .dosen { font-size: 0.75rem; color: var(--teks-2); margin-top: 8px; }
+  .pil { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+  .pil.nanti { background: var(--biru-pudar); color: var(--biru); }
+  .pil.berlangsung { background: #dcfce7; color: var(--hijau); }
+  .pil.selesai { background: var(--latar); color: var(--teks-2); }
+  .titik-geser { display: flex; gap: 5px; justify-content: center; margin-top: 10px; min-height: 6px; }
+  .titik-geser i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.35); }
+  .titik-geser i.on { background: var(--putih); width: 16px; }
+
+  .cincin { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .cincin .kartu-judul { align-self: flex-start; }
+  .cincin-svg { width: 92px; height: 92px; transform: rotate(-90deg); }
+  .cincin-svg .jalur { fill: none; stroke: var(--latar); stroke-width: 10; }
+  .cincin-svg .isi { fill: none; stroke: url(#gr); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.9s ease; }
+  .cincin-svg text { transform: rotate(90deg); transform-origin: 50% 50%; font: 800 19px var(--font); fill: var(--teks); }
+  .angka { font-size: 1.5rem; font-weight: 800; margin-top: 4px; }
+  .angka.besar { font-size: 2.4rem; line-height: 1.1; margin-top: 8px; }
+
+  .ai { display: flex; flex-direction: column; gap: 10px; }
+  .ai .kartu-judul { margin-bottom: 0; }
+  .ai-teks { font-size: 0.88rem; line-height: 1.45; flex: 1; }
+  .ai .tombol { align-self: flex-start; }
+  .chain { display: flex; flex-direction: column; }
+
+  .daftar { margin-top: 12px; }
+  .daftar ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .daftar li { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 16px; background: var(--latar); }
+  .berkas { width: 42px; height: 46px; border-radius: 10px; display: grid; place-items: center; color: var(--putih); flex: none; }
+  .berkas.merah { background: linear-gradient(145deg, #fb7185, #e11d48); }
+  .berkas.kuning { background: linear-gradient(145deg, #fcd34d, #f59e0b); }
+  .berkas.biasa { background: linear-gradient(145deg, #60a5fa, #1d4ed8); }
+  .daftar .isi { flex: 1; min-width: 0; }
+  .daftar .isi b { display: block; font-size: 0.92rem; }
+  .daftar .isi > span { font-size: 0.8rem; color: var(--teks-2); }
+  .sisa { font-weight: 700; white-space: nowrap; }
+  .sisa.merah { color: var(--merah); } .sisa.kuning { color: #b45309; } .sisa.biasa { color: var(--biru); }
+  .tombol-kumpul { border: 0; background: var(--putih); color: var(--hijau); width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; cursor: pointer; flex: none; box-shadow: 0 4px 10px -6px rgba(0, 0, 0, 0.4); }
   .batang { height: 6px; border-radius: 3px; background: var(--garis); margin-top: 6px; overflow: hidden; }
-  .batang i { display: block; height: 100%; background: var(--hadir); }
-  .batang.awas i { background: var(--awas); }
-  .chain { margin-top: 10px; }
+  .batang i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #4ade80, var(--hijau)); }
+  .batang.awas i { background: linear-gradient(90deg, #fbbf24, var(--merah)); }
+  .skor { font-weight: 800; font-size: 0.9rem; white-space: nowrap; }
+  .kosong { justify-content: center; color: var(--teks-2); font-size: 0.88rem; }
+  #pesan { margin-top: 12px; }
 </style>
 
 <script>
   import { api, esc, tanganiGalat } from '../lib/api';
+  import { ikon } from '../lib/ikon';
 
   const $ = (id: string) => document.getElementById(id)!;
-
-  type Kelas = { nama: string; mulai: string; selesai: string; ruang: string; dosen: string; status?: string; menit_lagi?: number; menit_tersisa?: number };
-
-  const durasi = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} jam ${m % 60 ? `${m % 60} menit` : ''}`.trim() : `${m} menit`);
-  const jamTitik = (j: string) => j.replace(':', '.');
-
-  function momen(b: any): [string, string] {
-    const k: Kelas | null = b.kelas_berikut;
-    const s: Kelas | null = b.kelas_berlangsung;
-    switch (b.momen) {
-      case 'sebelum':
-        return [
-          k!.menit_lagi! <= 90 ? `${k!.nama} mulai ${durasi(k!.menit_lagi!)} lagi.` : `${k!.nama} jam ${jamTitik(k!.mulai)}.`,
-          `${jamTitik(k!.mulai)}–${jamTitik(k!.selesai)} di ${k!.ruang}, bersama ${k!.dosen}.`,
-        ];
-      case 'kelas':
-        return [`Sekarang: ${s!.nama}.`, `Di ${s!.ruang}, selesai ${durasi(s!.menit_tersisa!)} lagi. Jangan lupa tap KTM ke HP dosen.`];
-      case 'setelah': {
-        const t = b.tugas_kelas_tadi;
-        return ['Kelas hari ini sudah selesai.', t.length ? `Ada ${t.length} tugas dari kelas tadi yang belum dikumpulkan.` : 'Tidak ada tugas baru dari kelas tadi.'];
-      }
-      case 'malam': {
-        const besok: Kelas[] = b.jadwal_besok;
-        return besok.length
-          ? [`Besok mulai ${jamTitik(besok[0].mulai)}: ${besok[0].nama}.`, `${besok.length} kelas besok. Ruang ${besok[0].ruang}.`]
-          : ['Besok tidak ada kelas.', 'Waktu yang pas untuk mencicil tugas.'];
-      }
-      default:
-        return ['Hari ini tidak ada kelas.', 'Cek tugas di bawah, siapa tahu ada yang bisa dicicil.'];
-    }
-  }
+  const BULAN = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+  const titik = (j: string) => j.replace(':', '.');
+  const durasi = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} jam${m % 60 ? ` ${m % 60} mnt` : ''}` : `${m} menit`);
+  const SAPA: Record<string, string> = { Pagi: 'Selamat pagi!', Siang: 'Selamat siang!', Sore: 'Selamat sore!', Malam: 'Selamat malam!' };
 
   function render(b: any) {
-    $('tanggal').textContent = b.sekarang;
-    $('sapa').textContent = `${b.sapaan}, ${b.nama}.`;
-    const [judul, detail] = momen(b);
-    $('judul-momen').textContent = judul;
-    $('detail-momen').textContent = detail;
+    $('sapa').textContent = `Hai ${b.nama}`;
+    $('sapa-waktu').textContent = `${SAPA[b.sapaan] ?? ''} ${b.sekarang.split(' · ')[0]}`;
+    $('inisial').textContent = b.nama.charAt(0).toUpperCase();
 
-    $('ringkas').hidden = !b.ringkasan;
-    $('sumber-ringkas').textContent = b.ringkasan_ai ? 'Ringkasan dari AI agent' : 'Ringkasan hari ini';
-    $('isi-ringkas').textContent = b.ringkasan;
-
+    // Malam hari yang ditampilkan jadwal besok.
     const malam = b.momen === 'malam';
-    const jadwal: Kelas[] = malam ? b.jadwal_besok : b.jadwal_hari_ini;
+    const kelas: any[] = malam ? b.jadwal_besok : b.jadwal_hari_ini;
     $('judul-jadwal').textContent = malam ? 'Jadwal besok' : 'Jadwal hari ini';
-    $('jadwal').innerHTML = jadwal.length
-      ? jadwal
-          .map((k) => `<li class="${esc(k.status ?? '')}"><span class="jam">${esc(jamTitik(k.mulai))}</span>
-            <span class="isi"><strong>${esc(k.nama)}</strong><br><span class="redup kecil">${esc(k.ruang)}, ${esc(k.dosen)}</span></span></li>`)
-          .join('')
-      : '<li class="redup">Tidak ada kelas.</li>';
+    const tgl = new Date(Date.now() + (malam ? 86400000 : 0));
+    const hari = `<div class="hari"><b>${tgl.getDate()}</b><span>${BULAN[tgl.getMonth()]}</span></div>`;
+    const pil = (k: any) => {
+      if (malam) return `<span class="pil nanti">Besok ${titik(k.mulai)}</span>`;
+      if (k.status === 'berlangsung') return '<span class="pil berlangsung">Sedang berlangsung</span>';
+      if (k.status === 'selesai') return '<span class="pil selesai">Selesai</span>';
+      const lagi = b.kelas_berikut && b.kelas_berikut.id === k.id ? b.kelas_berikut.menit_lagi : null;
+      return `<span class="pil nanti">${lagi !== null ? `${durasi(lagi)} lagi` : `Jam ${titik(k.mulai)}`}</span>`;
+    };
+    $('jadwal').innerHTML = kelas.length
+      ? kelas.map((k) => `<div class="kelas"><div class="kelas-tgl">${hari}<div><h3>${esc(k.nama)}</h3>
+          <p class="jam">${titik(k.mulai)}–${titik(k.selesai)} · ${esc(k.ruang)}</p></div></div>
+          <p class="dosen">${esc(k.dosen)}</p>${pil(k)}</div>`).join('')
+      : `<div class="kelas"><div class="kelas-tgl">${hari}<div><h3>Tidak ada kelas</h3><p class="jam">Waktunya mencicil tugas.</p></div></div></div>`;
+    $('titik').innerHTML = kelas.length > 1 ? kelas.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('') : '';
+    const fokus = kelas.findIndex((k) => k.status === 'berlangsung' || k.status === 'nanti');
+    if (fokus > 0) $('jadwal').scrollLeft = ($('jadwal').clientWidth + 10) * fokus;
 
-    $('tugas').innerHTML = b.tugas.length
-      ? b.tugas
-          .map((t: any) => `<li><span class="isi"><strong>${esc(t.judul)}</strong><br><span class="redup kecil">${esc(t.matkul)}</span><br>
-            <button class="tombol garis kumpul" data-tugas="${t.id}">Sudah dikumpulkan</button></span>
-            <span class="ujung ${t.tingkat}">${esc(t.sisa)}</span></li>`)
-          .join('')
-      : '<li class="redup">Semua tugas sudah dikumpulkan.</li>';
+    const hadir = b.presensi.reduce((s: number, p: any) => s + p.hadir, 0);
+    const total = b.presensi.reduce((s: number, p: any) => s + p.total, 0);
+    const pct = total ? Math.round((hadir / total) * 100) : 100;
+    $('persen').textContent = `${pct}%`;
+    requestAnimationFrame(() => $('cincin').setAttribute('stroke-dashoffset', String(251.3 * (1 - pct / 100))));
+    $('hadir-angka').textContent = String(hadir);
+    $('hadir-ket').textContent = `dari ${total} pertemuan`;
 
-    $('presensi').innerHTML = b.presensi
+    $('sumber').textContent = b.ringkasan_ai ? 'AI agent' : 'Ringkasan hari ini';
+    $('ringkasan').textContent = b.ringkasan;
+    $('onchain').textContent = String(b.onchain);
+
+    $('daftar-tugas').innerHTML = b.tugas.length
+      ? b.tugas.map((t: any) => `<li><span class="berkas ${t.tingkat}">${ikon('tugas')}</span>
+          <span class="isi"><b>${esc(t.judul)}</b><span>${esc(t.matkul)} · <span class="sisa ${t.tingkat}">${esc(t.sisa)}</span></span></span>
+          <button class="tombol-kumpul" data-tugas="${t.id}" aria-label="Tandai ${esc(t.judul)} sudah dikumpulkan" title="Sudah dikumpulkan">${ikon('centang')}</button></li>`).join('')
+      : '<li class="kosong">Semua tugas sudah dikumpulkan 🎉</li>';
+
+    $('daftar-presensi').innerHTML = b.presensi
       .map((p: any) => {
-        const pct = p.total ? Math.round((p.hadir / p.total) * 100) : 100;
-        const kelas = p.status === 'aman' ? 'hijau' : p.status === 'hampir batas' ? 'kuning' : 'merah';
+        const persen = p.total ? Math.round((p.hadir / p.total) * 100) : 100;
         const ket = p.absen ? `absen ${p.absen}× dari batas ${p.batas}` : 'belum pernah absen';
-        return `<li><span class="isi"><strong>${esc(p.matkul)}</strong><br><span class="kecil ${kelas}">${ket}</span>
-          <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${pct}%"></i></div></span>
-          <span class="ujung">${p.hadir}/${p.total}</span></li>`;
+        return `<li><span class="isi"><b>${esc(p.matkul)}</b><span>${ket}</span>
+          <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${persen}%"></i></div></span>
+          <span class="skor">${p.hadir}/${p.total}</span></li>`;
       })
       .join('');
-    $('chain').textContent = b.onchain ? `${b.onchain} kehadiranmu sudah tercatat di blockchain dan tidak bisa diubah.` : '';
   }
+
+  $('jadwal').addEventListener('scroll', () => {
+    const el = $('jadwal');
+    const i = Math.round(el.scrollLeft / (el.clientWidth + 10));
+    $('titik').querySelectorAll('i').forEach((t, k) => t.classList.toggle('on', k === i));
+  });
 
   async function muat() {
     try {
@@ -134,7 +220,7 @@ import Dasar from '../layouts/Dasar.astro';
     }
   }
 
-  $('tugas').addEventListener('click', async (ev) => {
+  $('daftar-tugas').addEventListener('click', async (ev) => {
     const tombol = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-tugas]');
     if (!tombol) return;
     tombol.disabled = true;
@@ -146,6 +232,7 @@ import Dasar from '../layouts/Dasar.astro';
     }
   });
 
+  api<any>('/saya').then((s) => ($('lencana-ktm').hidden = !s.ktm)).catch(() => {});
   muat();
   setInterval(muat, 60_000);
 </script>

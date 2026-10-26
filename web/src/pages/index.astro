@@ -1,85 +1,88 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
 import Kartu from '../components/Kartu.astro';
+import { ikon } from '../lib/ikon';
 ---
 <Dasar judul="Tap KTM">
-  <header class="kepala">
-    <p class="merek">Smart KTM</p>
-    <h1>Tap KTM kamu, kuliahmu langsung kebuka.</h1>
+  <header class="atas-putih">
+    <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+    <h1 class="sapa-besar">Tap KTM kamu</h1>
+    <p class="sapa-kecil">Jadwal, tugas, dan AI asisten langsung terbuka.</p>
   </header>
 
-  <div class="kartu-wrap"><Kartu nama="KTM kamu" nim="Tempel di belakang HP" prodi="Universitas Pamulang" /></div>
+  <section class="zona-biru">
+    <div class="kartu-wrap"><Kartu nama="KTM kamu" nim="Tempel di belakang HP" prodi="Universitas Pamulang" /></div>
 
-  <!-- Lanjut sesi yang tersimpan -->
-  <section id="lanjut" hidden>
-    <a class="tombol" id="lanjut-ke" href="/beranda/">Lanjut sebagai <span id="lanjut-nama"></span></a>
-    <button class="tautan" id="ganti-akun" type="button">Ganti akun</button>
+    <!-- Lanjut sesi yang tersimpan -->
+    <div class="langkah" id="lanjut" hidden>
+      <a class="tombol kuning" id="lanjut-ke" href="/beranda/">Lanjut sebagai <span id="lanjut-nama"></span></a>
+      <button class="tautan" id="ganti-akun" type="button">Ganti akun</button>
+    </div>
+
+    <!-- Awal -->
+    <div class="langkah" id="awal">
+      <button class="tombol kuning" id="mulai-tap" type="button"><Fragment set:html={ikon('nfc')} /> Tap KTM</button>
+      <p class="catatan" id="tanpa-nfc" hidden>Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM.</p>
+      <button class="tombol garis" id="ke-nim" type="button">Masuk pakai NIM</button>
+      <p class="catatan"><Fragment set:html={ikon('perisai')} /> Hanya nomor seri kartu yang dibaca. Isi KTM, termasuk data parkir, tidak diubah.</p>
+    </div>
+
+    <!-- Menunggu kartu -->
+    <div class="langkah" id="menunggu" hidden>
+      <p class="status">Tempelkan KTM ke belakang HP</p>
+      <p class="catatan">Tahan sebentar sampai HP bergetar.</p>
+      <button class="tautan" id="batal-tap" type="button">Batal</button>
+    </div>
+
+    <!-- KTM terdaftar: PIN -->
+    <form class="kartu form" id="form-pin" hidden>
+      <p class="status-gelap">Halo, <span id="pin-nama"></span> 👋</p>
+      <label for="pin">PIN 6 angka</label>
+      <input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+      <button class="tombol" type="submit">Masuk</button>
+    </form>
+
+    <!-- KTM baru: daftar -->
+    <form class="kartu form" id="form-daftar" hidden>
+      <p class="status-gelap">KTM ini belum terdaftar</p>
+      <p class="redup kecil">Daftarkan sekali, setelah itu cukup tap. Kalau NIM kamu sudah ada di sistem, isi NIM dan PIN saja.</p>
+      <label for="d-nim">NIM</label>
+      <input id="d-nim" name="nim" inputmode="numeric" required />
+      <label for="d-nama">Nama lengkap</label>
+      <input id="d-nama" name="nama" autocomplete="name" />
+      <label for="d-prodi">Program studi</label>
+      <input id="d-prodi" name="prodi" value="Teknik Informatika" />
+      <label for="d-pin">Buat PIN 6 angka</label>
+      <input id="d-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
+      <button class="tombol" type="submit">Daftarkan KTM</button>
+    </form>
+
+    <!-- Masuk pakai NIM -->
+    <form class="kartu form" id="form-nim" hidden>
+      <p class="status-gelap">Masuk pakai NIM</p>
+      <label for="m-nim">NIM atau NIDN</label>
+      <input id="m-nim" name="nim" inputmode="numeric" required />
+      <label for="m-pin">PIN</label>
+      <input id="m-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+      <button class="tombol" type="submit">Masuk</button>
+      <button class="tautan biru" id="kembali" type="button">Kembali</button>
+    </form>
+
+    <p id="pesan" class="galat pesan" role="alert"></p>
   </section>
-
-  <!-- Awal: tap atau NIM -->
-  <section id="awal">
-    <button class="tombol sinyal" id="mulai-tap" type="button">Tap KTM</button>
-    <p class="redup kecil catatan" id="tanpa-nfc" hidden>
-      Tap KTM hanya bisa di Chrome Android dengan NFC menyala. Di perangkat ini, masuk pakai NIM.
-    </p>
-    <button class="tombol garis" id="ke-nim" type="button">Masuk pakai NIM</button>
-    <p class="redup kecil catatan">Aplikasi hanya membaca nomor seri kartu. Isi KTM, termasuk data parkir, tidak diubah.</p>
-  </section>
-
-  <!-- Menunggu kartu -->
-  <section id="menunggu" hidden>
-    <p class="status-besar">Tempelkan KTM ke belakang HP</p>
-    <p class="redup">Tahan sebentar sampai HP bergetar.</p>
-    <button class="tautan" id="batal-tap" type="button">Batal</button>
-  </section>
-
-  <!-- KTM terdaftar: PIN -->
-  <form id="form-pin" hidden>
-    <p class="status-besar">Halo, <span id="pin-nama"></span>.</p>
-    <label for="pin">PIN 6 angka</label>
-    <input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
-    <button class="tombol" type="submit">Masuk</button>
-  </form>
-
-  <!-- KTM baru: daftar -->
-  <form id="form-daftar" hidden>
-    <p class="status-besar">KTM ini belum terdaftar.</p>
-    <p class="redup">Daftarkan sekali, setelah itu cukup tap. Kalau NIM kamu sudah ada di sistem, isi NIM dan PIN saja.</p>
-    <label for="d-nim">NIM</label>
-    <input id="d-nim" name="nim" inputmode="numeric" required />
-    <label for="d-nama">Nama lengkap</label>
-    <input id="d-nama" name="nama" autocomplete="name" />
-    <label for="d-prodi">Program studi</label>
-    <input id="d-prodi" name="prodi" value="Teknik Informatika" />
-    <label for="d-pin">Buat PIN 6 angka</label>
-    <input id="d-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
-    <button class="tombol" type="submit">Daftarkan KTM</button>
-  </form>
-
-  <!-- Masuk pakai NIM -->
-  <form id="form-nim" hidden>
-    <label for="m-nim">NIM atau NIDN</label>
-    <input id="m-nim" name="nim" inputmode="numeric" required />
-    <label for="m-pin">PIN</label>
-    <input id="m-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
-    <button class="tombol" type="submit">Masuk</button>
-    <button class="tautan" id="kembali" type="button">Kembali</button>
-  </form>
-
-  <p id="pesan" class="galat" role="alert"></p>
 </Dasar>
 
-<style>
-  .kepala { margin: 8px 0 24px; }
-  .merek { font-family: var(--judul); font-weight: 700; color: var(--tinta-2); margin-bottom: 10px; }
-  .kepala h1 { font-size: 2.35rem; max-width: 14ch; }
-  .kartu-wrap { margin-bottom: 28px; }
-  section, form { display: flex; flex-direction: column; gap: 12px; }
-  form { gap: 0; }
-  form .tombol { margin-top: 20px; }
-  .catatan { text-align: center; }
-  .status-besar { font-family: var(--judul); font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
-  #pesan { margin-top: 16px; min-height: 1.5em; }
+<style is:global>
+  .kartu-wrap { margin: 4px 4px 22px; transform: perspective(800px) rotateX(6deg); }
+  .langkah { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+  .catatan { display: flex; gap: 8px; justify-content: center; align-items: flex-start; text-align: center; font-size: 0.85rem; color: rgba(255, 255, 255, 0.8); }
+  .catatan .ikon { width: 16px; height: 16px; margin-top: 2px; }
+  .status { font-size: 1.35rem; font-weight: 800; text-align: center; }
+  .status-gelap { font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; }
+  .form .tombol { margin-top: 18px; }
+  .tautan.biru { color: var(--biru); display: block; margin: 8px auto 0; }
+  .langkah .tautan { color: var(--putih); }
+  .pesan { margin-top: 14px; text-align: center; min-height: 1.5em; }
 </style>
 
 <script>
@@ -160,7 +163,6 @@ import Kartu from '../components/Kartu.astro';
     $('tanpa-nfc').hidden = false;
   }
 
-  // Sudah pernah masuk di perangkat ini?
   if (sesi.ambil()) {
     api<{ nama: string; peran: string }>('/saya')
       .then((s) => {

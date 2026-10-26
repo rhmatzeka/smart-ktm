@@ -1,60 +1,60 @@
 ---
-// KTM digital. Isi nama/NIM/prodi diisi skrip halaman lewat data-isi.
+// KTM digital. Isi nama/NIM/prodi bisa diganti skrip halaman lewat data-isi.
+import { ikon } from '../lib/ikon';
 interface Props {
   nama?: string;
   nim?: string;
   prodi?: string;
-  sinyal?: boolean;
 }
-const { nama = 'Nama Mahasiswa', nim = 'NIM', prodi = 'Program Studi', sinyal = false } = Astro.props;
+const { nama = 'Nama Mahasiswa', nim = 'NIM', prodi = 'Program Studi' } = Astro.props;
 ---
-<div class:list={['ktm', { sinyal }]}>
-  <div class="gelombang" aria-hidden="true"><span></span><span></span><span></span></div>
-  <div class="atas">
-    <span class="lembaga">Kartu Tanda Mahasiswa</span>
-    <span class="chip" aria-hidden="true"></span>
+<div class="ktm">
+  <div class="riak" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="ktm-atas">
+    <span class="ktm-merek"><Fragment set:html={ikon('kartu')} /> Kartu Tanda Mahasiswa</span>
+    <span class="ktm-nfc" aria-hidden="true"><Fragment set:html={ikon('nfc')} /></span>
   </div>
-  <div class="bawah">
+  <span class="chip" aria-hidden="true"></span>
+  <div class="ktm-bawah">
     <strong data-isi="nama">{nama}</strong>
     <span data-isi="nim">{nim}</span>
     <span data-isi="prodi">{prodi}</span>
   </div>
 </div>
 
-<style>
+<style is:global>
   .ktm {
-    position: relative; aspect-ratio: 1.586; width: 100%;
-    border-radius: var(--r-kartu); padding: 18px 20px;
+    position: relative; aspect-ratio: 1.586; width: 100%; overflow: hidden;
+    border-radius: 24px; padding: 18px 20px; color: var(--putih);
     display: flex; flex-direction: column; justify-content: space-between;
-    color: var(--kertas);
     background:
-      radial-gradient(120% 90% at 100% 0%, #1d4a78 0%, transparent 60%),
-      linear-gradient(160deg, #123659, var(--tinta));
-    box-shadow: 0 18px 40px -18px rgba(14, 42, 71, 0.55);
-    overflow: hidden;
+      radial-gradient(90% 80% at 0% 0%, rgba(255, 255, 255, 0.28), transparent 60%),
+      radial-gradient(70% 90% at 100% 100%, #7c3aed 0%, transparent 60%),
+      linear-gradient(135deg, #3b7bf6, #1747c9 55%, #0f3699);
+    box-shadow: 0 24px 40px -18px rgba(9, 30, 90, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   }
-  .atas { display: flex; justify-content: space-between; align-items: flex-start; }
-  .lembaga { font-family: var(--judul); font-weight: 700; font-size: 0.95rem; opacity: 0.9; }
+  .ktm::after {
+    content: ''; position: absolute; inset: -60% -30%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.22) 50%, transparent 58%);
+  }
+  .ktm-atas { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+  .ktm-merek { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.85rem; opacity: 0.95; }
+  .ktm-merek .ikon { width: 18px; height: 18px; }
+  .ktm-nfc .ikon { width: 26px; height: 26px; }
   .chip {
-    width: 42px; height: 32px; border-radius: 7px;
-    background: linear-gradient(135deg, #f7cf6a, var(--sinyal) 55%, #c98d0a);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+    position: absolute; left: 20px; top: 38%; width: 44px; height: 34px; border-radius: 8px;
+    background: linear-gradient(135deg, #fde68a, #fbbf24 55%, #d97706);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
   }
-  .bawah { display: flex; flex-direction: column; gap: 2px; }
-  .bawah strong { font-family: var(--judul); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
-  .bawah span { opacity: 0.85; font-size: 0.95rem; }
+  .ktm-bawah { display: flex; flex-direction: column; position: relative; z-index: 1; }
+  .ktm-bawah strong { font-size: 1.35rem; font-weight: 800; }
+  .ktm-bawah span { font-size: 0.85rem; opacity: 0.85; }
 
-  /* Gelombang NFC hanya bergerak saat halaman sedang menunggu tap. */
-  .gelombang { position: absolute; right: 18px; top: 50%; translate: 0 -50%; width: 90px; height: 90px; pointer-events: none; }
-  .gelombang span {
-    position: absolute; inset: 0; border-radius: 50%;
-    border: 3px solid var(--sinyal); opacity: 0;
-  }
-  .ktm.sinyal .gelombang span { animation: riak 1.8s ease-out infinite; }
-  .ktm.sinyal .gelombang span:nth-child(2) { animation-delay: 0.6s; }
-  .ktm.sinyal .gelombang span:nth-child(3) { animation-delay: 1.2s; }
-  @keyframes riak {
-    from { transform: scale(0.2); opacity: 0.9; }
-    to { transform: scale(1.4); opacity: 0; }
-  }
+  /* Gelombang NFC hanya bergerak saat menunggu tap (.ktm.sinyal). */
+  .riak { position: absolute; right: -30px; top: -30px; width: 170px; height: 170px; pointer-events: none; }
+  .riak span { position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--kuning); opacity: 0; }
+  .ktm.sinyal .riak span { animation: riak 1.8s ease-out infinite; }
+  .ktm.sinyal .riak span:nth-child(2) { animation-delay: 0.6s; }
+  .ktm.sinyal .riak span:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes riak { from { transform: scale(0.2); opacity: 0.9; } to { transform: scale(1.3); opacity: 0; } }
 </style>
