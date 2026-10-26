@@ -2,88 +2,120 @@
 import Dasar from '../layouts/Dasar.astro';
 import Kartu from '../components/Kartu.astro';
 import { ikon } from '../lib/ikon';
+const panah = ikon('kembali', 'ikon panah');
 ---
 <Dasar judul="Profil" nav="profil">
-  <header class="atas-putih kepala-profil">
-    <div class="baris-atas">
-      <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
-      <button class="ikon-keluar" id="keluar" type="button" aria-label="Keluar" title="Keluar"><Fragment set:html={ikon('keluar')} /></button>
-    </div>
-    <div class="avatar raksasa" id="inisial">·<span class="lencana-ktm" id="lencana-ktm" hidden><Fragment set:html={ikon('centang')} /></span></div>
-    <h1 class="nama-profil" id="nama">Memuat…</h1>
-    <p class="redup" id="prodi"></p>
-    <div class="info-kotak">
-      <div><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kartu')} /></span><span><b>NIM</b><span id="nim"></span></span></div>
-      <div><span class="titik-ikon t-ungu"><Fragment set:html={ikon('nfc')} /></span><span><b>KTM fisik</b><span id="ktm-status"></span></span></div>
+  <header class="kepala-chat">
+    <div>
+      <h1>Profil</h1>
+      <p>Akun, KTM, dan data dari MyUnpam</p>
     </div>
   </header>
 
-  <section class="zona-biru naik-sedikit">
-    <div class="dua-tombol">
-      <button class="tombol garis" id="buka-ktm" type="button"><Fragment set:html={ikon('kartu')} /> KTM Digital</button>
-      <a class="tombol garis" href="/verifikasi/"><Fragment set:html={ikon('rantai')} /> Cek bukti</a>
-    </div>
-    <div class="ktm-digital" id="ktm-digital" hidden><Kartu /></div>
-    <a class="tombol kuning sinkron-tombol" href="/sinkron/"><Fragment set:html={ikon('kalender')} /> Sinkron jadwal MyUnpam</a>
-
-    <ul class="info-biru">
-      <li><span class="titik-ikon t-hijau"><Fragment set:html={ikon('sekolah')} /></span><span><b>Universitas</b>Universitas Pamulang</span></li>
-      <li><span class="titik-ikon t-biru"><Fragment set:html={ikon('tugas')} /></span><span><b>Program studi</b><span id="prodi-2"></span></span></li>
+  <section class="isi-profil">
+    <!-- Identitas -->
+    <article class="identitas">
+      <span class="foto-profil" id="foto">·</span>
+      <div class="identitas-teks">
+        <b id="nama">Memuat…</b>
+        <span id="nim"></span>
+        <span id="prodi"></span>
+      </div>
+    </article>
+    <ul class="daftar-info">
+      <li><Fragment set:html={ikon('nfc')} /><span>KTM fisik</span><b id="ktm-status">–</b></li>
+      <li><Fragment set:html={ikon('sekolah')} /><span>Kampus</span><b>Universitas Pamulang</b></li>
     </ul>
 
-    <form class="kartu" id="form">
-      <p class="kartu-judul"><span class="titik-ikon t-kuning"><Fragment set:html={ikon('orang')} /></span>Profil publik (saat KTM ditap orang lain)</p>
+    <!-- Aksi -->
+    <p class="label-bagian">Akun</p>
+    <ul class="daftar-aksi">
+      <li><a href="/sinkron/"><Fragment set:html={ikon('kalender')} /><span><b>Sinkron jadwal MyUnpam</b><small>Ambil jadwal, presensi, dan foto terbaru</small></span><Fragment set:html={panah} /></a></li>
+      <li><button type="button" id="buka-ktm"><Fragment set:html={ikon('kartu')} /><span><b>KTM digital</b><small>Tampilkan kartu di layar</small></span><Fragment set:html={panah} /></button></li>
+      <li class="ktm-digital" id="ktm-digital" hidden><Kartu /></li>
+      <li><a href="/verifikasi/"><Fragment set:html={ikon('rantai')} /><span><b>Cek bukti kehadiran</b><small>Lihat catatan presensi di blockchain</small></span><Fragment set:html={panah} /></a></li>
+    </ul>
+
+    <!-- Profil publik -->
+    <p class="label-bagian">Profil publik, terlihat saat KTM-mu ditap orang lain</p>
+    <form class="blok-form" id="form">
       <label for="bio">Bio singkat</label>
       <textarea id="bio" name="bio" rows="2" maxlength="160" placeholder="Contoh: Suka web3, IoT, dan AI agent"></textarea>
-      <label for="github">Username GitHub</label>
-      <input id="github" name="github" autocomplete="off" />
-      <label for="portofolio">Portofolio</label>
-      <input id="portofolio" name="portofolio" placeholder="contoh.my.id" />
-      <label class="centang"><input type="checkbox" id="publik" name="publik" /> Tampilkan profil saat KTM ditap orang lain</label>
-      <button class="tombol" type="submit">Simpan profil</button>
-      <p class="tersimpan" id="tersimpan" role="status"></p>
+      <div class="dua-kolom">
+        <div>
+          <label for="github">GitHub</label>
+          <input id="github" name="github" autocomplete="off" placeholder="username" />
+        </div>
+        <div>
+          <label for="portofolio">Portofolio</label>
+          <input id="portofolio" name="portofolio" placeholder="contoh.my.id" />
+        </div>
+      </div>
+      <label class="saklar"><input type="checkbox" id="publik" name="publik" /><span>Tampilkan profil saat KTM ditap orang lain</span></label>
+      <div class="baris-simpan">
+        <span class="tersimpan" id="tersimpan" role="status"></span>
+        <button class="tombol kecil-saja" type="submit">Simpan</button>
+      </div>
     </form>
-    <p id="pesan" class="galat" role="alert"></p>
+
+    <button class="keluar" id="keluar" type="button"><Fragment set:html={ikon('keluar')} /> Keluar dari perangkat ini</button>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
   </section>
 </Dasar>
 
 <style is:global>
-  .kepala-profil { text-align: center; }
-  .kepala-profil .baris-atas { text-align: left; }
-  .ikon-keluar { width: 40px; height: 40px; border-radius: 12px; border: 0; background: #ffe4e6; color: var(--merah); display: grid; place-items: center; cursor: pointer; }
-  .avatar.raksasa img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .avatar.raksasa { width: 84px; height: 84px; font-size: 2.1rem; margin: 14px auto 10px; }
-  .avatar.raksasa .lencana-ktm { width: 28px; height: 28px; right: 2px; bottom: 2px; }
-  .avatar.raksasa .lencana-ktm .ikon { width: 16px; height: 16px; }
-  .nama-profil { font-size: 1.5rem; font-weight: 800; }
-  .info-kotak {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; padding: 14px;
-    background: var(--putih); border-radius: var(--r); box-shadow: 0 16px 36px -16px rgba(15, 54, 153, 0.35);
-    text-align: left; position: relative; z-index: 2;
+  body:has(.isi-profil) .halaman { background: var(--latar); }
+  .kepala-chat { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis); }
+  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
+  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
+
+  .isi-profil { flex: 1; padding: 14px 16px 100px; }
+  .label-bagian { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); margin: 18px 2px 8px; }
+
+  .identitas { display: flex; gap: 12px; align-items: center; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px 16px 0 0; padding: 14px; }
+  .foto-profil { width: 56px; height: 66px; border-radius: 10px; overflow: hidden; flex: none; display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; background: var(--biru-pudar); color: var(--biru); }
+  .foto-profil img { width: 100%; height: 100%; object-fit: cover; }
+  .identitas-teks { display: flex; flex-direction: column; min-width: 0; }
+  .identitas-teks b { font-size: 1.05rem; font-weight: 800; }
+  .identitas-teks span { font-size: 0.8rem; color: var(--teks-2); }
+
+  .daftar-info, .daftar-aksi { list-style: none; margin: 0; padding: 0; background: var(--putih); border: 1px solid var(--garis); }
+  .daftar-info { border-top: 0; border-radius: 0 0 16px 16px; }
+  .daftar-aksi { border-radius: 16px; overflow: hidden; }
+  .daftar-info li { display: flex; gap: 10px; align-items: center; padding: 10px 14px; font-size: 0.85rem; border-top: 1px solid #eef1f6; }
+  .daftar-info li span { color: var(--teks-2); }
+  .daftar-info li b { margin-left: auto; font-weight: 700; text-align: right; }
+  .daftar-info .ikon, .daftar-aksi .ikon { width: 18px; height: 18px; color: var(--biru); flex: none; }
+  .daftar-aksi li + li { border-top: 1px solid #eef1f6; }
+  .daftar-aksi a, .daftar-aksi button {
+    width: 100%; display: flex; gap: 12px; align-items: center; padding: 12px 14px; text-align: left;
+    background: none; border: 0; color: var(--teks); text-decoration: none; font: inherit; cursor: pointer;
   }
-  .info-kotak > div { display: flex; gap: 8px; align-items: flex-start; }
-  .info-kotak b { display: block; font-size: 0.82rem; }
-  .info-kotak span span { font-size: 0.85rem; color: var(--teks-2); overflow-wrap: anywhere; }
-  .naik-sedikit { margin-top: -40px; padding-top: 58px; }
-  .dua-tombol { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .dua-tombol .tombol { font-size: 0.9rem; padding: 0 10px; }
-  .ktm-digital { margin-top: 16px; }
-  .sinkron-tombol { margin-top: 12px; }
-  .info-biru { list-style: none; margin: 20px 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-  .info-biru li { display: flex; gap: 12px; align-items: flex-start; }
-  .info-biru b { display: block; font-size: 0.95rem; }
-  .info-biru span span, .info-biru li > span:last-child { color: rgba(255, 255, 255, 0.85); font-size: 0.9rem; }
-  #form .tombol { margin-top: 18px; }
-  .centang { display: flex; gap: 10px; align-items: center; font-weight: 500; }
-  .centang input { width: 20px; min-height: 20px; height: 20px; }
-  .tersimpan { color: var(--hijau); font-weight: 700; margin-top: 8px; min-height: 1.4em; }
+  .daftar-aksi span { flex: 1; display: flex; flex-direction: column; }
+  .daftar-aksi b { font-size: 0.9rem; font-weight: 700; }
+  .daftar-aksi small { font-size: 0.75rem; color: var(--teks-2); }
+  .daftar-aksi .panah { transform: rotate(180deg); color: var(--teks-2); width: 16px; height: 16px; }
+  .ktm-digital { padding: 12px 14px; }
+
+  .blok-form { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 4px 14px 14px; }
+  .blok-form label { font-size: 0.8rem; margin: 10px 0 5px; }
+  .blok-form textarea { min-height: 0; }
+  .dua-kolom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .saklar { display: flex; gap: 10px; align-items: center; font-weight: 500; margin-top: 12px; }
+  .saklar input { width: 18px; min-height: 18px; height: 18px; accent-color: var(--biru); }
+  .baris-simpan { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px; }
+  .tersimpan { color: var(--hijau); font-size: 0.8rem; font-weight: 700; }
+
+  .keluar { margin-top: 18px; width: 100%; display: flex; gap: 8px; align-items: center; justify-content: center; padding: 12px; border-radius: 14px; border: 1px solid var(--garis); background: var(--putih); color: var(--merah); font: 700 0.88rem var(--font); cursor: pointer; }
+  .keluar .ikon { width: 18px; height: 18px; }
+  .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
 </style>
 
 <script>
   import { api, sesi, tanganiGalat } from '../lib/api';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const salah = (t: string) => ($('pesan').textContent = t);
+  const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
 
   api<any>('/saya')
     .then((s) => {
@@ -91,16 +123,12 @@ import { ikon } from '../lib/ikon';
         const img = document.createElement('img');
         img.src = s.foto;
         img.alt = '';
-        $('inisial').firstChild!.replaceWith(img);
-      } else {
-        $('inisial').firstChild!.textContent = s.nama.charAt(0).toUpperCase();
-      }
-      $('lencana-ktm').hidden = !s.ktm;
+        $('foto').replaceChildren(img);
+      } else $('foto').textContent = s.nama.split(/\s+/).slice(0, 2).map((k: string) => k.charAt(0)).join('');
       $('nama').textContent = s.nama;
-      $('prodi').textContent = s.prodi || 'Dosen';
-      $('prodi-2').textContent = s.prodi || '-';
       $('nim').textContent = s.nim;
-      $('ktm-status').textContent = s.ktm ? 'Tertaut ✓' : 'Belum tertaut';
+      $('prodi').textContent = [s.prodi || (s.peran === 'dosen' ? 'Dosen' : ''), s.semester && `Semester ${s.semester}`].filter(Boolean).join(' · ');
+      $('ktm-status').textContent = s.ktm ? 'Tertaut' : 'Belum tertaut';
       const isi = (k: string, v: string) => (document.querySelector(`[data-isi=${k}]`)!.textContent = v);
       isi('nama', s.nama);
       isi('nim', s.nim);
@@ -124,7 +152,7 @@ import { ikon } from '../lib/ikon';
         portofolio: $<HTMLInputElement>('portofolio').value,
         publik: $<HTMLInputElement>('publik').checked,
       });
-      $('tersimpan').textContent = 'Profil tersimpan.';
+      $('tersimpan').textContent = 'Tersimpan';
     } catch (e) {
       tanganiGalat(e, salah);
     }
