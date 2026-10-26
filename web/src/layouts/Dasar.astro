@@ -61,16 +61,17 @@ const menu = [
     --bayang: 0 12px 32px -14px rgba(23, 71, 201, 0.35);
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
+  /* Skala dasar lebih kecil: semua ukuran berbasis rem ikut mengecil. */
+  html { -webkit-text-size-adjust: 100%; font-size: 14px; }
   body {
-    margin: 0; font-family: var(--font); font-size: 15px; line-height: 1.5;
+    margin: 0; font-family: var(--font); font-size: 14px; line-height: 1.5;
     color: var(--teks); background: #dfe6f3;
   }
   .halaman {
     max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
     background: var(--putih); display: flex; flex-direction: column;
   }
-  body.ada-nav .zona-biru { padding-bottom: 110px; }
+  body.ada-nav .zona-biru { padding-bottom: 90px; }
   h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.01em; }
   p { margin: 0; }
   a { color: inherit; }
@@ -78,26 +79,26 @@ const menu = [
   :focus-visible { outline: 3px solid var(--kuning); outline-offset: 2px; border-radius: 8px; }
   [hidden] { display: none !important; }
 
-  .ikon { width: 22px; height: 22px; flex: none; }
+  .ikon { width: 20px; height: 20px; flex: none; }
 
   /* Bagian atas putih + zona biru di bawahnya (pola utama tiap halaman). */
-  .atas-putih { padding: 22px 20px 20px; position: relative; z-index: 1; }
+  .atas-putih { padding: 16px 16px 14px; position: relative; z-index: 1; }
   .zona-biru {
     flex: 1; background: var(--biru); color: var(--putih);
-    border-radius: 28px 28px 0 0; padding: 22px 16px 28px;
+    border-radius: 24px 24px 0 0; padding: 18px 14px 24px;
     background-image: radial-gradient(120% 60% at 100% 0%, var(--biru-muda) 0%, transparent 55%);
   }
-  .zona-biru.naik { margin-top: -46px; padding-top: 66px; }
+  .zona-biru.naik { margin-top: -40px; padding-top: 56px; }
 
   .baris-atas { display: flex; justify-content: space-between; align-items: center; }
   .merek { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; color: var(--biru); }
-  .merek .ikon { width: 26px; height: 26px; }
-  .sapa-besar { font-size: 1.9rem; font-weight: 800; margin-top: 18px; }
-  .sapa-kecil { font-size: 1.1rem; font-weight: 500; color: var(--teks-2); margin-top: 2px; }
+  .merek .ikon { width: 22px; height: 22px; }
+  .sapa-besar { font-size: 1.6rem; font-weight: 800; margin-top: 12px; }
+  .sapa-kecil { font-size: 1rem; font-weight: 500; color: var(--teks-2); margin-top: 2px; }
 
   .avatar {
-    width: 48px; height: 48px; border-radius: 50%; flex: none;
-    display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; color: var(--putih);
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    display: grid; place-items: center; font-weight: 800; font-size: 1rem; color: var(--putih);
     background: linear-gradient(135deg, var(--biru-muda), var(--biru-tua));
     box-shadow: 0 0 0 3px var(--putih), 0 6px 16px -6px rgba(15, 54, 153, 0.6);
     position: relative;
@@ -111,11 +112,11 @@ const menu = [
   /* Kartu putih di zona biru */
   .kartu {
     background: var(--putih); color: var(--teks); border-radius: var(--r);
-    padding: 16px; box-shadow: var(--bayang);
+    padding: 14px; box-shadow: var(--bayang);
   }
-  .kartu-judul { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; margin-bottom: 10px; }
-  .titik-ikon { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; }
-  .titik-ikon .ikon { width: 16px; height: 16px; stroke-width: 2.2; }
+  .kartu-judul { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; }
+  .titik-ikon { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .titik-ikon .ikon { width: 14px; height: 14px; stroke-width: 2.2; }
   .t-oranye { background: #ffeadb; color: #c2410c; } .t-ungu { background: #efe7ff; color: #6d28d9; } .t-merah { background: #ffe5e7; color: #b91c1c; }
   .t-hijau { background: #e2f6e7; color: #15803d; } .t-biru { background: #e6edff; color: var(--biru); } .t-kuning { background: #fef3c7; color: #a16207; }
   .redup { color: var(--teks-2); }
@@ -123,26 +124,26 @@ const menu = [
 
   /* Ikon aplikasi: ikon garis polos, tanpa kotak */
   .app-ikon { display: grid; place-items: center; flex: none; color: var(--biru); }
-  .app-ikon .ikon { width: 24px; height: 24px; stroke-width: 1.9; }
+  .app-ikon .ikon { width: 21px; height: 21px; stroke-width: 1.9; }
 
   /* Tombol */
   .tombol {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    min-height: 52px; padding: 0 22px; width: 100%; border: 0; border-radius: 16px; cursor: pointer;
-    font: 700 1rem var(--font); text-decoration: none; background: var(--biru); color: var(--putih);
+    min-height: 44px; padding: 0 18px; width: 100%; border: 0; border-radius: 13px; cursor: pointer;
+    font: 700 0.95rem var(--font); text-decoration: none; background: var(--biru); color: var(--putih);
     box-shadow: 0 10px 20px -10px rgba(23, 71, 201, 0.7);
   }
   .tombol.kuning { background: var(--kuning); color: #1f2a44; box-shadow: 0 10px 20px -10px rgba(234, 179, 8, 0.8); }
   .tombol.putih { background: var(--putih); color: var(--biru); }
   .tombol.garis { background: transparent; color: var(--putih); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55); }
   .tombol.garis-biru { background: transparent; color: var(--biru); box-shadow: inset 0 0 0 1.5px var(--biru); }
-  .tombol.kecil-saja { min-height: 36px; width: auto; padding: 0 14px; font-size: 0.85rem; border-radius: 12px; }
+  .tombol.kecil-saja { min-height: 32px; width: auto; padding: 0 12px; font-size: 0.82rem; border-radius: 10px; }
   .tombol:disabled { opacity: 0.6; cursor: wait; }
   .tautan { background: none; border: 0; padding: 8px 0; font: 600 0.95rem var(--font); color: inherit; text-decoration: underline; cursor: pointer; }
 
   label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 6px; }
   input, textarea {
-    width: 100%; min-height: 50px; padding: 12px 14px; font: 1rem var(--font); color: var(--teks);
+    width: 100%; min-height: 44px; padding: 10px 12px; font: 0.95rem var(--font); color: var(--teks);
     background: var(--latar); border: 1.5px solid var(--garis); border-radius: var(--r-kecil);
   }
   input:focus, textarea:focus { border-color: var(--biru); outline: none; background: var(--putih); }
@@ -154,11 +155,11 @@ const menu = [
   .nav-bawah {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 20;
     width: 100%; max-width: 480px; display: flex; justify-content: space-around; align-items: center;
-    padding: 10px 18px calc(12px + env(safe-area-inset-bottom));
-    background: var(--biru-tua); border-radius: 26px 26px 0 0;
+    padding: 8px 18px calc(8px + env(safe-area-inset-bottom));
+    background: var(--biru-tua); border-radius: 22px 22px 0 0;
   }
   .nav-bawah a {
-    width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center;
+    width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
     color: rgba(255, 255, 255, 0.75); text-decoration: none;
   }
   .nav-bawah a[aria-current='page'] { background: var(--biru-muda); color: var(--kuning); }

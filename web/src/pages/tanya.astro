@@ -37,9 +37,9 @@ import { ikon } from '../lib/ikon';
   body:has(.kepala-chat) .halaman { background: var(--latar); }
   .kepala-chat {
     position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center;
-    padding: 16px 18px; background: var(--putih); border-bottom: 1px solid var(--garis);
+    padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis);
   }
-  .tanda-ktm { width: 40px; height: 40px; border-radius: 12px; background: var(--biru); color: var(--putih); display: grid; place-items: center; flex: none; }
+  .tanda-ktm { width: 36px; height: 36px; border-radius: 12px; background: var(--biru); color: var(--putih); display: grid; place-items: center; flex: none; }
   .tanda-ktm .ikon { width: 22px; height: 22px; }
   .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
   .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
@@ -76,12 +76,12 @@ import { ikon } from '../lib/ikon';
   .mode { align-self: flex-start; font-size: 0.75rem; color: var(--teks-2); }
 
   .ketik {
-    position: fixed; left: 50%; transform: translateX(-50%); bottom: 76px; z-index: 15;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 62px; z-index: 15;
     width: 100%; max-width: 480px; display: flex; gap: 8px; padding: 10px 14px;
     background: var(--latar);
   }
-  .ketik input { flex: 1; background: var(--putih); border: 1px solid var(--garis); border-radius: 14px; min-height: 48px; }
-  .kirim { width: 48px; height: 48px; border: 0; border-radius: 14px; background: var(--biru); color: var(--putih); display: grid; place-items: center; cursor: pointer; flex: none; }
+  .ketik input { flex: 1; background: var(--putih); border: 1px solid var(--garis); border-radius: 13px; min-height: 44px; }
+  .kirim { width: 44px; height: 44px; border: 0; border-radius: 14px; background: var(--biru); color: var(--putih); display: grid; place-items: center; cursor: pointer; flex: none; }
   .kirim:disabled { opacity: 0.5; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
