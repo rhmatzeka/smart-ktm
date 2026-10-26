@@ -80,8 +80,11 @@ import { ikon, ikonApp } from '../lib/ikon';
   }
   const simpan = () => { try { sessionStorage.setItem(KUNCI, JSON.stringify(riwayat.slice(-20))); } catch { /* abaikan */ } };
   const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
+  // Model kadang menjawab dengan markdown ringan: **tebal** dan daftar "- ".
+  const rapikan = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^\s*[-*] /gm, '• ');
+  const balasanAi = (teks: string) => tambah('gelembung ai', rapikan(teks), true);
 
-  riwayat.forEach((p) => tambah(`gelembung ${p.peran === 'user' ? 'saya' : 'ai'}`, p.teks));
+  riwayat.forEach((p) => (p.peran === 'user' ? tambah('gelembung saya', p.teks) : balasanAi(p.teks)));
 
   async function kirim(teks: string) {
     tambah('gelembung saya', teks);
@@ -92,8 +95,8 @@ import { ikon, ikonApp } from '../lib/ikon';
       const r = await api<{ balasan: string; aksi: string[]; mode: string }>('/chat', { pesan: teks, riwayat });
       tunggu.remove();
       r.aksi.forEach((a) => tambah('aksi', `${ikon('centang')} ${esc(a)}`, true));
-      tambah('gelembung ai', r.balasan);
-      if (r.mode === 'offline') tambah('mode', 'Mode offline: kunci Gemini belum diatur di server.');
+      balasanAi(r.balasan);
+      if (r.mode === 'offline') tambah('mode', 'Mode offline: kunci AI belum diatur di server.');
       riwayat.push({ peran: 'user', teks }, { peran: 'model', teks: r.balasan });
       simpan();
     } catch (e) {

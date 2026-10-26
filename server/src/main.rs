@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
     };
     println!(
         "AI: {} | Blockchain: {}",
-        if app.ai.kunci.is_some() { app.ai.model.as_str() } else { "offline (GEMINI_API_KEY kosong)" },
+        app.ai.label(),
         if app.chain.is_some() { "aktif" } else { "mati (presensi hanya lokal)" }
     );
 

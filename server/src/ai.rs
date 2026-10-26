@@ -1,5 +1,6 @@
-//! AI agent: Gemini dengan function calling ke data akademik mahasiswa.
-//! Tanpa GEMINI_API_KEY (atau saat Gemini gagal) jatuh ke mode offline berbasis kata kunci.
+//! AI agent dengan function calling ke data akademik mahasiswa.
+//! Urutan penyedia: Groq (gpt-oss, API gaya OpenAI) lalu Gemini. Tanpa kunci,
+//! atau saat semuanya gagal, jatuh ke mode offline berbasis kata kunci.
 
 use std::time::Duration;
 
@@ -10,16 +11,42 @@ use serde_json::{json, Value};
 
 use crate::{api::Pengguna, data, waktu, App};
 
+const GROQ_URL: &str = "https://api.groq.com/openai/v1/chat/completions";
+
 pub struct Konfig {
     pub kunci: Option<String>,
     pub model: String,
+    pub groq_kunci: Option<String>,
+    pub groq_model: String,
 }
 
 impl Konfig {
     pub fn dari_env() -> Self {
+        let ambil = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
         Self {
-            kunci: std::env::var("GEMINI_API_KEY").ok().filter(|v| !v.is_empty()),
-            model: std::env::var("GEMINI_MODEL").ok().filter(|v| !v.is_empty()).unwrap_or_else(|| "gemini-2.5-flash".into()),
+            kunci: ambil("GEMINI_API_KEY"),
+            model: ambil("GEMINI_MODEL").unwrap_or_else(|| "gemini-2.5-flash".into()),
+            groq_kunci: ambil("GROQ_API_KEY"),
+            groq_model: ambil("GROQ_MODEL").unwrap_or_else(|| "openai/gpt-oss-120b".into()),
+        }
+    }
+
+    pub fn aktif(&self) -> bool {
+        self.groq_kunci.is_some() || self.kunci.is_some()
+    }
+
+    pub fn label(&self) -> String {
+        let mut p = vec![];
+        if self.groq_kunci.is_some() {
+            p.push(format!("Groq {}", self.groq_model));
+        }
+        if self.kunci.is_some() {
+            p.push(format!("Gemini {}", self.model));
+        }
+        if p.is_empty() {
+            "offline (GROQ_API_KEY dan GEMINI_API_KEY kosong)".into()
+        } else {
+            p.join(" -> ")
         }
     }
 
@@ -136,6 +163,12 @@ pub fn jalankan(app: &App, u: &Pengguna, nama: &str, args: &Value) -> (Value, Op
 
 pub async fn chat(app: &App, u: &Pengguna, pesan: &str, riwayat: &[Pesan]) -> Value {
     let mut aksi = vec![];
+    if let Some(kunci) = &app.ai.groq_kunci {
+        match groq(app, kunci, u, pesan, riwayat, &mut aksi).await {
+            Ok(t) => return json!({ "balasan": t, "aksi": aksi, "mode": "groq" }),
+            Err(e) => eprintln!("groq gagal: {e:#}"),
+        }
+    }
     if let Some(kunci) = &app.ai.kunci {
         match gemini(app, kunci, u, pesan, riwayat, &mut aksi).await {
             Ok(t) => return json!({ "balasan": t, "aksi": aksi, "mode": "gemini" }),
@@ -145,9 +178,66 @@ pub async fn chat(app: &App, u: &Pengguna, pesan: &str, riwayat: &[Pesan]) -> Va
     json!({ "balasan": offline(app, u, pesan), "aksi": aksi, "mode": "offline" })
 }
 
-async fn gemini(app: &App, kunci: &str, u: &Pengguna, pesan: &str, riwayat: &[Pesan], aksi: &mut Vec<String>) -> anyhow::Result<String> {
+/// Alat yang sama dalam format OpenAI (dipakai Groq).
+fn alat_openai() -> Value {
+    let deklarasi = alat()[0]["functionDeclarations"].as_array().cloned().unwrap_or_default();
+    Value::Array(
+        deklarasi
+            .into_iter()
+            .map(|f| {
+                let parameter = f.get("parameters").cloned().unwrap_or_else(|| json!({ "type": "object", "properties": {} }));
+                json!({ "type": "function", "function": { "name": f["name"], "description": f["description"], "parameters": parameter } })
+            })
+            .collect(),
+    )
+}
+
+async fn groq(app: &App, kunci: &str, u: &Pengguna, pesan: &str, riwayat: &[Pesan], aksi: &mut Vec<String>) -> anyhow::Result<String> {
+    let mut isi = vec![json!({ "role": "system", "content": sistem(u) })];
+    for p in riwayat.iter().rev().take(10).rev() {
+        isi.push(json!({ "role": if p.peran == "model" { "assistant" } else { "user" }, "content": p.teks }));
+    }
+    isi.push(json!({ "role": "user", "content": pesan }));
+
+    for _ in 0..5 {
+        let badan = json!({
+            "model": app.ai.groq_model, "messages": isi, "tools": alat_openai(),
+            "tool_choice": "auto", "reasoning_effort": "low", "temperature": 0.4,
+        });
+        let res = app.http.post(GROQ_URL).bearer_auth(kunci).json(&badan).timeout(Duration::from_secs(40)).send().await?;
+        let status = res.status();
+        let v: Value = res.json().await?;
+        if !status.is_success() {
+            bail!("{status} {}", v["error"]["message"]);
+        }
+        let mut pesan_ai = v["choices"][0]["message"].clone();
+        let panggilan = pesan_ai["tool_calls"].as_array().cloned().unwrap_or_default();
+        if panggilan.is_empty() {
+            let teks = pesan_ai["content"].as_str().unwrap_or("").trim().to_string();
+            if teks.is_empty() {
+                bail!("jawaban kosong: {v}");
+            }
+            return Ok(teks);
+        }
+        // Field "reasoning" dari gpt-oss tidak diterima balik sebagai input.
+        if let Some(o) = pesan_ai.as_object_mut() {
+            o.remove("reasoning");
+        }
+        isi.push(pesan_ai);
+        for p in panggilan {
+            let nama = p["function"]["name"].as_str().unwrap_or("");
+            let args: Value = serde_json::from_str(p["function"]["arguments"].as_str().unwrap_or("{}")).unwrap_or(json!({}));
+            let (hasil, a) = jalankan(app, u, nama, &args);
+            aksi.extend(a);
+            isi.push(json!({ "role": "tool", "tool_call_id": p["id"], "content": hasil.to_string() }));
+        }
+    }
+    bail!("terlalu banyak langkah alat")
+}
+
+fn sistem(u: &Pengguna) -> String {
     let kini = waktu::sekarang();
-    let sistem = format!(
+    format!(
         "Kamu AI agent akademik di aplikasi Smart KTM untuk mahasiswa Universitas Pamulang. \
          Pengguna: {} (NIM {}, {}). Sekarang {} WIB, hari {}. \
          Jawab dalam bahasa Indonesia santai, singkat dan jelas (maksimal sekitar 120 kata). \
@@ -159,7 +249,11 @@ async fn gemini(app: &App, kunci: &str, u: &Pengguna, pesan: &str, riwayat: &[Pe
         u.prodi,
         waktu::teks(&kini),
         waktu::nama_hari(waktu::hari_ke(&kini))
-    );
+    )
+}
+
+async fn gemini(app: &App, kunci: &str, u: &Pengguna, pesan: &str, riwayat: &[Pesan], aksi: &mut Vec<String>) -> anyhow::Result<String> {
+    let sistem = sistem(u);
     let mut isi: Vec<Value> = riwayat
         .iter()
         .rev()
@@ -244,7 +338,9 @@ fn offline(app: &App, u: &Pengguna, pesan: &str) -> String {
 
 /// Ringkasan beranda versi AI (cache per jam). None = pakai ringkasan aturan.
 pub async fn briefing(app: &App, user: i64, beranda: &Value) -> Option<String> {
-    let kunci = app.ai.kunci.as_ref()?;
+    if !app.ai.aktif() {
+        return None;
+    }
     let kunci_cache = format!("{user}:{}", waktu::sekarang().format("%Y-%m-%d %H"));
     if let Some(s) = app.cache.lock().unwrap().get(&kunci_cache) {
         return Some(s.clone());
@@ -254,10 +350,21 @@ pub async fn briefing(app: &App, user: i64, beranda: &Value) -> Option<String> {
          langsung ke hal paling penting sesuai 'momen' (kelas berikutnya/berlangsung, tugas paling mendesak, peringatan absen). \
          Tanpa salam, tanpa markdown. Data: {beranda}"
     );
-    let badan = json!({ "contents": [{ "role": "user", "parts": [{ "text": prompt }] }], "generationConfig": app.ai.generation_config() });
-    let res = app.http.post(app.ai.url()).header("x-goog-api-key", kunci).json(&badan).timeout(Duration::from_secs(8)).send().await.ok()?;
-    let v: Value = res.json().await.ok()?;
-    let teks: String = v["candidates"][0]["content"]["parts"].as_array()?.iter().filter(|p| p["thought"] != true).filter_map(|p| p["text"].as_str()).collect();
+    let teks = match &app.ai.groq_kunci {
+        Some(kunci) => {
+            let badan = json!({ "model": app.ai.groq_model, "messages": [{ "role": "user", "content": prompt }], "reasoning_effort": "low" });
+            let res = app.http.post(GROQ_URL).bearer_auth(kunci).json(&badan).timeout(Duration::from_secs(8)).send().await.ok()?;
+            let v: Value = res.json().await.ok()?;
+            v["choices"][0]["message"]["content"].as_str()?.to_string()
+        }
+        None => {
+            let kunci = app.ai.kunci.as_ref()?;
+            let badan = json!({ "contents": [{ "role": "user", "parts": [{ "text": prompt }] }], "generationConfig": app.ai.generation_config() });
+            let res = app.http.post(app.ai.url()).header("x-goog-api-key", kunci).json(&badan).timeout(Duration::from_secs(8)).send().await.ok()?;
+            let v: Value = res.json().await.ok()?;
+            v["candidates"][0]["content"]["parts"].as_array()?.iter().filter(|p| p["thought"] != true).filter_map(|p| p["text"].as_str()).collect()
+        }
+    };
     let teks = teks.trim().to_string();
     if teks.is_empty() {
         return None;
