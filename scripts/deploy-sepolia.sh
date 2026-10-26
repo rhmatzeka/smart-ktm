@@ -40,4 +40,5 @@ ssh "$HOST" "cd /opt/smart-ktm && cp .env .env.sebelum-sepolia-\$(date +%Y%m%d%H
   grep -q '^CHAIN_PRIVATE_KEY=' .env && sed -i 's|^CHAIN_PRIVATE_KEY=.*|CHAIN_PRIVATE_KEY=__KUNCI__|' .env"
 # Kunci dikirim lewat stdin, tidak muncul di argumen proses.
 echo "$KUNCI" | ssh "$HOST" 'read -r k; sed -i "s|^CHAIN_PRIVATE_KEY=__KUNCI__|CHAIN_PRIVATE_KEY=$k|" /opt/smart-ktm/.env; chmod 600 /opt/smart-ktm/.env; chown smartktm:smartktm /opt/smart-ktm/.env; systemctl restart smart-ktm; sleep 3; journalctl -u smart-ktm -n 3 --no-pager -o cat | grep -E "Blockchain|jalan"'
+ssh "$HOST" "python3 -c \"import sqlite3; c=sqlite3.connect('/opt/smart-ktm/data/smart-ktm.db'); n=c.execute(\\\"UPDATE presensi SET tx = NULL, status = 'lokal' WHERE tx IS NOT NULL AND status = 'onchain'\\\").rowcount; c.commit(); print(n, 'presensi lama (Anvil) ditandai lokal')\""
 echo "Selesai. Kontrak PresensiKTM: $EXPLORER/address/$KONTRAK"
