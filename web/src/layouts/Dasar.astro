@@ -121,20 +121,9 @@ const menu = [
   .redup { color: var(--teks-2); }
   .kecil { font-size: 0.85rem; }
 
-  /* Ikon aplikasi: ikon 3D di latar pastel */
-  .app-ikon {
-    width: 58px; height: 58px; border-radius: 20px; display: grid; place-items: center; flex: none;
-    transition: transform 0.15s ease;
-  }
-  .app-ikon img { width: 40px; height: 40px; filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.18)); }
-  .app-ikon .ikon { width: 26px; height: 26px; }
-  a:active .app-ikon, button:active .app-ikon { transform: scale(0.94); }
-  .app-ikon.biru { background: #e6edff; color: var(--biru); }
-  .app-ikon.teal { background: #dcf5f0; color: #0f766e; }
-  .app-ikon.oranye { background: #ffeadb; color: #c2410c; }
-  .app-ikon.hijau { background: #e2f6e7; color: #15803d; }
-  .app-ikon.ungu { background: #efe7ff; color: #6d28d9; }
-  .app-ikon.merah { background: #ffe5e7; color: #b91c1c; }
+  /* Ikon aplikasi: ikon garis polos, tanpa kotak */
+  .app-ikon { display: grid; place-items: center; flex: none; color: var(--biru); }
+  .app-ikon .ikon { width: 24px; height: 24px; stroke-width: 1.9; }
 
   /* Tombol */
   .tombol {

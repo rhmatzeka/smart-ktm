@@ -74,13 +74,17 @@ import { ikon, ikonApp } from '../lib/ikon';
 
 <style is:global>
   .avatar { text-decoration: none; }
+  /* Menu cepat: ikon garis biru, dipisah garis tipis (gaya aplikasi bank) */
   .menu-cepat {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-    margin-top: 20px; padding: 16px 8px 14px; background: var(--putih);
-    border-radius: var(--r); box-shadow: 0 16px 36px -16px rgba(15, 54, 153, 0.35);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    margin-top: 20px; padding: 14px 0; background: var(--putih);
+    border: 1px solid var(--garis); border-radius: 18px;
+    box-shadow: 0 14px 30px -20px rgba(15, 54, 153, 0.45);
     position: relative; z-index: 2;
   }
-  .menu-cepat a { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; font-size: 0.78rem; font-weight: 700; color: var(--teks); }
+  .menu-cepat a { display: flex; flex-direction: column; align-items: center; gap: 7px; text-decoration: none; font-size: 0.78rem; font-weight: 700; color: var(--teks); }
+  .menu-cepat a + a { border-left: 1px solid #eef1f6; }
+  .menu-cepat a:active .app-ikon { transform: scale(0.92); }
 
   .bagian { margin-top: 12px; }
 
