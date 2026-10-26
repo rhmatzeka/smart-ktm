@@ -29,7 +29,15 @@ export function ikon(nama: string, kelas = 'ikon'): string {
   return `<svg class="${kelas}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${jalur[nama] ?? ''}</svg>`;
 }
 
-/** Ikon aplikasi berwarna (gaya kotak mengkilap). */
+// Ikon 3D (Fluent Emoji, Microsoft, lisensi MIT) di web/public/ikon3d.
+const ikon3d: Record<string, string> = {
+  kalender: 'kalender', tugas: 'tugas', kilau: 'ai', nfc: 'kenalan', kartu: 'kartu',
+  rantai: 'rantai', sekolah: 'sekolah', buku: 'buku', sinyal: 'sinyal',
+};
+
+/** Ikon aplikasi: ikon 3D di atas latar pastel. */
 export function ikonApp(nama: string, warna: string): string {
-  return `<span class="app-ikon ${warna}">${ikon(nama)}</span>`;
+  const berkas = ikon3d[nama];
+  const isi = berkas ? `<img src="/ikon3d/${berkas}.png" alt="" width="40" height="40" loading="lazy" decoding="async">` : ikon(nama);
+  return `<span class="app-ikon ${warna}">${isi}</span>`;
 }

@@ -114,26 +114,27 @@ const menu = [
     padding: 16px; box-shadow: var(--bayang);
   }
   .kartu-judul { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; margin-bottom: 10px; }
-  .titik-ikon { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--putih); flex: none; }
-  .titik-ikon .ikon { width: 15px; height: 15px; }
-  .t-oranye { background: var(--oranye); } .t-ungu { background: #8b5cf6; } .t-merah { background: var(--merah); }
-  .t-hijau { background: var(--hijau); } .t-biru { background: var(--biru-muda); } .t-kuning { background: #eab308; }
+  .titik-ikon { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .titik-ikon .ikon { width: 16px; height: 16px; stroke-width: 2.2; }
+  .t-oranye { background: #ffeadb; color: #c2410c; } .t-ungu { background: #efe7ff; color: #6d28d9; } .t-merah { background: #ffe5e7; color: #b91c1c; }
+  .t-hijau { background: #e2f6e7; color: #15803d; } .t-biru { background: #e6edff; color: var(--biru); } .t-kuning { background: #fef3c7; color: #a16207; }
   .redup { color: var(--teks-2); }
   .kecil { font-size: 0.85rem; }
 
-  /* Ikon aplikasi mengkilap */
+  /* Ikon aplikasi: ikon 3D di latar pastel */
   .app-ikon {
-    width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--putih);
-    position: relative; overflow: hidden; box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+    width: 58px; height: 58px; border-radius: 20px; display: grid; place-items: center; flex: none;
+    transition: transform 0.15s ease;
   }
-  .app-ikon::after { content: ''; position: absolute; inset: 0 0 50% 0; background: linear-gradient(rgba(255, 255, 255, 0.35), transparent); }
-  .app-ikon .ikon { width: 26px; height: 26px; position: relative; z-index: 1; }
-  .app-ikon.biru { background: linear-gradient(145deg, #4f8bff, #1c3fae); }
-  .app-ikon.teal { background: linear-gradient(145deg, #2dd4bf, #0e7490); }
-  .app-ikon.oranye { background: linear-gradient(145deg, #fdba74, #ea580c); }
-  .app-ikon.hijau { background: linear-gradient(145deg, #86efac, #15803d); }
-  .app-ikon.ungu { background: linear-gradient(145deg, #c084fc, #6d28d9); }
-  .app-ikon.merah { background: linear-gradient(145deg, #fca5a5, #b91c1c); }
+  .app-ikon img { width: 40px; height: 40px; filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.18)); }
+  .app-ikon .ikon { width: 26px; height: 26px; }
+  a:active .app-ikon, button:active .app-ikon { transform: scale(0.94); }
+  .app-ikon.biru { background: #e6edff; color: var(--biru); }
+  .app-ikon.teal { background: #dcf5f0; color: #0f766e; }
+  .app-ikon.oranye { background: #ffeadb; color: #c2410c; }
+  .app-ikon.hijau { background: #e2f6e7; color: #15803d; }
+  .app-ikon.ungu { background: #efe7ff; color: #6d28d9; }
+  .app-ikon.merah { background: #ffe5e7; color: #b91c1c; }
 
   /* Tombol */
   .tombol {

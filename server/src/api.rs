@@ -54,6 +54,7 @@ pub fn router() -> Router<App> {
         .route("/tugas/{id}/selesai", post(tugas_selesai))
         .route("/chat", post(chat))
         .route("/sinkron", post(sinkron_unpam))
+        .route("/kehadiran/{id}", get(kehadiran))
         .route("/kenalan", post(kenalan))
         .route("/verifikasi/{bukti}", get(verifikasi))
         .route("/dosen/kelas", get(dosen_kelas))
@@ -311,6 +312,20 @@ async fn chat(State(app): State<App>, h: HeaderMap, Json(b): Json<Chat>) -> Hasi
         return Err(galat(StatusCode::BAD_REQUEST, "Pesan kosong"));
     }
     Ok(Json(ai::chat(&app, &u, &pesan, &b.riwayat).await))
+}
+
+async fn kehadiran(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    let mut v = data::kehadiran(&c, u.id, id)?.ok_or_else(|| galat(StatusCode::NOT_FOUND, "Mata kuliah tidak ada di jadwalmu"))?;
+    if let (Some(ch), Some(tap)) = (&app.chain, v["tap"].as_array_mut()) {
+        for t in tap {
+            if let Some(tx) = t["tx"].as_str().map(str::to_string) {
+                t["link_tx"] = json!(ch.link_tx(&tx));
+            }
+        }
+    }
+    Ok(Json(v))
 }
 
 async fn sinkron_unpam(State(app): State<App>, h: HeaderMap, Json(d): Json<sinkron::DataUnpam>) -> Hasil {

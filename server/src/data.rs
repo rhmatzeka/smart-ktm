@@ -1,7 +1,7 @@
 //! Query data akademik yang dipakai beranda dan alat AI agent.
 
 use chrono::{DateTime, FixedOffset, Timelike};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Value};
 
 use crate::waktu::{self, menit};
@@ -117,11 +117,51 @@ pub fn presensi(c: &Connection, user: i64, dibuat: &str) -> rusqlite::Result<Vec
             "aman"
         };
         hasil.push(json!({
-            "matkul": nama, "hadir": hadir, "total": total, "absen": absen, "batas": batas, "status": status,
+            "id": id, "matkul": nama, "hadir": hadir, "total": total, "absen": absen, "batas": batas, "status": status,
             "onchain": onchain, "belum_presensi": belum, "bisa_presensi": bisa, "jumlah_pertemuan": jumlah, "sumber": sumber,
         }));
     }
     Ok(hasil)
+}
+
+/// Rincian per pertemuan satu matkul untuk mahasiswa (data MyUnpam + tap KTM di Smart KTM).
+pub fn kehadiran(c: &Connection, user: i64, matkul: i64) -> rusqlite::Result<Option<Value>> {
+    let info: Option<(String, String, String)> = c
+        .query_row(
+            "SELECT m.nama, COALESCE(NULLIF(m.dosen_nama, ''), d.nama), m.ruang FROM matkul m JOIN users d ON d.id = m.dosen_id
+             JOIN ambil a ON a.matkul_id = m.id AND a.user_id = ?1 WHERE m.id = ?2",
+            params![user, matkul],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .optional()?;
+    let Some((nama, dosen, ruang)) = info else { return Ok(None) };
+    let hari_ini = waktu::sekarang().format("%Y-%m-%d").to_string();
+    let mut q = c.prepare("SELECT ke, jenis, mulai, akhir, status, waktu FROM pertemuan_unpam WHERE user_id = ?1 AND matkul_id = ?2 ORDER BY ke")?;
+    let pertemuan: Vec<Value> = q
+        .query_map(params![user, matkul], |r| {
+            let (ke, jenis, mulai, akhir, status, saat): (i64, String, String, String, Option<String>, Option<String>) =
+                (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?);
+            let keadaan = match status.as_deref() {
+                Some(s) if s.eq_ignore_ascii_case("hadir") => "hadir",
+                Some(_) => "absen",
+                None if akhir < hari_ini => "terlewat",
+                None if mulai <= hari_ini => "minggu_ini",
+                None => "nanti",
+            };
+            Ok(json!({ "ke": ke, "jenis": jenis, "mulai": mulai, "akhir": akhir, "status": status, "waktu": saat, "keadaan": keadaan }))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut q = c.prepare(
+        "SELECT s.pertemuan, p.waktu, p.status, p.tx, p.bukti FROM presensi p JOIN sesi s ON s.id = p.sesi_id
+         WHERE p.user_id = ?1 AND s.matkul_id = ?2 ORDER BY p.waktu DESC",
+    )?;
+    let tap: Vec<Value> = q
+        .query_map(params![user, matkul], |r| {
+            Ok(json!({ "pertemuan": r.get::<_, i64>(0)?, "waktu": r.get::<_, String>(1)?, "status": r.get::<_, String>(2)?,
+                       "tx": r.get::<_, Option<String>>(3)?, "bukti": r.get::<_, String>(4)? }))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(Some(json!({ "matkul": nama, "dosen": dosen, "ruang": ruang, "pertemuan": pertemuan, "tap": tap })))
 }
 
 pub fn pengingat(c: &Connection, user: i64) -> rusqlite::Result<Vec<Value>> {

@@ -80,7 +80,7 @@ import { ikon, ikonApp } from '../lib/ikon';
     border-radius: var(--r); box-shadow: 0 16px 36px -16px rgba(15, 54, 153, 0.35);
     position: relative; z-index: 2;
   }
-  .menu-cepat a { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; font-size: 0.78rem; font-weight: 600; color: var(--teks-2); }
+  .menu-cepat a { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; font-size: 0.78rem; font-weight: 700; color: var(--teks); }
 
   .bagian { margin-top: 12px; }
 
@@ -137,7 +137,34 @@ import { ikon, ikonApp } from '../lib/ikon';
   .tombol-kumpul .ikon { width: 18px; height: 18px; }
 
   /* Kehadiran */
-  .daftar-hadir li { display: flex; gap: 12px; align-items: center; }
+  .daftar-hadir li.kosong { display: block; }
+  .baris-hadir {
+    width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; cursor: pointer;
+    background: none; border: 0; padding: 4px 0; font: inherit; color: inherit;
+  }
+  .panah-kecil { display: grid; place-items: center; color: var(--teks-2); transform: rotate(-90deg); transition: transform 0.2s; }
+  .panah-kecil .ikon { width: 16px; height: 16px; }
+  .baris-hadir[aria-expanded='true'] .panah-kecil { transform: rotate(90deg); }
+  .rincian-hadir { margin: 8px 0 6px; padding: 12px; border-radius: 14px; background: var(--latar); }
+  .ringkas-hadir { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.75rem; color: var(--teks-2); margin-bottom: 10px; }
+  .tanda-k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-left: 4px; }
+  .tanda-k.hadir { background: var(--hijau); } .tanda-k.terlewat { background: var(--merah); }
+  .tanda-k.minggu_ini { background: #f59e0b; } .tanda-k.nanti { background: #cbd5e1; }
+  .daftar-pertemuan { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .daftar-pertemuan li { display: flex; gap: 10px; align-items: center; background: var(--putih); border-radius: 12px; padding: 8px 10px; }
+  .daftar-pertemuan .nomor { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-weight: 800; font-size: 0.8rem; flex: none; background: #e2e8f0; color: var(--teks-2); }
+  .daftar-pertemuan li.hadir .nomor { background: #dcfce7; color: var(--hijau); }
+  .daftar-pertemuan li.terlewat .nomor, .daftar-pertemuan li.absen .nomor { background: #ffe4e6; color: var(--merah); }
+  .daftar-pertemuan li.minggu_ini .nomor { background: #fef3c7; color: #b45309; }
+  .daftar-pertemuan li.nanti { opacity: 0.6; }
+  .daftar-pertemuan b { font-size: 0.82rem; white-space: normal; }
+  .status-k { font-size: 0.75rem; font-weight: 700; text-align: right; white-space: nowrap; display: flex; flex-direction: column; }
+  .status-k small { font-weight: 500; color: var(--teks-2); }
+  .daftar-pertemuan li.hadir .status-k { color: var(--hijau); }
+  .daftar-pertemuan li.terlewat .status-k, .daftar-pertemuan li.absen .status-k { color: var(--merah); }
+  .daftar-pertemuan li.minggu_ini .status-k { color: #b45309; }
+  .status-k a { color: var(--biru); }
+  .judul-tap { font-size: 0.8rem; font-weight: 700; margin: 12px 0 6px; }
   .batang { height: 6px; border-radius: 3px; background: var(--garis); margin-top: 5px; overflow: hidden; }
   .batang i { display: block; height: 100%; border-radius: 3px; background: var(--hijau); }
   .batang.awas i { background: var(--merah); }
@@ -158,6 +185,42 @@ import { ikon, ikonApp } from '../lib/ikon';
   const durasi = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} jam${m % 60 ? ` ${m % 60} mnt` : ''}` : `${m} menit`);
   const SAPA: Record<string, string> = { Pagi: 'Selamat pagi!', Siang: 'Selamat siang!', Sore: 'Selamat sore!', Malam: 'Selamat malam!' };
   let semuaTugas = false;
+  const terbuka = new Set<number>();
+  const rincian = new Map<number, string>();
+  const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const tgl = (t: string) => `${+t.slice(8, 10)} ${BLN[+t.slice(5, 7) - 1]}`;
+  const KEADAAN: Record<string, string> = { hadir: 'Hadir', absen: 'Absen', terlewat: 'Belum presensi', minggu_ini: 'Minggu ini', nanti: 'Belum mulai' };
+
+  function htmlRincian(d: any) {
+    if (!d.pertemuan.length && !d.tap.length) return '<p class="kosong">Presensi mata kuliah ini belum dibuka di MyUnpam.</p>';
+    const hitung = (k: string) => d.pertemuan.filter((p: any) => p.keadaan === k).length;
+    const ringkas = `<p class="ringkas-hadir"><span class="tanda-k hadir"></span>${hitung('hadir')} hadir
+      <span class="tanda-k terlewat"></span>${hitung('terlewat') + hitung('absen')} tidak hadir
+      <span class="tanda-k minggu_ini"></span>${hitung('minggu_ini')} minggu ini
+      <span class="tanda-k nanti"></span>${hitung('nanti')} belum mulai</p>`;
+    const baris = d.pertemuan.map((p: any) => `<li class="${p.keadaan}"><span class="nomor">${p.ke}</span>
+      <span class="isi"><b>Pertemuan ${p.ke}</b><span class="ket">${tgl(p.mulai)}–${tgl(p.akhir)}${p.jenis ? ` · ${esc(p.jenis)}` : ''}</span></span>
+      <span class="status-k">${KEADAAN[p.keadaan]}${p.keadaan === 'hadir' && p.waktu ? `<small>${tgl(p.waktu)} ${p.waktu.slice(11, 16)}</small>` : ''}</span></li>`).join('');
+    const tap = d.tap.length
+      ? `<p class="judul-tap">Tap KTM di Smart KTM</p><ul class="daftar-pertemuan">${d.tap.map((t: any) => `<li class="hadir"><span class="nomor">${t.pertemuan}</span>
+          <span class="isi"><b>Pertemuan ${t.pertemuan}</b><span class="ket">${esc(t.waktu)} WIB</span></span>
+          <span class="status-k">${t.link_tx ? `<a href="${esc(t.link_tx)}" target="_blank" rel="noopener">on-chain</a>` : `<a href="/verifikasi/?b=${esc(t.bukti)}">bukti</a>`}</span></li>`).join('')}</ul>`
+      : '';
+    return ringkas + (baris ? `<ul class="daftar-pertemuan">${baris}</ul>` : '') + tap;
+  }
+
+  async function bukaRincian(id: number) {
+    const el = document.getElementById(`rincian-${id}`);
+    if (!el) return;
+    if (!rincian.has(id)) el.innerHTML = '<p class="kosong">Memuat pertemuan…</p>';
+    try {
+      const html = htmlRincian(await api(`/kehadiran/${id}`));
+      rincian.set(id, html);
+      el.innerHTML = html;
+    } catch (e) {
+      el.innerHTML = `<p class="kosong">${esc((e as Error).message)}</p>`;
+    }
+  }
   let semuaHadir = false;
   let data: any = null;
 
@@ -247,8 +310,12 @@ import { ikon, ikonApp } from '../lib/ikon';
           if (p.bisa_presensi?.length) bagian.push(`<span class="bisa-teks">minggu ini: pertemuan ${p.bisa_presensi.join(', ')} belum presensi</span>`);
           if (!bagian.length) bagian.push(p.absen ? `<span class="${p.status === 'aman' ? '' : 'awas-teks'}">absen ${p.absen}× dari batas ${p.batas}</span>` : p.sumber === 'myunpam' || p.total ? 'semua pertemuan hadir' : 'presensi belum dibuka di MyUnpam');
           const ket = bagian.join('<br>');
-          return `<li><span class="isi"><b>${esc(p.matkul)}</b><span class="ket">${ket}</span>
-            <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${pct}%"></i></div></span><span class="skor">${p.hadir}/${p.total}</span></li>`;
+          const buka = terbuka.has(p.id);
+          return `<li class="matkul-hadir"><button class="baris-hadir" type="button" data-matkul="${p.id}" aria-expanded="${buka}">
+            <span class="isi"><b>${esc(p.matkul)}</b><span class="ket">${ket}</span>
+            <div class="batang ${p.status === 'aman' ? '' : 'awas'}"><i style="width:${pct}%"></i></div></span>
+            <span class="skor">${p.hadir}/${p.total}</span><span class="panah-kecil">${ikon('kembali')}</span></button>
+            <div class="rincian-hadir" id="rincian-${p.id}" ${buka ? '' : 'hidden'}>${rincian.get(p.id) ?? ''}</div></li>`;
         }).join('')
       : `<li class="kosong">${total ? 'Semua mata kuliah aman 👍' : 'Belum ada pertemuan tercatat. Kehadiran dihitung dari tap KTM di HP dosen.'}</li>`;
     $('sumber-hadir').textContent = b.presensi.some((p: any) => p.sumber === 'myunpam') ? 'Data presensi dari MyUnpam (sinkron terakhir).' : '';
@@ -263,6 +330,16 @@ import { ikon, ikonApp } from '../lib/ikon';
     }
   }
 
+  $('daftar-presensi').addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('.baris-hadir');
+    if (!b) return;
+    const id = Number(b.dataset.matkul);
+    const el = document.getElementById(`rincian-${id}`)!;
+    const buka = el.hidden;
+    el.hidden = !buka;
+    b.setAttribute('aria-expanded', String(buka));
+    if (buka) { terbuka.add(id); bukaRincian(id); } else terbuka.delete(id);
+  });
   $('semua-tugas').addEventListener('click', () => { semuaTugas = !semuaTugas; render(data); });
   $('semua-hadir').addEventListener('click', () => { semuaHadir = !semuaHadir; render(data); });
   $('daftar-tugas').addEventListener('click', async (ev) => {
