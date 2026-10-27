@@ -32,6 +32,13 @@
 
         </activity>
 
+        <!-- Sinkron MyUnpam: login MyUnpam di dalam aplikasi lalu jadwal diambil otomatis. -->
+        <activity
+            android:name=".MyUnpamActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

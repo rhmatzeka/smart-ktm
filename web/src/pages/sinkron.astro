@@ -20,6 +20,20 @@ import { ikon } from '../lib/ikon';
       <a class="tombol" href="/beranda/" id="ke-beranda" hidden>Lihat beranda</a>
     </article>
 
+    <!-- Di aplikasi Android: satu tombol -->
+    <article class="kartu langkah-sinkron" id="satu-tombol" hidden>
+      <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Sinkron satu tombol</p>
+      <p class="redup kecil">MyUnpam terbuka di dalam aplikasi. Login seperti biasa, jadwal dan presensi diambil otomatis. Berikutnya tidak perlu login lagi selama sesi MyUnpam masih aktif.</p>
+      <button class="tombol" id="sinkron-app" type="button">Sinkron sekarang</button>
+    </article>
+
+    <!-- Aplikasi versi lama: belum punya sinkron satu tombol -->
+    <article class="kartu langkah-sinkron" id="perbarui" hidden>
+      <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Ada cara yang lebih gampang</p>
+      <p class="redup kecil">Pasang Smart KTM versi terbaru supaya sinkron MyUnpam cukup satu tombol.</p>
+      <a class="tombol" href="/unduh/SmartKTM.apk">Unduh aplikasi terbaru</a>
+    </article>
+
     <!-- Cara pakai -->
     <article class="kartu langkah-sinkron" id="cara">
       <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Cara sinkron (sekali saja)</p>
@@ -58,15 +72,18 @@ import { ikon } from '../lib/ikon';
   const $ = (id: string) => document.getElementById(id)!;
   const KUNCI = 'smartktm.sinkron';
 
-  // Dijalankan di my.unpam.ac.id (sesi login pengguna sendiri), lalu kembali ke halaman ini.
-  const kode = `javascript:(async()=>{try{const t=(localStorage.getItem('access_token')||'').replace(/^__q_\\w+\\|/,'');`
+  // Pengumpul data, dijalankan di my.unpam.ac.id dengan sesi login pengguna sendiri. Hasil: variabel d.
+  const inti = `const t=(localStorage.getItem('access_token')||'').replace(/^__q_\\w+\\|/,'');`
     + `const g=u=>fetch(u,{headers:{accept:'application/json',authorization:'Bearer '+t}}).then(r=>{if(!r.ok)throw r.status;return r.json()});`
     + `const j=await g('/api/jadwal-kuliah');const p=await g('/api/presensi/mahasiswa/jadwal-kuliah').catch(()=>[]);const s={};p.forEach(r=>s[r.id_mata_kuliah]=+r.sks||0);`
     + `let f='';try{const bl=await fetch('/api/biodata/mahasiswa/foto',{headers:{authorization:'Bearer '+t}}).then(r=>{if(!r.ok)throw r.status;return r.blob()});const im=await createImageBitmap(bl);const z=Math.min(im.width,im.height);const c=document.createElement('canvas');c.width=c.height=192;c.getContext('2d').drawImage(im,(im.width-z)/2,(im.height-z)/4,z,z,0,0,192,192);f=c.toDataURL('image/jpeg',.8)}catch(e){}`
     + `const pt=await Promise.all(j.jadwal.map(r=>g('/api/presensi/mahasiswa/jadwal-pertemuan/'+r.id_kelas+'/'+r.id_mata_kuliah).catch(()=>[])));`
     + `const d={nim:j.mahasiswa.nim,nama:(p[0]||{}).nama_mahasiswa||'',prodi:(j.jadwal[0]||{}).nama_prodi||'',semester:j.mahasiswa.semester||'',foto:f,kelas:j.jadwal.map((r,i)=>({kode:r.id_mata_kuliah,kelas:r.id_kelas,nama:r.nama_mata_kuliah,sks:s[r.id_mata_kuliah]||0,hari:r.waktu_kuliah.hari.nama_hari,jam:r.waktu_kuliah.ket_jam,ruang:((r.nama_lokasi_kampus||'')+' '+r.id_ruang).trim(),dosen:(r.dosen||{}).nama_gelar_dosen||'',`
-    + `pertemuan:(pt[i]||[]).map((x,n)=>({ke:n+1,jenis:x.jenis_perkuliahan||'',mulai:x.tanggal_mulai,akhir:x.tanggal_akhir,status:x.presensi_status,waktu:x.presensi_date}))}))};`
-    + `location.href='${location.origin}/sinkron/#'+encodeURIComponent(JSON.stringify(d))}catch(e){alert('Smart KTM: buka my.unpam.ac.id dan login dulu, lalu jalankan lagi.')}})()`;
+    + `pertemuan:(pt[i]||[]).map((x,n)=>({ke:n+1,jenis:x.jenis_perkuliahan||'',mulai:x.tanggal_mulai,akhir:x.tanggal_akhir,status:x.presensi_status,waktu:x.presensi_date}))}))};`;
+  // Bookmark (browser): kembali ke halaman ini membawa data di #hash.
+  const kode = `javascript:(async()=>{try{${inti}location.href='${location.origin}/sinkron/#'+encodeURIComponent(JSON.stringify(d))}catch(e){alert('Smart KTM: buka my.unpam.ac.id dan login dulu, lalu jalankan lagi.')}})()`;
+  // Aplikasi Android: hasil dikirim ke jembatan SmartKTM; sesi habis (401) = arahkan ke login MyUnpam.
+  const skripAplikasi = `(async()=>{try{${inti}SmartKTM.selesai(JSON.stringify(d))}catch(e){if(e===401){localStorage.removeItem('access_token');SmartKTM.gagal('login','');location.href='/'}else SmartKTM.gagal(String(e),localStorage.getItem('access_token')||'')}})()`;
   ($('seret') as HTMLAnchorElement).href = kode;
   $('seret').addEventListener('click', (e) => { e.preventDefault(); alert('Seret tombol ini ke bilah bookmark, jangan diklik.'); });
 
@@ -98,6 +115,32 @@ import { ikon } from '../lib/ikon';
       $('hasil').hidden = true;
       tanganiGalat(e, (t) => ($('pesan').textContent = t));
     }
+  }
+
+  // Aplikasi Android: sinkron satu tombol lewat plugin MyUnpam.
+  const cap = (window as any).Capacitor;
+  const plugin = (n: string) => !!cap?.PluginHeaders?.some((p: { name: string }) => p.name === n);
+  if (plugin('MyUnpam')) {
+    $('satu-tombol').hidden = false;
+    $('cara').hidden = true;
+    $('sinkron-app').addEventListener('click', async () => {
+      const tombol = $('sinkron-app') as HTMLButtonElement;
+      tombol.disabled = true;
+      $('pesan').textContent = '';
+      try {
+        const r = await cap.nativePromise('MyUnpam', 'ambil', { skrip: skripAplikasi });
+        $('satu-tombol').hidden = true;
+        await kirim(JSON.parse(r.data));
+        if ($('hasil').hidden) $('satu-tombol').hidden = false;
+      } catch (e) {
+        const t = (e as Error)?.message || '';
+        if (!/dibatalkan/i.test(t)) $('pesan').textContent = t || 'Sinkron gagal, coba lagi.';
+      } finally {
+        tombol.disabled = false;
+      }
+    });
+  } else if (plugin('KtmNfc')) {
+    $('perbarui').hidden = false;
   }
 
   // Data datang dari bookmark lewat #hash; simpan dulu kalau belum masuk.

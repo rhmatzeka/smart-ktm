@@ -4,4 +4,5 @@
 # Proyek Android hasil generate Capacitor (kecuali plugin NFC buatan sendiri tetap dihitung).
 mobile/android/** linguist-generated=true
 mobile/android/app/src/main/java/id/my/rahmateka/ktm/KtmNfcPlugin.java linguist-generated=false
+mobile/android/app/src/main/java/id/my/rahmateka/ktm/MyUnpam*.java -linguist-generated
 mobile/www/** linguist-vendored=true
