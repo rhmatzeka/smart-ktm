@@ -1,0 +1,7 @@
+# Statistik bahasa GitHub: tonjolkan kode yang ditulis sendiri (Rust, TypeScript, Solidity).
+# Halaman .astro sebagian besar berisi markup & CSS tampilan.
+*.astro linguist-detectable=false
+# Proyek Android hasil generate Capacitor (kecuali plugin NFC buatan sendiri tetap dihitung).
+mobile/android/** linguist-generated=true
+mobile/android/app/src/main/java/id/my/rahmateka/ktm/KtmNfcPlugin.java linguist-generated=false
+mobile/www/** linguist-vendored=true
