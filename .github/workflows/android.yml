@@ -33,7 +33,7 @@ jobs:
         env:
           DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
         if: env.DEBUG_KEYSTORE != ''
-        run: mkdir -p ~/.android && echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
+        run: echo "$DEBUG_KEYSTORE" | base64 -d > android/app/ktm-debug.keystore
       - name: Ikon dan splash dari mobile/assets
         run: npx -y @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#1747C9' --splashBackgroundColor '#1747C9'
       - run: npx cap sync android
