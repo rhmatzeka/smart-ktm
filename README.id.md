@@ -37,10 +37,11 @@ Aplikasi Android memuat situs yang live, jadi fitur baru langsung muncul tanpa p
 ## Fitur
 
 - **Masuk dengan tap KTM (NFC).** KTM UNPAM adalah MIFARE Classic 1K (kartu yang sama untuk parkir). Aplikasi hanya membaca nomor seri (UID) dan tidak pernah menulis ke kartu, jadi data parkir aman. UID disimpan sebagai hash bergaram.
-- **Data asli dari MyUnpam**: jadwal (matkul, hari, jam, ruang, dosen), status presensi tiap pertemuan, dan foto, disinkronkan per mahasiswa lewat bookmark yang berjalan di sesi MyUnpam milik mahasiswa sendiri.
+- **Data asli dari MyUnpam dan Mentari, satu tombol.** Di aplikasi Android, *Sinkron sekarang* membuka MyUnpam lalu Mentari di dalam aplikasi; mahasiswa login seperti biasa dan aplikasi mengambil jadwal (matkul, hari, jam, ruang, dosen), presensi tiap pertemuan, foto, serta tugas dan aktivitas Mentari yang belum dikerjakan. Kata sandi hanya diketik di halaman kampus. Di browser, MyUnpam disinkron lewat bookmark.
 - **Beranda yang menyesuaikan waktu**: kelas berikutnya dengan hitung mundur, jadwal seminggu, pertemuan terlewat, ringkasan AI satu kalimat.
+- **Notifikasi HP** (Android): 15 menit sebelum kelas, H-1 dan 3 jam sebelum tenggat tugas, serta pengingat yang dibuat AI agent.
 - **AI agent dengan alat**: Groq (`openai/gpt-oss-120b`), cadangan Gemini, mode offline tanpa kunci. Bisa melihat jadwal, tugas, presensi, mencatat tugas dari obrolan, menandai tugas selesai, dan membuat pengingat.
-- **Presensi on-chain**: HP dosen sebagai pembaca, foto mahasiswa muncul setiap tap, hash kehadiran dikirim ke `PresensiKTM`. Mahasiswa tidak perlu wallet: wallet operator di server yang menandatangani dan membayar gas. Siapa pun bisa memverifikasi kode bukti di Etherscan.
+- **Presensi on-chain**: HP dosen sebagai pembaca, foto mahasiswa muncul setiap tap, hash kehadiran dikirim ke `PresensiKTM`. Mahasiswa tidak perlu wallet: wallet operator di server yang menandatangani dan membayar gas. Siapa pun bisa memverifikasi kode bukti di Etherscan, dan kode kedua kontrak terverifikasi di [Sourcify](https://repo.sourcify.dev/11155111/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d) (exact match).
 - **Sertifikat acara on-chain** dengan halaman verifikasi publik.
 - **Mode KTM hilang** dan **kartu nama digital**.
 - **Aplikasi Android** (Capacitor) dengan plugin NFC native yang hanya membaca; **PWA** untuk HP lain.
@@ -51,9 +52,11 @@ Aplikasi Android memuat situs yang live, jadi fitur baru langsung muncul tanpa p
 - **HP tepercaya.** Tap KTM tanpa PIN hanya berlaku di HP yang pernah masuk dengan PIN sekali. Sekadar tahu UID seseorang tidak cukup. Pemilik bisa mewajibkan PIN di setiap tap.
 - **Batas percobaan.** 5 kali PIN salah mengunci akun 15 menit; cek kartu, masuk, daftar, tap, chat, dan sinkron dibatasi per IP atau per akun.
 - **Sesi kedaluwarsa** setelah 30 hari. Mengganti PIN mencabut HP tepercaya lainnya.
+- **Riwayat pemakaian KTM.** Setiap pemakaian KTM (masuk, presensi, check-in acara, ditempel orang) tercatat untuk pemiliknya. Tombol *Bukan saya* memblokir kartu dan menandai presensi itu ke dosen.
+- **Deteksi kartu ganda.** KTM yang sama dipakai presensi di kelas lain dalam 20 menit ditolak dan dicatat, karena hampir pasti kartu salinan.
 - **Privasi on-chain.** Hanya hash yang dikirim ke blockchain: tanpa nama, NIM, atau UID.
 
-Keterbatasan yang diketahui: UID MIFARE Classic bisa dibaca dan disalin oleh siapa pun yang sempat memegang kartu, jadi kartu salinan di HP tepercaya, atau akun dosen yang tidak jujur, masih bisa memalsukan kehadiran. Pengaman saat ini adalah foto yang muncul di setiap tap; solusi tuntas butuh kartu dengan autentikasi kriptografis (mis. DESFire). MyUnpam tidak punya API publik, dan Smart KTM tidak pernah menulis ke sistem kampus.
+Keterbatasan yang diketahui: UID MIFARE Classic bisa dibaca dan disalin oleh siapa pun yang sempat memegang kartu, jadi kartu salinan di HP tepercaya, atau akun dosen yang tidak jujur, masih bisa memalsukan kehadiran. Pengaman saat ini adalah foto yang muncul di setiap tap, deteksi kartu ganda, dan riwayat pemakaian untuk pemilik; solusi tuntas butuh kartu dengan autentikasi kriptografis (mis. DESFire). MyUnpam tidak punya API publik, dan Smart KTM tidak pernah menulis ke sistem kampus.
 
 ## Arsitektur
 
@@ -107,7 +110,7 @@ Tes di HP lewat kabel: `adb reverse tcp:8080 tcp:8080`, lalu buka `localhost:808
 ## Tes
 
 ```bash
-cd server && cargo test       # 13 tes: logika jadwal, hash, sinkron MyUnpam, KTM hilang, HP tepercaya, batas percobaan
+cd server && cargo test       # 18 tes: logika jadwal, hash, sinkron MyUnpam & Mentari, notifikasi, KTM hilang, HP tepercaya, kartu ganda, batas percobaan
 cd contracts && forge test    # 6 tes: PresensiKTM dan SertifikatKTM
 ```
 

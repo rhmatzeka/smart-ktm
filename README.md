@@ -37,10 +37,11 @@ The Android app loads the live site, so new features arrive without reinstalling
 ## Features
 
 - **Tap-to-sign-in with NFC.** UNPAM KTMs are MIFARE Classic 1K cards (the same cards used at the parking gate). The app only reads the card's serial number (UID) and never writes to the card, so the parking data stays intact. UIDs are stored as salted hashes.
-- **Real data from MyUnpam.** Schedule (course, day, time, room, lecturer), attendance status for every meeting, and profile photo, synced per student with a bookmarklet that runs in the student's own MyUnpam session.
+- **Real data from MyUnpam and Mentari, one tap.** In the Android app, *Sync now* opens MyUnpam and then Mentari inside the app; the student signs in as usual and the app collects the schedule (course, day, time, room, lecturer), attendance per meeting, profile photo, and open Mentari assignments and activities. Passwords are typed only into the campus pages. Browsers use a bookmarklet for MyUnpam.
 - **Time-aware home screen.** Next class with a countdown, a weekly timeline, missed meetings, and a one-sentence AI summary.
+- **Phone notifications** (Android): 15 minutes before each class, the day before and 3 hours before each deadline, and reminders created by the AI agent.
 - **AI agent with tool use.** Groq (`openai/gpt-oss-120b`), Gemini as fallback, offline keyword mode without keys. Tools: schedule, assignments, attendance, add assignment from chat ("MPI proposal due Friday"), mark assignments done, reminders.
-- **Attendance on-chain.** The lecturer's phone is the reader; the student's photo appears on each tap; a hash of every check-in goes to `PresensiKTM`. Students need no crypto wallet: the server's operator wallet signs and pays gas. Anyone can verify a proof code against Etherscan.
+- **Attendance on-chain.** The lecturer's phone is the reader; the student's photo appears on each tap; a hash of every check-in goes to `PresensiKTM`. Students need no crypto wallet: the server's operator wallet signs and pays gas. Anyone can verify a proof code against Etherscan, and both contracts are source-verified on [Sourcify](https://repo.sourcify.dev/11155111/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d) (exact match).
 - **On-chain event certificates** with a public verification page.
 - **Lost-card mode** and **digital business card**.
 - **Android app** (Capacitor) with a native read-only NFC plugin; **PWA** for every other phone.
@@ -51,9 +52,11 @@ The Android app loads the live site, so new features arrive without reinstalling
 - **Trusted phones.** A KTM tap signs in without a PIN only on a phone that has signed in with the PIN once. Knowing someone's UID is not enough. Owners can require the PIN on every tap.
 - **Rate limits and lockout.** 5 wrong PINs lock the account for 15 minutes; card checks, sign-in, registration, taps, chat, and sync are rate-limited per IP or account.
 - **Sessions expire** after 30 days. Changing the PIN revokes other trusted phones.
+- **Card usage history.** Every use of a KTM (sign-in, attendance, event check-in, someone tapping it) is listed for its owner. *Not me* blocks the card and flags that attendance for the lecturer.
+- **Duplicate-card detection.** The same KTM used for attendance in a different class within 20 minutes is rejected and logged, since that is almost certainly a cloned card.
 - **Privacy on-chain.** Only hashes go to the blockchain: no names, NIMs, or UIDs.
 
-Known limits: a MIFARE Classic UID can be read and cloned by anyone holding the card for a moment, so a cloned card on a trusted phone, or a dishonest lecturer account, could still fake attendance. The photo shown on every tap is the current safeguard; a full fix needs cards with cryptographic authentication (e.g. DESFire). MyUnpam has no public API, and Smart KTM never writes to campus systems.
+Known limits: a MIFARE Classic UID can be read and cloned by anyone holding the card for a moment, so a cloned card on a trusted phone, or a dishonest lecturer account, could still fake attendance. The photo shown on every tap, duplicate-card detection, and the owner's usage history are the current safeguards; a full fix needs cards with cryptographic authentication (e.g. DESFire). MyUnpam has no public API, and Smart KTM never writes to campus systems.
 
 ## Architecture
 
@@ -107,7 +110,7 @@ Testing on a phone over USB: `adb reverse tcp:8080 tcp:8080`, then open `localho
 ## Tests
 
 ```bash
-cd server && cargo test       # 13 tests: schedule logic, hashing, MyUnpam sync, lost card, trusted phones, rate limits
+cd server && cargo test       # 18 tests: schedule logic, hashing, MyUnpam & Mentari sync, notifications, lost card, trusted phones, duplicate cards, rate limits
 cd contracts && forge test    # 6 tests: PresensiKTM and SertifikatKTM
 ```
 
