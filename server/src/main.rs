@@ -74,8 +74,10 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let web = env("WEB_DIR", "../web/dist");
+    // APK Android disajikan dari data/unduh (diunggah scripts/deploy-vps.sh, tidak ikut repo).
     let router = Router::new()
         .nest("/api", api::router())
+        .nest_service("/unduh", ServeDir::new(format!("{data_dir}/unduh")))
         .fallback_service(ServeDir::new(&web).not_found_service(ServeFile::new(format!("{web}/404.html"))))
         .with_state(app);
 

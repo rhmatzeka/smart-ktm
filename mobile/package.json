@@ -1,0 +1,16 @@
+{
+  "name": "smart-ktm-mobile",
+  "private": true,
+  "description": "Aplikasi Android/iOS Smart KTM: membungkus ktm.rahmateka.my.id + NFC native untuk membaca UID KTM.",
+  "scripts": {
+    "sync": "cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}

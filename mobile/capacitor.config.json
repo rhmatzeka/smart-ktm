@@ -1,0 +1,17 @@
+{
+  "appId": "id.my.rahmateka.ktm",
+  "appName": "Smart KTM",
+  "webDir": "www",
+  "server": {
+    "url": "https://ktm.rahmateka.my.id",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#1747C9"
+  },
+  "ios": {
+    "backgroundColor": "#1747C9",
+    "contentInset": "always"
+  }
+}

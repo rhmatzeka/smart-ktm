@@ -149,7 +149,7 @@ import { ikon } from '../lib/ikon';
 
 <script>
   import { api, sesi, tujuan, GalatApi } from '../lib/api';
-  import { bacaKtm, diAndroid, diBrave, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
+  import { bacaKtm, diAndroid, diAplikasi, diBrave, diIphone, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   // Blok yang bergantian di bagian atas; form NIM selalu ada.
@@ -247,6 +247,9 @@ import { ikon } from '../lib/ikon';
     $('form-nim').querySelector('button[type=submit]')!.classList.remove('garis-biru');
     $('mulai-tap').hidden = true;
     $('tanpa-nfc').hidden = false;
+    if (diIphone()) {
+      $('tanpa-nfc-teks').textContent = 'iPhone belum bisa membaca KTM (chip MIFARE Classic), jadi masuk pakai NIM. Tips: Bagikan → Tambahkan ke Layar Utama supaya Smart KTM jadi ikon aplikasi.';
+    }
     if (diAndroid()) {
       ($('ke-chrome') as HTMLAnchorElement).href = tautanChrome();
       $('ke-chrome').hidden = false;
@@ -271,8 +274,10 @@ import { ikon } from '../lib/ikon';
       .catch((e) => { if (e instanceof GalatApi && e.status === 401) sesi.hapus(); });
   }
 
-  // Izin NFC sudah pernah diberikan: langsung siap baca, cukup tempel KTM.
-  if (nfcDidukung()) {
+  // Di aplikasi Android: langsung siap baca (termasuk tap yang membuka aplikasi).
+  // Di Chrome: langsung siap baca kalau izin NFC sudah pernah diberikan.
+  if (diAplikasi()) mulaiBaca();
+  else if (nfcDidukung()) {
     navigator.permissions
       ?.query({ name: 'nfc' as PermissionName })
       .then((p) => { if (p.state === 'granted') mulaiBaca(); })
