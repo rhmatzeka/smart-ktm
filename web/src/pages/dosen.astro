@@ -70,6 +70,8 @@ import { ikon } from '../lib/ikon';
   .kelas-dosen b { display: block; font-size: 1rem; }
   .kelas-dosen .app-ikon { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--garis); }
   .kelas-dosen .redup { font-size: 0.82rem; }
+  .kelas-dosen .ke-rekap { display: inline-flex; gap: 6px; align-items: center; margin: 6px 0 0 14px; font-size: 0.8rem; font-weight: 700; color: var(--putih); text-decoration: none; opacity: 0.92; }
+  .kelas-dosen .ke-rekap .ikon { width: 15px; height: 15px; }
   .kelas-dosen .aktif { display: inline-block; margin-top: 4px; font-size: 0.72rem; font-weight: 700; color: var(--hijau); background: #dcfce7; padding: 2px 8px; border-radius: 99px; }
   .hitung { font-weight: 600; color: var(--teks-2); }
   .hitung b { font-size: 1.8rem; color: var(--biru); }
@@ -143,7 +145,8 @@ import { ikon } from '../lib/ikon';
       $('kelas').innerHTML = r.kelas
         .map((k: any, i: number) => `<li><button data-matkul="${k.id}">${ikonApp('kalender', WARNA[i % WARNA.length])}
           <span><b>${esc(k.nama)}</b><span class="redup">${esc(k.hari)} ${esc(k.mulai.replace(':', '.'))} · ${esc(k.ruang)} · ${k.peserta} mahasiswa</span>
-          ${k.sesi_aktif ? '<br><span class="aktif">Sesi sedang dibuka</span>' : ''}</span></button></li>`)
+          ${k.sesi_aktif ? '<br><span class="aktif">Sesi sedang dibuka</span>' : ''}</span></button>
+          <a class="ke-rekap" href="/rekap/?k=${k.id}">${ikon('tugas')} Rekap kehadiran${k.pertemuan ? ` (${k.pertemuan} sesi)` : ''}</a></li>`)
         .join('');
     } catch (e) {
       tanganiGalat(e, salah);

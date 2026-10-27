@@ -16,6 +16,16 @@ import { ikon } from '../lib/ikon';
     <p class="label-bagian" id="judul-hari"></p>
     <ol class="kelas-hari" id="kelas"></ol>
     <p id="pesan" class="pesan-galat" role="alert" hidden></p>
+
+    <article class="kotak-kalender" id="kalender" hidden>
+      <p class="judul-kalender"><Fragment set:html={ikon('kalender')} /> Masukkan ke kalender</p>
+      <p class="ket-kalender">Semua pertemuan (tanggal asli dari MyUnpam) dan tenggat tugas, lengkap dengan pengingat.</p>
+      <div class="aksi-kalender">
+        <a class="tombol kecil-saja" id="unduh-ics" href="#" download>Unduh ke kalender HP</a>
+        <button class="tombol garis-biru kecil-saja" id="salin-ics" type="button">Salin link Google Calendar</button>
+      </div>
+      <p class="ket-kalender" id="ics-ok" role="status"></p>
+    </article>
   </section>
 </Dasar>
 
@@ -28,6 +38,11 @@ import { ikon } from '../lib/ikon';
   .tombol-kembali .ikon { width: 18px; height: 18px; }
 
   .isi-jadwal { flex: 1; padding: 14px 16px 100px; }
+  .kotak-kalender { margin-top: 18px; padding: 14px; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; }
+  .judul-kalender { display: flex; gap: 8px; align-items: center; font-weight: 800; font-size: 0.92rem; }
+  .judul-kalender .ikon { width: 18px; height: 18px; color: var(--biru); }
+  .ket-kalender { margin: 4px 0 0; font-size: 0.75rem; color: var(--teks-2); }
+  .aksi-kalender { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .pilih-hari { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
   .pilih-hari button {
     display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 7px;
@@ -117,4 +132,21 @@ import { ikon } from '../lib/ikon';
       render();
     })
     .catch((e) => tanganiGalat(e, (t) => { $('pesan').textContent = t; $('pesan').hidden = false; }));
+
+  // Kalender: .ics untuk diunduh, atau link pribadi untuk langganan di Google Calendar (ikut diperbarui).
+  api<{ url: string }>('/kalender')
+    .then(({ url }) => {
+      const penuh = location.origin + url;
+      ($('unduh-ics') as HTMLAnchorElement).href = url;
+      $('salin-ics').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(penuh);
+          $('ics-ok').textContent = 'Link tersalin. Buka calendar.google.com di browser, lalu Kalender lain (+) > Dari URL > tempel. Link ini pribadi, jangan dibagikan.';
+        } catch {
+          prompt('Salin link ini ke Google Calendar (Kalender lain > Dari URL):', penuh);
+        }
+      });
+      $('kalender').hidden = false;
+    })
+    .catch(() => {});
 </script>

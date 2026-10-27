@@ -11,7 +11,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::{ai, data, db, sinkron, waktu, App};
+use crate::{ai, data, db, kalender, rekap, sinkron, waktu, App};
 
 pub struct Gagal(StatusCode, String);
 
@@ -60,6 +60,10 @@ pub fn router() -> Router<App> {
         .route("/jadwal", get(jadwal_minggu))
         .route("/notifikasi", get(notifikasi))
         .route("/ktm/jejak", get(lihat_jejak))
+        .route("/dosen/kelas/{id}/rekap", get(lihat_rekap))
+        .route("/unduh/rekap/{token}", get(unduh_rekap))
+        .route("/kalender", get(link_kalender))
+        .route("/kalender/{token}", get(unduh_kalender))
         .route("/ktm/jejak/{id}/bukan-saya", post(bukan_saya))
         .route("/ktm/hilang", post(lapor_hilang))
         .route("/keamanan", post(atur_keamanan))
@@ -866,6 +870,103 @@ async fn bukan_saya(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -
     Ok(Json(json!({ "ok": true, "hilang": true })))
 }
 
+// ---------- Rekap kehadiran (dosen) & kalender (mahasiswa) ----------
+
+/// Tanda tangan link unduhan. Link dibuka oleh Chrome, DownloadManager Android, atau Google Calendar
+/// yang tidak membawa header sesi, jadi izinnya ada di link itu sendiri.
+fn tanda(rahasia: &str, isi: &str) -> String {
+    db::sha(&format!("{rahasia}:unduh:{isi}"))[..32].to_string()
+}
+
+const LINK_REKAP_DETIK: i64 = 600;
+
+fn token_rekap(rahasia: &str, matkul: i64, dosen: i64, kedaluwarsa: i64) -> String {
+    format!("{matkul}.{dosen}.{kedaluwarsa}.{}", tanda(rahasia, &format!("rekap:{matkul}:{dosen}:{kedaluwarsa}")))
+}
+
+/// Token rekap yang sah dan belum kedaluwarsa: (matkul, dosen).
+fn baca_token_rekap(rahasia: &str, token: &str, sekarang: i64) -> Option<(i64, i64)> {
+    let token = token.trim_end_matches(".xlsx");
+    let mut b = token.splitn(4, '.');
+    let (m, d, k) = (b.next()?.parse().ok()?, b.next()?.parse().ok()?, b.next()?.parse::<i64>().ok()?);
+    (k >= sekarang && token_rekap(rahasia, m, d, k) == token).then_some((m, d))
+}
+
+/// Link kalender pribadi per mahasiswa (seperti "alamat rahasia" Google Calendar), tanpa kedaluwarsa.
+fn token_kalender(rahasia: &str, user: i64) -> String {
+    format!("{user}-{}", tanda(rahasia, &format!("kalender:{user}")))
+}
+
+fn baca_token_kalender(rahasia: &str, token: &str) -> Option<i64> {
+    let token = token.trim_end_matches(".ics");
+    let user = token.split_once('-')?.0.parse().ok()?;
+    (token_kalender(rahasia, user) == token).then_some(user)
+}
+
+fn nama_berkas(s: &str) -> String {
+    s.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect::<String>().split('-').filter(|w| !w.is_empty()).collect::<Vec<_>>().join("-")
+}
+
+async fn lihat_rekap(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    let milik: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM matkul WHERE id = ?1 AND dosen_id = ?2)", params![id, u.id], |r| r.get(0))?;
+    if !milik {
+        return Err(galat(StatusCode::NOT_FOUND, "Kelas tidak ditemukan"));
+    }
+    let mut v = rekap::rekap(&c, id)?.json();
+    let kedaluwarsa = waktu::sekarang().timestamp() + LINK_REKAP_DETIK;
+    v["unduh"] = json!(format!("/api/unduh/rekap/{}.xlsx", token_rekap(&app.rahasia, id, u.id, kedaluwarsa)));
+    Ok(Json(v))
+}
+
+async fn unduh_rekap(State(app): State<App>, h: HeaderMap, Path(token): Path<String>) -> Result<Response, Gagal> {
+    batasi(&app, &format!("unduh:{}", ip(&h)), 30, 60)?;
+    let (matkul, dosen) = baca_token_rekap(&app.rahasia, &token, waktu::sekarang().timestamp())
+        .ok_or_else(|| galat(StatusCode::FORBIDDEN, "Link unduhan kedaluwarsa. Buka lagi halaman rekap lalu unduh ulang."))?;
+    let r = {
+        let c = app.db.lock().unwrap();
+        let milik: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM matkul WHERE id = ?1 AND dosen_id = ?2)", params![matkul, dosen], |r| r.get(0))?;
+        if !milik {
+            return Err(galat(StatusCode::NOT_FOUND, "Kelas tidak ditemukan"));
+        }
+        rekap::rekap(&c, matkul)?
+    };
+    let berkas = rekap::excel(&r).map_err(|e| galat(StatusCode::INTERNAL_SERVER_ERROR, format!("Gagal membuat Excel: {e}")))?;
+    let nama = format!("Rekap-Kehadiran-{}.xlsx", nama_berkas(&r.matkul));
+    Ok((
+        [
+            (axum::http::header::CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".to_string()),
+            (axum::http::header::CONTENT_DISPOSITION, format!("attachment; filename=\"{nama}\"")),
+            (axum::http::header::CACHE_CONTROL, "no-store".to_string()),
+        ],
+        berkas,
+    )
+        .into_response())
+}
+
+async fn link_kalender(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    Ok(Json(json!({ "url": format!("/api/kalender/{}.ics", token_kalender(&app.rahasia, u.id)) })))
+}
+
+async fn unduh_kalender(State(app): State<App>, h: HeaderMap, Path(token): Path<String>) -> Result<Response, Gagal> {
+    batasi(&app, &format!("unduh:{}", ip(&h)), 30, 60)?;
+    let user = baca_token_kalender(&app.rahasia, &token).ok_or_else(|| galat(StatusCode::NOT_FOUND, "Kalender tidak ditemukan"))?;
+    let isi = kalender::ics(&app.db.lock().unwrap(), user, &waktu::sekarang())?;
+    Ok((
+        [
+            (axum::http::header::CONTENT_TYPE, "text/calendar; charset=utf-8"),
+            (axum::http::header::CONTENT_DISPOSITION, "attachment; filename=\"Jadwal-Kuliah-Smart-KTM.ics\""),
+            (axum::http::header::CACHE_CONTROL, "no-cache"),
+        ],
+        isi,
+    )
+        .into_response())
+}
+
 // ---------- KTM hilang ----------
 
 #[derive(Deserialize)]
@@ -1138,6 +1239,19 @@ mod tes {
         // Versi lama mengirim satu teks.
         let lama: TokenHp = serde_json::from_value(json!(hp_a)).unwrap();
         assert!(perangkat_sah(&c, a, &lama.daftar()).unwrap());
+    }
+
+    #[test]
+    fn link_unduhan_bertanda_tangan() {
+        let t = token_rekap("rahasia", 3, 1, 1000);
+        assert_eq!(baca_token_rekap("rahasia", &format!("{t}.xlsx"), 999), Some((3, 1)));
+        assert_eq!(baca_token_rekap("rahasia", &t, 1001), None, "kedaluwarsa");
+        assert_eq!(baca_token_rekap("lain", &t, 999), None, "rahasia server lain");
+        assert_eq!(baca_token_rekap("rahasia", &t.replacen("3.", "4.", 1), 999), None, "kelas lain tidak bisa ditebak");
+        let k = token_kalender("rahasia", 7);
+        assert_eq!(baca_token_kalender("rahasia", &format!("{k}.ics")), Some(7));
+        assert_eq!(baca_token_kalender("rahasia", &k.replacen("7-", "8-", 1)), None);
+        assert_eq!(nama_berkas("Testing dan QA (P1)"), "Testing-dan-QA-P1");
     }
 
     #[test]

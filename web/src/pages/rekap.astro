@@ -1,0 +1,131 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Rekap kehadiran">
+  <header class="kepala-chat">
+    <a class="tombol-kembali" href="/dosen/" aria-label="Kembali ke daftar kelas"><Fragment set:html={ikon('kembali')} /></a>
+    <div>
+      <h1 id="r-matkul">Rekap kehadiran</h1>
+      <p id="r-info">Memuat…</p>
+    </div>
+  </header>
+
+  <section class="isi-rekap">
+    <div class="ringkas-rekap" id="ringkas" hidden>
+      <div><b id="n-mhs">0</b><span>mahasiswa</span></div>
+      <div><b id="n-pert">0</b><span>pertemuan</span></div>
+      <div class="rata"><b id="n-rata">0%</b><span>rata-rata hadir</span></div>
+    </div>
+
+    <article class="kartu perhatian" id="perhatian" hidden>
+      <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('peringatan')} /></span>Perlu perhatian</p>
+      <ul id="daftar-perhatian"></ul>
+    </article>
+
+    <a class="tombol" id="unduh" href="#" download hidden><Fragment set:html={ikon('tugas')} /> Unduh Excel</a>
+
+    <div class="tabel-rekap" id="wadah-tabel" hidden>
+      <table>
+        <thead id="kepala-tabel"></thead>
+        <tbody id="isi-tabel"></tbody>
+      </table>
+    </div>
+    <p class="ket-rekap" id="ket" hidden>H hadir (tap KTM), – tidak hadir, S disanggah pemilik KTM. Hanya pertemuan yang dibuka lewat mesin absen Smart KTM yang dihitung.</p>
+    <p class="kosong-rekap" id="kosong" hidden>Belum ada sesi presensi untuk kelas ini. Buka presensi dari mesin absen, rekapnya muncul di sini.</p>
+    <p id="pesan" class="pesan-galat" role="alert" hidden></p>
+  </section>
+</Dasar>
+
+<style is:global>
+  body:has(.isi-rekap) .halaman { background: var(--latar); }
+  .kepala-chat { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis); }
+  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
+  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
+  .tombol-kembali { width: 36px; height: 36px; border-radius: 11px; border: 1px solid var(--garis); display: grid; place-items: center; color: var(--teks); flex: none; }
+  .tombol-kembali .ikon { width: 18px; height: 18px; }
+
+  .isi-rekap { flex: 1; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+  .ringkas-rekap { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; }
+  .ringkas-rekap div { display: flex; flex-direction: column; padding: 12px; }
+  .ringkas-rekap div + div { border-left: 1px solid var(--garis); }
+  .ringkas-rekap b { font-size: 1.25rem; font-weight: 800; color: var(--biru); }
+  .ringkas-rekap span { font-size: 0.72rem; color: var(--teks-2); }
+
+  .perhatian ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .perhatian li { display: flex; justify-content: space-between; gap: 10px; font-size: 0.85rem; }
+  .perhatian li span { color: var(--teks-2); white-space: nowrap; }
+  .pil { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .pil.aman { background: #dcfce7; color: #166534; }
+  .pil.hampir { background: #fef3c7; color: #92400e; }
+  .pil.lewat { background: #ffe4e6; color: #9f1239; }
+
+  #unduh { align-self: flex-start; }
+  .tabel-rekap { overflow-x: auto; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; }
+  .tabel-rekap table { border-collapse: collapse; font-size: 0.8rem; min-width: 100%; }
+  .tabel-rekap th, .tabel-rekap td { padding: 8px 6px; border-bottom: 1px solid #eef1f6; text-align: center; white-space: nowrap; }
+  .tabel-rekap th { font-size: 0.7rem; color: var(--teks-2); font-weight: 700; background: #f8fafd; }
+  .tabel-rekap th small { display: block; font-weight: 500; }
+  .tabel-rekap .nama { position: sticky; left: 0; background: var(--putih); text-align: left; padding-left: 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; box-shadow: 1px 0 0 #eef1f6; }
+  .tabel-rekap th.nama { background: #f8fafd; }
+  .tabel-rekap .nama small { display: block; color: var(--teks-2); font-size: 0.7rem; }
+  .tabel-rekap td.H { color: var(--hijau); font-weight: 800; }
+  .tabel-rekap td.S { color: #b45309; font-weight: 800; }
+  .tabel-rekap td.kosong-tanda { color: #c3cad6; }
+  .ket-rekap, .kosong-rekap { font-size: 0.75rem; color: var(--teks-2); }
+</style>
+
+<script>
+  import { api, esc, tanganiGalat } from '../lib/api';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
+  const kelasPil = (s: string) => (s === 'lewat batas' ? 'lewat' : s === 'hampir batas' ? 'hampir' : 'aman');
+  const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const tgl = (t: string) => `${+t.slice(8, 10)} ${BULAN[+t.slice(5, 7) - 1]}`;
+
+  type Mhs = { nim: string; nama: string; tanda: string[]; hadir: number; absen: number; onchain: number; status: string };
+  type Rekap = { matkul: string; kode: string; dosen: string; batas: number; pertemuan: { ke: number; tanggal: string }[]; mahasiswa: Mhs[]; unduh: string };
+
+  async function muat() {
+    const k = new URLSearchParams(location.search).get('k');
+    if (!k) return salah('Kelas tidak dipilih. Kembali ke daftar kelas.');
+    try {
+      const r = await api<Rekap>(`/dosen/kelas/${k}/rekap`);
+      document.title = `Rekap ${r.matkul}`;
+      $('r-matkul').textContent = r.matkul;
+      $('r-info').textContent = `Batas absen ${r.batas} kali`;
+      const n = r.pertemuan.length;
+      $('n-mhs').textContent = String(r.mahasiswa.length);
+      $('n-pert').textContent = String(n);
+      const rata = n && r.mahasiswa.length ? Math.round((r.mahasiswa.reduce((a, m) => a + m.hadir, 0) / (n * r.mahasiswa.length)) * 100) : 0;
+      $('n-rata').textContent = `${rata}%`;
+      $('ringkas').hidden = false;
+
+      if (!n) {
+        $('kosong').hidden = false;
+        return;
+      }
+      const perlu = r.mahasiswa.filter((m) => m.status !== 'aman').sort((a, b) => b.absen - a.absen);
+      $('perhatian').hidden = !perlu.length;
+      $('daftar-perhatian').innerHTML = perlu
+        .map((m) => `<li><b>${esc(m.nama)}</b><span>absen ${m.absen} <i class="pil ${kelasPil(m.status)}">${esc(m.status)}</i></span></li>`)
+        .join('');
+
+      ($('unduh') as HTMLAnchorElement).href = r.unduh;
+      $('unduh').hidden = false;
+
+      $('kepala-tabel').innerHTML = `<tr><th class="nama">Mahasiswa</th>${r.pertemuan.map((p) => `<th>P${p.ke}<small>${tgl(p.tanggal)}</small></th>`).join('')}<th>Hadir</th><th>Status</th></tr>`;
+      $('isi-tabel').innerHTML = r.mahasiswa
+        .map((m) => `<tr><td class="nama"><b>${esc(m.nama)}</b><small>${esc(m.nim)}</small></td>${m.tanda
+          .map((t) => `<td class="${t === '-' ? 'kosong-tanda' : t}">${t === '-' ? '–' : t}</td>`)
+          .join('')}<td><b>${m.hadir}</b>/${n}</td><td><i class="pil ${kelasPil(m.status)}">${esc(m.status)}</i></td></tr>`)
+        .join('');
+      $('wadah-tabel').hidden = false;
+      $('ket').hidden = false;
+    } catch (e) {
+      tanganiGalat(e, salah);
+    }
+  }
+  muat();
+</script>
