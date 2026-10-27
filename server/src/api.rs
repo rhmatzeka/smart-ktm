@@ -1042,9 +1042,8 @@ mod tes {
     }
 }
 
-/// Kirim ulang presensi & sertifikat yang gagal atau macet ke blockchain.
-/// Dicek dulu ke kontrak supaya yang ternyata sudah tercatat tidak dikirim dua kali.
-/// Kirim ulang ke blockchain: yang gagal, yang macet, dan yang tercatat 'lokal' sebelum blockchain aktif.
+/// Kirim ulang presensi & sertifikat ke blockchain: yang gagal, yang macet, dan yang tercatat
+/// 'lokal' sebelum blockchain aktif. Dicek dulu ke kontrak supaya yang sudah tercatat tidak dikirim dua kali.
 pub async fn coba_ulang_chain(app: &App) {
     let Some(ch) = app.chain.clone() else { return };
     let macet = waktu::teks(&(waktu::sekarang() - chrono::Duration::minutes(3)));
