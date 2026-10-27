@@ -5,7 +5,8 @@
   "server": {
     "url": "https://ktm.rahmateka.my.id",
     "androidScheme": "https",
-    "cleartext": false
+    "cleartext": false,
+    "errorPath": "offline.html"
   },
   "android": {
     "backgroundColor": "#1747C9"

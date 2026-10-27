@@ -12,6 +12,18 @@ export const sesi = {
   },
 };
 
+/** Token HP tepercaya: tetap tersimpan walau keluar, supaya tap KTM di HP ini tidak minta PIN lagi. */
+const KUNCI_HP = 'smartktm.perangkat';
+export const perangkat = {
+  ambil(): string | null {
+    try { return localStorage.getItem(KUNCI_HP); } catch { return null; }
+  },
+  simpan(t?: string) {
+    if (!t) return;
+    try { localStorage.setItem(KUNCI_HP, t); } catch { /* abaikan */ }
+  },
+};
+
 export class GalatApi extends Error {
   constructor(message: string, public status: number) { super(message); }
 }

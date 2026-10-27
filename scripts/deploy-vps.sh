@@ -86,10 +86,16 @@ UNIT
 chown -R smartktm:smartktm /opt/smart-ktm
 chmod 600 /opt/smart-ktm/.env /etc/cloudflared/smart-ktm.json 2>/dev/null || true
 systemctl daemon-reload
-systemctl enable -q smart-ktm-anvil smart-ktm smart-ktm-tunnel
-systemctl restart smart-ktm-anvil smart-ktm smart-ktm-tunnel
+# Anvil hanya dinyalakan kalau server masih memakai blockchain lokal (bukan Sepolia).
+if grep -q '^CHAIN_RPC=http://127.0.0.1:8545' /opt/smart-ktm/.env 2>/dev/null; then
+  systemctl enable -q --now smart-ktm-anvil
+else
+  systemctl disable -q --now smart-ktm-anvil 2>/dev/null || true
+fi
+systemctl enable -q smart-ktm smart-ktm-tunnel
+systemctl restart smart-ktm smart-ktm-tunnel
 sleep 4
-systemctl is-active smart-ktm-anvil smart-ktm smart-ktm-tunnel | tr '\n' ' '; echo
+systemctl is-active smart-ktm smart-ktm-tunnel | tr '\n' ' '; echo
 curl -s -o /dev/null -w "VPS lokal :8080 -> %{http_code}\n" http://127.0.0.1:8080/
 EOF
 

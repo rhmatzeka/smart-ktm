@@ -41,6 +41,7 @@ import { ikon } from '../lib/ikon';
     <!-- KTM terdaftar: PIN -->
     <form id="form-pin" hidden>
       <p class="judul-blok">Halo, <span id="pin-nama"></span>. Masukkan PIN.</p>
+      <p class="redup kecil">Cukup sekali di HP ini. Berikutnya, tap KTM langsung masuk.</p>
       <label for="pin">PIN 6 angka</label>
       <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
       <button class="tombol" type="submit">Masuk</button>
@@ -157,7 +158,7 @@ import { ikon } from '../lib/ikon';
 </style>
 
 <script>
-  import { api, sesi, tujuan, GalatApi } from '../lib/api';
+  import { api, perangkat, sesi, tujuan, GalatApi } from '../lib/api';
   import { bacaKtm, diAndroid, diAplikasi, diBrave, diIphone, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -179,8 +180,9 @@ import { ikon } from '../lib/ikon';
     if (input) setTimeout(() => input.focus(), 50);
   }
 
-  function selesaiMasuk(r: { token: string; peran: string }) {
+  function selesaiMasuk(r: { token: string; peran: string; perangkat?: string }) {
     sesi.simpan(r.token);
+    perangkat.simpan(r.perangkat);
     location.href = tujuan(r.peran);
   }
 
@@ -189,7 +191,7 @@ import { ikon } from '../lib/ikon';
     berhenti = null;
     uid = u;
     try {
-      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean; hilang?: boolean; pesan?: string; perlu_pin?: boolean }>('/ktm/cek', { uid });
+      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean; hilang?: boolean; pesan?: string; perlu_pin?: boolean }>('/ktm/cek', { uid, perangkat: perangkat.ambil() });
       if (r.hilang) {
         $('hilang-nama').textContent = r.nama ?? '';
         $('hilang-pesan').textContent = r.pesan ? `Pesan dari pemilik: "${r.pesan}"` : '';
@@ -204,7 +206,7 @@ import { ikon } from '../lib/ikon';
       }
       // KTM terdaftar: langsung masuk, kecuali pemiliknya menyalakan "minta PIN setiap tap".
       if (r.terdaftar && !r.perlu_pin) {
-        selesaiMasuk(await api('/masuk', { uid }));
+        selesaiMasuk(await api('/masuk', { uid, perangkat: perangkat.ambil() }));
         return;
       }
       if (r.terdaftar) {

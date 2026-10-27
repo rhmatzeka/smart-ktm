@@ -1,5 +1,7 @@
 //! Endpoint HTTP di bawah /api.
 
+use std::time::Duration;
+
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -58,6 +60,7 @@ pub fn router() -> Router<App> {
         .route("/jadwal", get(jadwal_minggu))
         .route("/ktm/hilang", post(lapor_hilang))
         .route("/keamanan", post(atur_keamanan))
+        .route("/pin", post(ganti_pin))
         .route("/acara", get(daftar_acara).post(buat_acara))
         .route("/acara/{id}", get(lihat_acara))
         .route("/acara/{id}/tap", post(tap_acara))
@@ -79,11 +82,19 @@ fn token(h: &HeaderMap) -> Option<String> {
     h.get("authorization")?.to_str().ok()?.strip_prefix("Bearer ").map(str::to_string)
 }
 
+/// Sesi login berlaku 30 hari.
+const SESI_HARI: i64 = 30;
+
+fn batas_sesi() -> String {
+    waktu::teks(&(waktu::sekarang() - chrono::Duration::days(SESI_HARI)))
+}
+
 fn pengguna(c: &Connection, h: &HeaderMap) -> Result<Pengguna, Gagal> {
     let t = token(h).ok_or_else(|| galat(StatusCode::UNAUTHORIZED, "Belum masuk"))?;
     c.query_row(
-        "SELECT u.id, u.peran, u.nim, u.nama, u.prodi, u.dibuat FROM sesi_login s JOIN users u ON u.id = s.user_id WHERE s.token = ?1",
-        [t],
+        "SELECT u.id, u.peran, u.nim, u.nama, u.prodi, u.dibuat FROM sesi_login s JOIN users u ON u.id = s.user_id
+         WHERE s.token = ?1 AND s.dibuat >= ?2",
+        params![t, batas_sesi()],
         |r| Ok(Pengguna { id: r.get(0)?, peran: r.get(1)?, nim: r.get(2)?, nama: r.get(3)?, prodi: r.get(4)?, dibuat: r.get(5)? }),
     )
     .optional()?
@@ -99,9 +110,63 @@ fn wajib(u: &Pengguna, peran: &str) -> Result<(), Gagal> {
 }
 
 fn token_baru(c: &Connection, user: i64) -> rusqlite::Result<String> {
+    c.execute("DELETE FROM sesi_login WHERE dibuat < ?1", [batas_sesi()])?;
     let t = hex::encode(rand::random::<[u8; 24]>());
     c.execute("INSERT INTO sesi_login(token, user_id, dibuat) VALUES(?1, ?2, ?3)", params![t, user, waktu::teks(&waktu::sekarang())])?;
     Ok(t)
+}
+
+/// HP tepercaya: pernah masuk pakai PIN. Hanya HP ini yang boleh masuk dengan tap KTM tanpa PIN,
+/// jadi orang yang sekadar tahu UID (UID MIFARE Classic tidak rahasia) tetap harus tahu PIN.
+fn perangkat_baru(c: &Connection, user: i64) -> rusqlite::Result<String> {
+    let t = hex::encode(rand::random::<[u8; 24]>());
+    c.execute(
+        "INSERT INTO perangkat(kode_hash, user_id, dibuat) VALUES(?1, ?2, ?3)",
+        params![db::sha(&t), user, waktu::teks(&waktu::sekarang())],
+    )?;
+    Ok(t)
+}
+
+fn perangkat_sah(c: &Connection, user: i64, token: Option<&str>) -> rusqlite::Result<bool> {
+    let Some(t) = token.filter(|t| !t.is_empty()) else { return Ok(false) };
+    c.query_row("SELECT EXISTS(SELECT 1 FROM perangkat WHERE kode_hash = ?1 AND user_id = ?2)", params![db::sha(t), user], |r| r.get(0))
+}
+
+/// IP asli pengunjung (lewat Cloudflare Tunnel).
+fn ip(h: &HeaderMap) -> String {
+    h.get("cf-connecting-ip")
+        .or_else(|| h.get("x-forwarded-for"))
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.split(',').next().unwrap_or("").trim().to_string())
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| "lokal".into())
+}
+
+/// Batas permintaan: `maks` kali per `detik` untuk satu kunci.
+fn batasi(app: &App, kunci: &str, maks: u32, detik: u64) -> Result<(), Gagal> {
+    if app.batas.izin(kunci, maks, Duration::from_secs(detik)) {
+        Ok(())
+    } else {
+        Err(galat(StatusCode::TOO_MANY_REQUESTS, "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi."))
+    }
+}
+
+const PIN_MAKS_GAGAL: u32 = 5;
+const PIN_KUNCI: Duration = Duration::from_secs(15 * 60);
+
+/// Cek PIN dengan penguncian akun setelah 5 kali salah dalam 15 menit.
+fn cek_pin_akun(app: &App, user: i64, pin: &str, pin_hash: &str) -> Result<(), Gagal> {
+    let kunci = format!("pin:{user}");
+    if app.batas.terkunci(&kunci, PIN_MAKS_GAGAL, PIN_KUNCI) {
+        return Err(galat(StatusCode::TOO_MANY_REQUESTS, "PIN salah 5 kali. Akun dikunci 15 menit."));
+    }
+    if db::cek_pin(pin, pin_hash) {
+        app.batas.hapus(&kunci);
+        Ok(())
+    } else {
+        app.batas.gagal(&kunci, PIN_KUNCI);
+        Err(galat(StatusCode::UNAUTHORIZED, "PIN salah"))
+    }
 }
 
 fn uid_hash(app: &App, uid: &str) -> Result<String, Gagal> {
@@ -130,9 +195,17 @@ struct Uid {
     uid: String,
 }
 
+#[derive(Deserialize)]
+struct CekKtm {
+    uid: String,
+    #[serde(default)]
+    perangkat: Option<String>,
+}
+
 /// `milik_sesi` = KTM ini milik akun yang sudah masuk di perangkat ini,
 /// jadi tap cukup untuk langsung membuka beranda tanpa PIN.
-async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<Uid>) -> Hasil {
+async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<CekKtm>) -> Hasil {
+    batasi(&app, &format!("cek:{}", ip(&h)), 60, 60)?;
     let hash = uid_hash(&app, &b.uid)?;
     let c = app.db.lock().unwrap();
     let r: Option<(i64, String, String, bool, Option<String>, bool)> = c
@@ -146,7 +219,8 @@ async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<Uid>) -> Ha
         Some((_, n, _, true, pesan, _)) => json!({ "terdaftar": true, "hilang": true, "nama": nama_depan(&n), "pesan": pesan.unwrap_or_default(), "milik_sesi": false }),
         Some((id, n, p, false, _, pin_tap)) => json!({
             "terdaftar": true, "hilang": false, "nama": nama_depan(&n), "peran": p,
-            "milik_sesi": sesi.is_some_and(|s| s.id == id), "perlu_pin": pin_tap,
+            "milik_sesi": sesi.is_some_and(|s| s.id == id),
+            "perlu_pin": pin_tap || !perangkat_sah(&c, id, b.perangkat.as_deref())?,
         }),
         None => json!({ "terdaftar": false, "hilang": false, "milik_sesi": false }),
     }))
@@ -161,7 +235,8 @@ struct Daftar {
     pin: String,
 }
 
-async fn daftar(State(app): State<App>, Json(b): Json<Daftar>) -> Hasil {
+async fn daftar(State(app): State<App>, hd: HeaderMap, Json(b): Json<Daftar>) -> Hasil {
+    batasi(&app, &format!("daftar:{}", ip(&hd)), 10, 600)?;
     let h = uid_hash(&app, &b.uid)?;
     let nim = b.nim.trim();
     if !(6..=15).contains(&nim.len()) || !nim.chars().all(|c| c.is_ascii_digit()) {
@@ -190,9 +265,7 @@ async fn daftar(State(app): State<App>, Json(b): Json<Daftar>) -> Hasil {
             if uid.is_some() && !hilang {
                 return Err(galat(StatusCode::CONFLICT, "NIM ini sudah punya KTM terdaftar"));
             }
-            if !db::cek_pin(&b.pin, &pin_hash) {
-                return Err(galat(StatusCode::UNAUTHORIZED, "PIN salah untuk NIM ini"));
-            }
+            cek_pin_akun(&app, id, &b.pin, &pin_hash)?;
             c.execute("UPDATE users SET uid_hash = ?1, hilang = 0, hilang_pesan = NULL WHERE id = ?2", params![h, id])?;
             (id, nama)
         }
@@ -211,7 +284,8 @@ async fn daftar(State(app): State<App>, Json(b): Json<Daftar>) -> Hasil {
         }
     };
     let t = token_baru(&c, id)?;
-    Ok(Json(json!({ "token": t, "peran": "mhs", "nama": nama })))
+    let p = perangkat_baru(&c, id)?;
+    Ok(Json(json!({ "token": t, "peran": "mhs", "nama": nama, "perangkat": p })))
 }
 
 #[derive(Deserialize)]
@@ -220,43 +294,60 @@ struct Masuk {
     nim: Option<String>,
     #[serde(default)]
     pin: String,
+    #[serde(default)]
+    perangkat: Option<String>,
 }
 
-async fn masuk(State(app): State<App>, Json(b): Json<Masuk>) -> Hasil {
+async fn masuk(State(app): State<App>, h: HeaderMap, Json(b): Json<Masuk>) -> Hasil {
+    batasi(&app, &format!("masuk:{}", ip(&h)), 30, 60)?;
     let c = app.db.lock().unwrap();
-    // KTM fisik adalah kuncinya: tap KTM masuk tanpa PIN, kecuali pemilik menyalakan "minta PIN".
-    // Masuk pakai NIM selalu butuh PIN.
-    if let Some(uid) = &b.uid {
-        let h = uid_hash(&app, uid)?;
-        let tanpa_pin: Option<(i64, String, String)> = c
-            .query_row("SELECT id, peran, nama FROM users WHERE uid_hash = ?1 AND hilang = 0 AND pin_tap = 0", [&h], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
-            .optional()?;
-        if let (Some((id, peran, nama)), true) = (tanpa_pin, b.pin.is_empty()) {
+    let cari = "SELECT id, peran, nama, pin_hash, hilang, pin_tap FROM users WHERE ";
+    type Akun = (i64, String, String, String, bool, bool);
+    let baris = |r: &rusqlite::Row| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?));
+    let akun: Option<Akun> = match (&b.uid, &b.nim) {
+        (Some(uid), _) => c.query_row(&format!("{cari}uid_hash = ?1"), [uid_hash(&app, uid)?], baris).optional()?,
+        (None, Some(nim)) => c.query_row(&format!("{cari}nim = ?1"), [nim.trim()], baris).optional()?,
+        _ => return Err(galat(StatusCode::BAD_REQUEST, "Tap KTM atau isi NIM")),
+    };
+    let Some((id, peran, nama, pin_hash, hilang, pin_tap)) = akun else {
+        return Err(galat(StatusCode::NOT_FOUND, "Akun tidak ditemukan"));
+    };
+    if b.uid.is_some() && hilang {
+        return Err(galat(StatusCode::FORBIDDEN, "KTM ini dilaporkan hilang dan sudah diblokir"));
+    }
+    // Tap KTM tanpa PIN: hanya di HP tepercaya dan kalau pemilik tidak menyalakan "minta PIN".
+    if b.uid.is_some() && b.pin.is_empty() {
+        if !pin_tap && perangkat_sah(&c, id, b.perangkat.as_deref())? {
             let t = token_baru(&c, id)?;
             return Ok(Json(json!({ "token": t, "peran": peran, "nama": nama })));
         }
+        return Err(galat(StatusCode::UNAUTHORIZED, "Masukkan PIN sekali untuk HP ini"));
     }
-    let cari = "SELECT id, peran, nama, pin_hash FROM users WHERE ";
-    let akun: Option<(i64, String, String, String)> = match (&b.uid, &b.nim) {
-        (Some(uid), _) => {
-            let h = uid_hash(&app, uid)?;
-            let hilang: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM users WHERE uid_hash = ?1 AND hilang = 1)", [&h], |r| r.get(0))?;
-            if hilang {
-                return Err(galat(StatusCode::FORBIDDEN, "KTM ini dilaporkan hilang dan sudah diblokir"));
-            }
-            c.query_row(&format!("{cari}uid_hash = ?1"), [h], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).optional()?
-        }
-        (None, Some(nim)) => c.query_row(&format!("{cari}nim = ?1"), [nim.trim()], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).optional()?,
-        _ => return Err(galat(StatusCode::BAD_REQUEST, "Tap KTM atau isi NIM")),
-    };
-    let Some((id, peran, nama, pin_hash)) = akun else {
-        return Err(galat(StatusCode::NOT_FOUND, "Akun tidak ditemukan"));
-    };
-    if !db::cek_pin(&b.pin, &pin_hash) {
-        return Err(galat(StatusCode::UNAUTHORIZED, "PIN salah"));
-    }
+    cek_pin_akun(&app, id, &b.pin, &pin_hash)?;
     let t = token_baru(&c, id)?;
-    Ok(Json(json!({ "token": t, "peran": peran, "nama": nama })))
+    let p = perangkat_baru(&c, id)?;
+    Ok(Json(json!({ "token": t, "peran": peran, "nama": nama, "perangkat": p })))
+}
+
+#[derive(Deserialize)]
+struct GantiPin {
+    lama: String,
+    baru: String,
+}
+
+/// Ganti PIN: semua HP tepercaya lain dicabut, HP ini tetap tepercaya.
+async fn ganti_pin(State(app): State<App>, h: HeaderMap, Json(b): Json<GantiPin>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    if !pin_valid(&b.baru) {
+        return Err(galat(StatusCode::BAD_REQUEST, "PIN baru harus 6 angka"));
+    }
+    let pin_hash: String = c.query_row("SELECT pin_hash FROM users WHERE id = ?1", [u.id], |r| r.get(0))?;
+    cek_pin_akun(&app, u.id, &b.lama, &pin_hash)?;
+    c.execute("UPDATE users SET pin_hash = ?1 WHERE id = ?2", params![db::hash_pin(&b.baru), u.id])?;
+    c.execute("DELETE FROM perangkat WHERE user_id = ?1", [u.id])?;
+    let p = perangkat_baru(&c, u.id)?;
+    Ok(Json(json!({ "ok": true, "perangkat": p })))
 }
 
 async fn keluar(State(app): State<App>, h: HeaderMap) -> Hasil {
@@ -346,6 +437,7 @@ async fn chat(State(app): State<App>, h: HeaderMap, Json(b): Json<Chat>) -> Hasi
         wajib(&u, "mhs")?;
         u
     };
+    batasi(&app, &format!("chat:{}", u.id), 40, 3600)?;
     let pesan: String = b.pesan.trim().chars().take(1000).collect();
     if pesan.is_empty() {
         return Err(galat(StatusCode::BAD_REQUEST, "Pesan kosong"));
@@ -379,13 +471,15 @@ async fn sinkron_unpam(State(app): State<App>, h: HeaderMap, Json(d): Json<sinkr
     let mut c = app.db.lock().unwrap();
     let u = pengguna(&c, &h)?;
     wajib(&u, "mhs")?;
+    batasi(&app, &format!("sinkron:{}", u.id), 10, 600)?;
     let n = sinkron::sinkron(&mut c, u.id, &d).map_err(|e| galat(StatusCode::BAD_REQUEST, e.to_string()))?;
     app.cache.lock().unwrap().retain(|k, _| !k.starts_with(&format!("{}:", u.id)));
     Ok(Json(json!({ "jumlah": n })))
 }
 
 /// KTM orang lain ditap: hanya profil publik, tanpa jadwal/nilai.
-async fn kenalan(State(app): State<App>, Json(b): Json<Uid>) -> Hasil {
+async fn kenalan(State(app): State<App>, hd: HeaderMap, Json(b): Json<Uid>) -> Hasil {
+    batasi(&app, &format!("kenalan:{}", ip(&hd)), 30, 60)?;
     let h = uid_hash(&app, &b.uid)?;
     let c = app.db.lock().unwrap();
     let r: Option<(i64, String, String, String, String, String, bool, String, Option<String>)> = c
@@ -567,6 +661,7 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
         let c = app.db.lock().unwrap();
         let u = pengguna(&c, &h)?;
         wajib(&u, "dosen")?;
+        batasi(&app, &format!("tap:{}", u.id), 120, 60)?;
         let (matkul_id, terbuka) = sesi_milik(&c, id, u.id)?;
         if !terbuka {
             return Err(galat(StatusCode::CONFLICT, "Sesi sudah ditutup"));
@@ -765,6 +860,7 @@ async fn tap_acara(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>, Js
         let c = app.db.lock().unwrap();
         let u = pengguna(&c, &h)?;
         wajib(&u, "dosen")?;
+        batasi(&app, &format!("tap:{}", u.id), 120, 60)?;
         let (.., dibuka) = acara_milik(&c, id, u.id)?;
         if !dibuka {
             return Err(galat(StatusCode::CONFLICT, "Check-in acara sudah ditutup"));
@@ -888,4 +984,67 @@ mod tes {
         assert!(pesan.contains("hilang"));
         assert!(mahasiswa_dari_ktm(&c, "tidak-ada").is_err());
     }
+
+    #[test]
+    fn tap_tanpa_pin_hanya_di_hp_tepercaya() {
+        let c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let (a, b): (i64, i64) = c.query_row("SELECT MIN(id), MAX(id) FROM users WHERE peran = 'mhs'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        let hp = perangkat_baru(&c, a).unwrap();
+        assert!(perangkat_sah(&c, a, Some(&hp)).unwrap());
+        assert!(!perangkat_sah(&c, b, Some(&hp)).unwrap(), "token HP milik akun lain tidak berlaku");
+        assert!(!perangkat_sah(&c, a, None).unwrap());
+        assert!(!perangkat_sah(&c, a, Some("tebakan")).unwrap());
+    }
+}
+
+/// Kirim ulang presensi & sertifikat yang gagal atau macet ke blockchain.
+/// Dicek dulu ke kontrak supaya yang ternyata sudah tercatat tidak dikirim dua kali.
+pub async fn coba_ulang_chain(app: &App) {
+    let Some(ch) = app.chain.clone() else { return };
+    let macet = waktu::teks(&(waktu::sekarang() - chrono::Duration::minutes(3)));
+    let (presensi, sertifikat) = {
+        let c = app.db.lock().unwrap();
+        let ambil = |sql: &str| -> Vec<(i64, i64, String, String)> {
+            c.prepare(sql)
+                .and_then(|mut q| q.query_map([&macet], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?.collect())
+                .unwrap_or_default()
+        };
+        (
+            ambil("SELECT p.id, p.sesi_id, u.uid_hash, p.bukti FROM presensi p JOIN users u ON u.id = p.user_id
+                   WHERE (p.status = 'gagal' OR (p.status = 'menunggu' AND p.waktu < ?1)) AND u.uid_hash IS NOT NULL LIMIT 20"),
+            if ch.ada_sertifikat() {
+                ambil("SELECT s.id, s.acara_id, u.uid_hash, s.kode FROM sertifikat s JOIN users u ON u.id = s.user_id
+                       WHERE (s.status = 'gagal' OR (s.status = 'menunggu' AND s.waktu < ?1)) AND u.uid_hash IS NOT NULL LIMIT 20")
+            } else {
+                vec![]
+            },
+        )
+    };
+    for (id, sesi, mhs, bukti) in presensi {
+        let hasil = match ch.cek(&bukti).await {
+            Ok(ts) if ts > 0 => Ok(None),
+            _ => ch.catat(&db::sha(&format!("{}:sesi:{sesi}", app.rahasia)), &mhs, &bukti).await.map(Some),
+        };
+        simpan_hasil(app, "presensi", id, hasil);
+    }
+    for (id, acara, mhs, kode) in sertifikat {
+        let hasil = match ch.cek_sertifikat(&kode).await {
+            Ok(ts) if ts > 0 => Ok(None),
+            _ => ch.terbitkan(&db::sha(&format!("{}:acara:{acara}", app.rahasia)), &mhs, &kode).await.map(Some),
+        };
+        simpan_hasil(app, "sertifikat", id, hasil);
+    }
+}
+
+fn simpan_hasil(app: &App, tabel: &str, id: i64, hasil: anyhow::Result<Option<String>>) {
+    let c = app.db.lock().unwrap();
+    let _ = match hasil {
+        Ok(Some(tx)) => c.execute(&format!("UPDATE {tabel} SET tx = ?1, status = 'onchain' WHERE id = ?2"), params![tx, id]),
+        Ok(None) => c.execute(&format!("UPDATE {tabel} SET status = 'onchain' WHERE id = ?1"), [id]),
+        Err(e) => {
+            eprintln!("coba ulang {tabel} {id} gagal: {e:#}");
+            c.execute(&format!("UPDATE {tabel} SET status = 'gagal' WHERE id = ?1"), [id])
+        }
+    };
 }

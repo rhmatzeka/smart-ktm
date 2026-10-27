@@ -64,8 +64,18 @@ const panah = ikon('kembali', 'ikon panah');
     <p class="label-bagian">Keamanan</p>
     <ul class="daftar-aksi">
       <li><label class="baris-saklar"><Fragment set:html={ikon('perisai')} /><span><b>Minta PIN setiap tap KTM</b><small>Mati: tap KTM langsung masuk. Nyalakan kalau HP sering dipinjam.</small></span><input type="checkbox" id="pin-tap" /></label></li>
+      <li><button type="button" id="buka-pin"><Fragment set:html={ikon('kunci')} /><span><b>Ganti PIN</b><small>PIN dipakai untuk masuk pakai NIM dan di HP baru</small></span><Fragment set:html={panah} /></button></li>
       <li><button type="button" id="buka-hilang"><Fragment set:html={ikon('peringatan')} /><span><b>Laporkan KTM hilang</b><small>Blokir kartu dan tampilkan kontakmu ke penemu</small></span><Fragment set:html={panah} /></button></li>
     </ul>
+    <form class="blok-form" id="form-pin" hidden>
+      <p class="judul-form">Setelah PIN diganti, HP lain harus memasukkan PIN baru sekali sebelum bisa tap KTM tanpa PIN.</p>
+      <div class="dua-kolom">
+        <div><label for="pin-lama">PIN lama</label><input id="pin-lama" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required /></div>
+        <div><label for="pin-baru">PIN baru</label><input id="pin-baru" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required /></div>
+      </div>
+      <div class="baris-simpan"><span class="tersimpan" id="pin-ok" role="status"></span><button class="tombol kecil-saja" type="submit">Ganti PIN</button></div>
+    </form>
+
     <form class="blok-form" id="form-hilang" hidden>
       <p class="judul-form">Kalau KTM-mu ditemukan dan ditap orang lain, mereka akan melihat pesan ini.</p>
       <label for="pesan-hilang">Pesan untuk penemu</label>
@@ -150,7 +160,7 @@ const panah = ikon('kembali', 'ikon panah');
 </style>
 
 <script>
-  import { api, sesi, tanganiGalat } from '../lib/api';
+  import { api, perangkat, sesi, tanganiGalat } from '../lib/api';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
@@ -188,6 +198,21 @@ const panah = ikon('kembali', 'ikon panah');
     const el = e.target as HTMLInputElement;
     try { await api('/keamanan', { pin_tap: el.checked }); }
     catch (err) { el.checked = !el.checked; tanganiGalat(err, salah); }
+  });
+  $('buka-pin').addEventListener('click', () => {
+    const f = $('form-pin');
+    f.hidden = !f.hidden;
+    if (!f.hidden) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('form-pin').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    $('pin-ok').textContent = '';
+    try {
+      const r = await api<{ perangkat: string }>('/pin', { lama: ($('pin-lama') as HTMLInputElement).value, baru: ($('pin-baru') as HTMLInputElement).value });
+      perangkat.simpan(r.perangkat);
+      ($('form-pin') as HTMLFormElement).reset();
+      $('pin-ok').textContent = 'PIN diganti';
+    } catch (e) { tanganiGalat(e, salah); }
   });
   $('buka-hilang').addEventListener('click', () => {
     const f = $('form-hilang');

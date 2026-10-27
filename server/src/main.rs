@@ -1,5 +1,6 @@
 mod ai;
 mod api;
+mod batas;
 mod chain;
 mod data;
 mod db;
@@ -20,6 +21,7 @@ pub struct App {
     pub chain: Option<Arc<chain::Chain>>,
     pub http: reqwest::Client,
     pub cache: Arc<Mutex<HashMap<String, String>>>,
+    pub batas: Arc<batas::Pembatas>,
 }
 
 fn env(k: &str, d: &str) -> String {
@@ -64,6 +66,7 @@ async fn main() -> anyhow::Result<()> {
         rahasia: Arc::new(db::rahasia(&data_dir)?),
         http: reqwest::Client::new(),
         cache: Arc::default(),
+        batas: Arc::default(),
         chain,
         ai: Arc::new(ai),
     };
@@ -72,6 +75,15 @@ async fn main() -> anyhow::Result<()> {
         app.ai.label(),
         if app.chain.is_some() { "aktif" } else { "mati (presensi hanya lokal)" }
     );
+
+    // Transaksi blockchain yang gagal/macet dicoba ulang tiap 2 menit.
+    let app_ulang = app.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(120)).await;
+            api::coba_ulang_chain(&app_ulang).await;
+        }
+    });
 
     let web = env("WEB_DIR", "../web/dist");
     // APK Android disajikan dari data/unduh (diunggah scripts/deploy-vps.sh, tidak ikut repo).
