@@ -44,6 +44,8 @@ The Android app loads the live site, so new features arrive without reinstalling
 - **Attendance on-chain.** The lecturer's phone is the reader; the student's photo appears on each tap; a hash of every check-in goes to `PresensiKTM`. Students need no crypto wallet: the server's operator wallet signs and pays gas. Anyone can verify a proof code against Etherscan, and both contracts are source-verified on [Sourcify](https://repo.sourcify.dev/11155111/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d) (exact match).
 - **Attendance recap for lecturers** per class (student x meeting, absence limit warnings) with **Excel export** (formulas included).
 - **Calendar export**: every meeting (real MyUnpam dates) and deadline as an `.ics` file or a private Google Calendar subscription link.
+- **Real lecturer accounts** by invite code from a registered lecturer (one-time, 7 days); classes are linked automatically when the name matches the lecturer listed in MyUnpam.
+- **Privacy page** ([/privasi/](https://ktm.rahmateka.my.id/privasi/)) and **delete account**: removes the account and all personal data from the server.
 - **On-chain event certificates** with a public verification page.
 - **Lost-card mode** and **digital business card**.
 - **Android app** (Capacitor) with a native read-only NFC plugin; **PWA** for every other phone.
@@ -112,7 +114,7 @@ Testing on a phone over USB: `adb reverse tcp:8080 tcp:8080`, then open `localho
 ## Tests
 
 ```bash
-cd server && cargo test       # 22 tests: schedule logic, hashing, MyUnpam & Mentari sync, notifications, lost card, trusted phones, duplicate cards, recap & Excel, calendar, signed links, rate limits
+cd server && cargo test       # 27 tests: schedule logic, hashing, MyUnpam & Mentari sync, notifications, lost card, trusted phones, duplicate cards, recap & Excel, calendar, signed links, lecturer invites, account deletion, rate limits
 cd contracts && forge test    # 6 tests: PresensiKTM and SertifikatKTM
 ```
 
