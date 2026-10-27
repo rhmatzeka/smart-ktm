@@ -1,0 +1,85 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Daftar dosen">
+  <header class="atas-putih">
+    <div class="baris-atas">
+      <p class="merek"><Fragment set:html={ikon('kartu')} /> Smart KTM</p>
+      <a class="ikon-kembali" href="/" aria-label="Kembali ke halaman masuk"><Fragment set:html={ikon('kembali')} /></a>
+    </div>
+    <h1 class="sapa-besar">Daftar sebagai dosen</h1>
+    <p class="sapa-kecil">Pakai kode undangan dari dosen yang sudah memakai Smart KTM. Kelas Anda di MyUnpam langsung terhubung kalau nama Anda sama dengan nama dosen pengampu.</p>
+  </header>
+
+  <section class="zona-biru">
+    <form class="kartu form-dosen" id="form">
+      <label for="kode">Kode undangan</label>
+      <input id="kode" name="kode" autocomplete="off" autocapitalize="characters" maxlength="8" placeholder="8 huruf/angka" required />
+      <label for="nidn">NIDN</label>
+      <input id="nidn" name="nidn" inputmode="numeric" autocomplete="username" placeholder="10 angka" required />
+      <label for="nama">Nama lengkap dengan gelar</label>
+      <input id="nama" name="nama" autocomplete="name" placeholder="Contoh: Juli Gunawan, S.T., M.Kom." required />
+      <p class="redup kecil">Tulis sama seperti di jadwal MyUnpam supaya kelas Anda terhubung otomatis.</p>
+      <div class="dua-kolom">
+        <div>
+          <label for="pin">Buat PIN 6 angka</label>
+          <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
+        </div>
+        <div>
+          <label for="pin2">Ulangi PIN</label>
+          <input id="pin2" name="pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
+        </div>
+      </div>
+      <button class="tombol" type="submit">Daftar</button>
+      <p class="galat-form" id="pesan" role="alert" hidden></p>
+    </form>
+
+    <article class="kartu" id="berhasil" hidden>
+      <p class="kartu-judul"><span class="titik-ikon t-hijau"><Fragment set:html={ikon('centang')} /></span>Akun dosen siap</p>
+      <p class="kecil" id="hasil-kelas"></p>
+      <p class="redup kecil">Berikutnya masuk dari halaman depan dengan NIDN dan PIN.</p>
+      <a class="tombol" href="/dosen/">Buka mode dosen</a>
+    </article>
+  </section>
+</Dasar>
+
+<style is:global>
+  .ikon-kembali { width: 40px; height: 40px; border-radius: 12px; background: var(--biru-pudar); color: var(--biru); display: grid; place-items: center; }
+  .form-dosen .dua-kolom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-dosen .tombol { margin-top: 16px; }
+  .form-dosen .redup { margin-top: 4px; }
+  .galat-form { margin-top: 10px; color: var(--merah); font-weight: 600; font-size: 0.85rem; }
+  #berhasil .tombol { margin-top: 12px; }
+</style>
+
+<script>
+  import { api, sesi } from '../lib/api';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const kode = new URLSearchParams(location.search).get('kode');
+  if (kode) $<HTMLInputElement>('kode').value = kode.toUpperCase();
+
+  $('form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const d = Object.fromEntries(new FormData(ev.target as HTMLFormElement)) as Record<string, string>;
+    const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
+    if (d.pin !== d.pin2) return salah('PIN dan ulangi PIN tidak sama.');
+    const tombol = (ev.target as HTMLFormElement).querySelector('button')!;
+    tombol.disabled = true;
+    salah('');
+    try {
+      const r = await api<{ token: string; kelas: number }>('/dosen/daftar', { kode: d.kode, nidn: d.nidn, nama: d.nama, pin: d.pin });
+      sesi.simpan(r.token);
+      $('hasil-kelas').textContent = r.kelas
+        ? `${r.kelas} kelas Anda di MyUnpam sudah terhubung dan siap dibuka presensinya.`
+        : 'Belum ada kelas yang terhubung. Kelas muncul otomatis setelah mahasiswa Anda menyinkronkan jadwal MyUnpam.';
+      $('form').hidden = true;
+      $('berhasil').hidden = false;
+    } catch (e) {
+      salah((e as Error).message);
+    } finally {
+      tombol.disabled = false;
+    }
+  });
+</script>

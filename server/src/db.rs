@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS sertifikat(
   waktu TEXT NOT NULL, kode TEXT NOT NULL UNIQUE, tx TEXT, status TEXT NOT NULL, UNIQUE(acara_id, user_id));
 CREATE TABLE IF NOT EXISTS perangkat(kode_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), dibuat TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS pengingat(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), teks TEXT NOT NULL, waktu TEXT NOT NULL, dibuat TEXT NOT NULL);
+-- Kode undangan dosen: sekali pakai, ada kedaluwarsa.
+CREATE TABLE IF NOT EXISTS undangan_dosen(
+  kode TEXT PRIMARY KEY, dibuat_oleh INTEGER NOT NULL REFERENCES users(id), dibuat TEXT NOT NULL,
+  kedaluwarsa TEXT NOT NULL, dipakai_oleh INTEGER REFERENCES users(id));
 -- Riwayat pemakaian KTM untuk pemiliknya (masuk, presensi, sertifikat, ditap orang). disanggah = pemilik menyanggah (bukan saya).
 CREATE TABLE IF NOT EXISTS jejak_ktm(
   id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), waktu TEXT NOT NULL, aksi TEXT NOT NULL,

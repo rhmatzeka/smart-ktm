@@ -192,7 +192,7 @@ pub fn sinkron(c: &mut Connection, user: i64, d: &DataUnpam) -> anyhow::Result<u
             "INSERT INTO matkul(kode, nama, sks, dosen_id, dosen_nama, hari, mulai, selesai, ruang) VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
              ON CONFLICT(kode) DO UPDATE SET nama = excluded.nama, sks = excluded.sks, dosen_nama = excluded.dosen_nama,
                hari = excluded.hari, mulai = excluded.mulai, selesai = excluded.selesai, ruang = excluded.ruang",
-            params![kode, rapikan(&k.nama), k.sks, dosen_demo, k.dosen.trim(), hari, mulai, selesai, k.ruang.trim()],
+            params![kode, rapikan(&k.nama), k.sks, crate::dosen::dosen_untuk(&tx, &k.dosen, dosen_demo)?, k.dosen.trim(), hari, mulai, selesai, k.ruang.trim()],
         )?;
         id_matkul.push(tx.query_row("SELECT id FROM matkul WHERE kode = ?1", [&kode], |r| r.get::<_, i64>(0))?);
     }

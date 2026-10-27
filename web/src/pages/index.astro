@@ -95,9 +95,12 @@ import { ikon } from '../lib/ikon';
     <span class="unduh-label">Unduh</span>
   </a>
   <p class="catatan-kecil">Smart KTM tidak menulis apa pun ke kartu atau ke sistem kampus.</p>
+  <p class="catatan-kecil tautan-bawah"><a href="/privasi/">Privasi dan data</a><a href="/daftar-dosen/">Daftar sebagai dosen</a></p>
 </Dasar>
 
 <style is:global>
+  .tautan-bawah { display: flex; justify-content: center; gap: 18px; margin-top: -4px; }
+  .tautan-bawah a { color: var(--biru); font-weight: 600; text-decoration: none; }
   body:has(.kartu-masuk) .halaman { background: var(--latar); }
   .pita-masuk {
     position: relative; overflow: hidden; color: var(--putih); padding: 16px 18px 60px;

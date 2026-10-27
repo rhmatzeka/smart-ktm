@@ -13,6 +13,13 @@ import { ikon } from '../lib/ikon';
       <h1 class="sapa-besar">Mode dosen</h1>
       <p class="sapa-kecil" id="nama-dosen"></p>
       <a class="ke-acara" href="/acara/"><Fragment set:html={ikon('perisai')} /><span><b>Acara & sertifikat on-chain</b><small>Check-in seminar dengan tap KTM</small></span></a>
+      <button class="ke-acara" id="undang" type="button"><Fragment set:html={ikon('orang')} /><span><b>Undang dosen lain</b><small>Kode sekali pakai, berlaku 7 hari</small></span></button>
+      <div class="kotak-undangan" id="kotak-undangan" hidden>
+        <p>Kode undangan</p>
+        <b id="kode-undangan"></b>
+        <span id="ket-undangan"></span>
+        <button class="tombol kecil-saja" id="bagikan-undangan" type="button">Bagikan</button>
+      </div>
     </header>
     <section class="zona-biru">
       <p class="kartu-judul terang"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Pilih kelas untuk membuka presensi</p>
@@ -57,7 +64,13 @@ import { ikon } from '../lib/ikon';
   .ke-acara { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--garis); border-radius: 14px; color: var(--teks); text-decoration: none; }
   .ke-acara .ikon { width: 20px; height: 20px; color: var(--biru); }
   .ke-acara span { display: flex; flex-direction: column; }
-  .ke-acara b { font-size: 0.88rem; } .ke-acara small { font-size: 0.75rem; color: var(--teks-2); }
+  .ke-acara b { font-size: 0.88rem; }
+  button.ke-acara { width: 100%; background: var(--putih); font: inherit; text-align: left; cursor: pointer; margin-top: 8px; }
+  .kotak-undangan { margin-top: 8px; padding: 12px; border: 1px dashed var(--biru-muda); border-radius: 14px; background: var(--biru-pudar); display: flex; flex-direction: column; gap: 4px; }
+  .kotak-undangan p { font-size: 0.75rem; color: var(--teks-2); }
+  .kotak-undangan b { font-size: 1.5rem; letter-spacing: 0.12em; color: var(--biru); }
+  .kotak-undangan span { font-size: 0.75rem; color: var(--teks-2); }
+  .kotak-undangan .tombol { align-self: flex-start; margin-top: 6px; } .ke-acara small { font-size: 0.75rem; color: var(--teks-2); }
   .tahap { display: flex; flex-direction: column; flex: 1; }
   .ikon-keluar, .ikon-kembali { width: 40px; height: 40px; border-radius: 12px; border: 0; display: grid; place-items: center; cursor: pointer; }
   .ikon-keluar { background: #ffe4e6; color: var(--merah); }
@@ -248,6 +261,26 @@ import { ikon } from '../lib/ikon';
     await api('/keluar', {}).catch(() => {});
     sesi.hapus();
     location.href = '/';
+  });
+
+  // Undang dosen lain: kode sekali pakai + link pendaftaran yang sudah terisi kodenya.
+  $('undang').addEventListener('click', async () => {
+    try {
+      const r = await api<{ kode: string; hari: number; link: string }>('/dosen/undangan', {});
+      const link = location.origin + r.link;
+      $('kode-undangan').textContent = r.kode;
+      $('ket-undangan').textContent = `Berlaku ${r.hari} hari, sekali pakai. Daftar di ${link}`;
+      $('kotak-undangan').hidden = false;
+      $('bagikan-undangan').onclick = async () => {
+        const teks = `Undangan Smart KTM untuk dosen. Daftar di ${link} (kode ${r.kode}, berlaku ${r.hari} hari).`;
+        try {
+          if (navigator.share) await navigator.share({ title: 'Undangan Smart KTM', text: teks });
+          else { await navigator.clipboard.writeText(teks); $('bagikan-undangan').textContent = 'Tersalin'; }
+        } catch { /* dibatalkan */ }
+      };
+    } catch (e) {
+      tanganiGalat(e, salah);
+    }
   });
 
   if (!nfcDidukung()) salah('Mesin absen butuh Chrome di Android dengan NFC menyala.');

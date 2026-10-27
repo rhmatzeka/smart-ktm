@@ -37,6 +37,7 @@ const panah = ikon('kembali', 'ikon panah');
       <li><button type="button" id="buka-publik"><Fragment set:html={ikon('orang')} /><span><b>Profil publik</b><small id="ringkas-publik">Bio, GitHub, dan portofolio di kartu nama</small></span><Fragment set:html={panah} /></button></li>
       <li><a href="/sertifikat/"><Fragment set:html={ikon('perisai')} /><span><b>Sertifikat saya</b><small id="ringkas-sert">Sertifikat acara on-chain</small></span><Fragment set:html={panah} /></a></li>
       <li><a href="/verifikasi/"><Fragment set:html={ikon('rantai')} /><span><b>Cek bukti kehadiran</b><small>Lihat catatan presensi di blockchain</small></span><Fragment set:html={panah} /></a></li>
+      <li><a href="/privasi/"><Fragment set:html={ikon('perisai')} /><span><b>Privasi dan data</b><small>Data apa yang dipakai dan cara menghapusnya</small></span><Fragment set:html={panah} /></a></li>
     </ul>
 
     <!-- Profil publik (dibuka dari daftar Akun) -->
@@ -67,6 +68,15 @@ const panah = ikon('kembali', 'ikon panah');
       <li><button type="button" id="buka-pin"><Fragment set:html={ikon('kunci')} /><span><b>Ganti PIN</b><small>PIN dipakai untuk masuk pakai NIM dan di HP baru</small></span><Fragment set:html={panah} /></button></li>
       <li><button type="button" id="buka-hilang"><Fragment set:html={ikon('peringatan')} /><span><b>Laporkan KTM hilang</b><small>Blokir kartu dan tampilkan kontakmu ke penemu</small></span><Fragment set:html={panah} /></button></li>
     </ul>
+    <ul class="daftar-aksi" id="baris-hapus">
+      <li><button type="button" id="buka-hapus"><Fragment set:html={ikon('keluar')} /><span><b>Hapus akun dan data</b><small>Permanen: jadwal, presensi, riwayat, dan akun dihapus dari server</small></span><Fragment set:html={panah} /></button></li>
+    </ul>
+    <form class="blok-form" id="form-hapus" hidden>
+      <p class="judul-form">Semua datamu di Smart KTM dihapus permanen: akun, KTM tertaut, jadwal, presensi, sertifikat, dan riwayat. Bukti di blockchain tetap ada tapi hanya hash yang tidak bisa dikaitkan lagi ke kamu.</p>
+      <label for="pin-hapus">Masukkan PIN untuk konfirmasi</label>
+      <input id="pin-hapus" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+      <div class="baris-simpan"><button class="tombol kecil-saja merah" type="submit">Hapus akun saya</button></div>
+    </form>
     <p class="label-bagian">Riwayat pemakaian KTM</p>
     <div class="kotak-jejak">
       <p class="ket-jejak">Setiap kali KTM-mu dipakai: masuk, presensi, check-in acara, atau ditempel orang. Ada yang bukan kamu? Tekan <b>Bukan saya</b>: KTM langsung diblokir dan presensinya ditandai ke dosen.</p>
@@ -204,6 +214,7 @@ const panah = ikon('kembali', 'ikon panah');
       $<HTMLInputElement>('portofolio').value = s.portofolio;
       $<HTMLInputElement>('publik').checked = s.publik;
       $('banner-hilang').hidden = !s.hilang;
+      $('baris-hapus').hidden = s.peran === 'dosen';
       ($('pin-tap') as HTMLInputElement).checked = !!s.pin_tap;
       $('buka-hilang').closest('ul')!.hidden = !!s.hilang;
       if (s.hilang_pesan) ($('pesan-hilang') as HTMLTextAreaElement).value = s.hilang_pesan;
@@ -240,6 +251,19 @@ const panah = ikon('kembali', 'ikon panah');
       muatJejak();
     } catch (e) {
       b.disabled = false;
+      tanganiGalat(e, salah);
+    }
+  });
+
+  $('buka-hapus').addEventListener('click', () => { $('form-hapus').hidden = !$('form-hapus').hidden; });
+  $('form-hapus').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!confirm('Hapus akun dan semua data secara permanen? Ini tidak bisa dibatalkan.')) return;
+    try {
+      await api('/akun/hapus', { pin: ($('pin-hapus') as HTMLInputElement).value });
+      sesi.hapus();
+      location.href = '/';
+    } catch (e) {
       tanganiGalat(e, salah);
     }
   });

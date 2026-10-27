@@ -11,8 +11,9 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::{ai, data, db, kalender, rekap, sinkron, waktu, App};
+use crate::{ai, data, db, dosen, kalender, rekap, sinkron, waktu, App};
 
+#[derive(Debug)]
 pub struct Gagal(StatusCode, String);
 
 impl IntoResponse for Gagal {
@@ -63,6 +64,9 @@ pub fn router() -> Router<App> {
         .route("/dosen/kelas/{id}/rekap", get(lihat_rekap))
         .route("/unduh/rekap/{token}", get(unduh_rekap))
         .route("/kalender", get(link_kalender))
+        .route("/akun/hapus", post(hapus_akun_saya))
+        .route("/dosen/undangan", post(undang_dosen))
+        .route("/dosen/daftar", post(daftar_dosen))
         .route("/kalender/{token}", get(unduh_kalender))
         .route("/ktm/jejak/{id}/bukan-saya", post(bukan_saya))
         .route("/ktm/hilang", post(lapor_hilang))
@@ -967,6 +971,64 @@ async fn unduh_kalender(State(app): State<App>, h: HeaderMap, Path(token): Path<
         .into_response())
 }
 
+// ---------- Dosen sungguhan & hapus akun ----------
+
+async fn undang_dosen(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    batasi(&app, &format!("undang:{}", u.id), 10, 3600)?;
+    let kode = dosen::buat_undangan(&c, u.id, &waktu::sekarang())?;
+    Ok(Json(json!({ "kode": kode, "hari": dosen::UNDANGAN_HARI, "link": format!("/daftar-dosen/?kode={kode}") })))
+}
+
+#[derive(Deserialize)]
+struct DaftarDosen {
+    kode: String,
+    nidn: String,
+    nama: String,
+    pin: String,
+}
+
+async fn daftar_dosen(State(app): State<App>, hd: HeaderMap, Json(b): Json<DaftarDosen>) -> Hasil {
+    batasi(&app, &format!("daftar:{}", ip(&hd)), 10, 600)?;
+    let mut c = app.db.lock().unwrap();
+    let (id, kelas) = dosen::daftar(&mut c, &b.kode, &b.nidn, &b.nama, &b.pin, &waktu::sekarang()).map_err(|e| galat(StatusCode::BAD_REQUEST, e.to_string()))?;
+    let t = token_baru(&c, id)?;
+    Ok(Json(json!({ "token": t, "peran": "dosen", "nama": b.nama.trim(), "kelas": kelas })))
+}
+
+/// Hapus akun mahasiswa beserta semua data pribadinya. Bukti on-chain tetap ada di blockchain,
+/// tapi hanya berupa hash yang tidak bisa dikaitkan lagi ke siapa pun setelah data di server terhapus.
+fn hapus_akun(c: &mut Connection, user: i64) -> Result<(), Gagal> {
+    let peran: String = c.query_row("SELECT peran FROM users WHERE id = ?1", [user], |r| r.get(0))?;
+    if peran != "mhs" {
+        return Err(galat(StatusCode::FORBIDDEN, "Akun dosen tidak bisa dihapus sendiri karena masih memegang kelas."));
+    }
+    let tx = c.transaction()?;
+    for t in ["sesi_login", "perangkat", "ambil", "presensi", "sertifikat", "tugas_selesai", "pengingat", "pertemuan_unpam", "jejak_ktm"] {
+        tx.execute(&format!("DELETE FROM {t} WHERE user_id = ?1"), [user])?;
+    }
+    tx.execute("DELETE FROM users WHERE id = ?1", [user])?;
+    tx.commit()?;
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct HapusAkun {
+    pin: String,
+}
+
+async fn hapus_akun_saya(State(app): State<App>, h: HeaderMap, Json(b): Json<HapusAkun>) -> Hasil {
+    let mut c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    let pin_hash: String = c.query_row("SELECT pin_hash FROM users WHERE id = ?1", [u.id], |r| r.get(0))?;
+    cek_pin_akun(&app, u.id, &b.pin, &pin_hash)?;
+    hapus_akun(&mut c, u.id)?;
+    app.cache.lock().unwrap().retain(|k, _| !k.starts_with(&format!("{}:", u.id)));
+    Ok(Json(json!({ "ok": true })))
+}
+
 // ---------- KTM hilang ----------
 
 #[derive(Deserialize)]
@@ -1239,6 +1301,26 @@ mod tes {
         // Versi lama mengirim satu teks.
         let lama: TokenHp = serde_json::from_value(json!(hp_a)).unwrap();
         assert!(perangkat_sah(&c, a, &lama.daftar()).unwrap());
+    }
+
+    #[test]
+    fn hapus_akun_menghapus_data_pribadi() {
+        let mut c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let id: i64 = c.query_row("SELECT id FROM users WHERE nim = '231011400001'", [], |r| r.get(0)).unwrap();
+        perangkat_baru(&c, id).unwrap();
+        token_baru(&c, id).unwrap();
+        catat_jejak(&c, id, "masuk", "tes", None).unwrap();
+        let sebelum: i64 = c.query_row("SELECT COUNT(*) FROM presensi WHERE user_id = ?1", [id], |r| r.get(0)).unwrap();
+        assert!(sebelum > 0, "akun demo punya riwayat presensi");
+        hapus_akun(&mut c, id).unwrap();
+        for t in ["users", "sesi_login", "perangkat", "ambil", "presensi", "tugas_selesai", "jejak_ktm", "pengingat", "pertemuan_unpam", "sertifikat"] {
+            let kolom = if t == "users" { "id" } else { "user_id" };
+            let n: i64 = c.query_row(&format!("SELECT COUNT(*) FROM {t} WHERE {kolom} = ?1"), [id], |r| r.get(0)).unwrap();
+            assert_eq!(n, 0, "{t} masih menyimpan data akun");
+        }
+        let dosen: i64 = c.query_row("SELECT id FROM users WHERE peran = 'dosen' LIMIT 1", [], |r| r.get(0)).unwrap();
+        assert!(hapus_akun(&mut c, dosen).is_err(), "akun dosen tidak dihapus sendiri (masih memegang kelas)");
     }
 
     #[test]

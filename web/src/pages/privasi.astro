@@ -1,0 +1,81 @@
+---
+import Dasar from '../layouts/Dasar.astro';
+import { ikon } from '../lib/ikon';
+---
+<Dasar judul="Privasi dan data">
+  <header class="kepala-chat">
+    <a class="tombol-kembali" href="/" id="kembali" aria-label="Kembali"><Fragment set:html={ikon('kembali')} /></a>
+    <div>
+      <h1>Privasi dan data</h1>
+      <p>Berlaku sejak 28 Oktober 2026</p>
+    </div>
+  </header>
+
+  <article class="isi-privasi">
+    <p class="pembuka">Smart KTM adalah proyek mata kuliah Manajemen Proyek Informatika (Kelompok 11, Universitas Pamulang), bukan aplikasi resmi kampus. Halaman ini menjelaskan data apa yang dipakai, untuk apa, dan bagaimana menghapusnya.</p>
+
+    <h2>Yang dibaca dari KTM</h2>
+    <p>Hanya nomor seri kartu (UID). Smart KTM tidak pernah menulis ke kartu, jadi data parkir tetap utuh. Nomor seri disimpan sebagai hash bergaram, bukan nomor aslinya.</p>
+
+    <h2>Yang diambil dari MyUnpam dan Mentari</h2>
+    <p>Saat kamu menekan <b>Sinkron sekarang</b>: NIM, nama, program studi, semester, foto profil, jadwal kuliah, status presensi tiap pertemuan, serta tugas dan aktivitas Mentari yang belum dikerjakan. Kata sandi kampus hanya kamu ketik di halaman MyUnpam dan Mentari; Smart KTM tidak pernah membaca atau menyimpannya. Smart KTM tidak pernah mengubah apa pun di sistem kampus.</p>
+
+    <h2>Yang dibuat di Smart KTM</h2>
+    <ul>
+      <li>PIN (disimpan sebagai hash Argon2) dan daftar HP tepercaya.</li>
+      <li>Presensi dari mesin absen dosen, sertifikat acara, dan riwayat pemakaian KTM.</li>
+      <li>Pengingat dan tugas yang kamu catat lewat Asisten KTM, serta isi obrolan yang dikirim ke penyedia AI (Groq, cadangan Google Gemini) untuk dijawab. Isi obrolan tidak disimpan di server; di HP pun hanya selama aplikasi terbuka.</li>
+      <li>Profil publik (bio, GitHub, portofolio) hanya tampil ke orang yang menempel KTM-mu kalau kamu menyalakannya.</li>
+    </ul>
+
+    <h2>Yang masuk blockchain</h2>
+    <p>Hanya hash: hash sesi, hash kartu, dan kode bukti. Tidak ada nama, NIM, atau nomor kartu. Data di blockchain (Ethereum Sepolia) tidak bisa dihapus, tetapi setelah akunmu dihapus dari server, hash itu tidak bisa lagi dikaitkan ke siapa pun.</p>
+
+    <h2>Siapa yang bisa melihat</h2>
+    <ul>
+      <li><b>Kamu</b>: semua datamu.</li>
+      <li><b>Dosen pengampu</b>: nama, NIM, foto saat tap, dan rekap kehadiran di kelasnya.</li>
+      <li><b>Orang yang menempel KTM-mu</b>: kartu nama publik kalau dinyalakan; kalau KTM dilaporkan hilang, hanya pesan untuk penemu.</li>
+      <li><b>Pengelola server</b> (Kelompok 11) untuk pemeliharaan. Data tidak dijual atau dibagikan ke pihak lain.</li>
+    </ul>
+
+    <h2>Hak kamu</h2>
+    <ul>
+      <li>Melihat riwayat pemakaian KTM dan menyanggah yang bukan kamu (Profil, Riwayat pemakaian KTM).</li>
+      <li>Memblokir KTM yang hilang, mengganti PIN, dan mewajibkan PIN setiap tap.</li>
+      <li><b>Menghapus akun dan semua data</b> dari Profil, Hapus akun. Penghapusan langsung dan permanen.</li>
+    </ul>
+
+    <h2>Penyimpanan dan keamanan</h2>
+    <p>Data disimpan di server VPS pengelola dan dikirim lewat HTTPS. Sesi masuk habis setelah 30 hari, PIN salah 5 kali mengunci akun 15 menit, dan setiap permintaan dibatasi per IP atau per akun. Kode aplikasi terbuka di <a href="https://github.com/rhmatzeka/smart-ktm" target="_blank" rel="noopener">github.com/rhmatzeka/smart-ktm</a>.</p>
+
+    <h2>Kontak</h2>
+    <p>Pertanyaan atau permintaan soal data: buka issue di repositori GitHub di atas, atau hubungi Kelompok 11 (Rahmat Eka Satria, Andika Agung Triadha), kelas 07TPLP003.</p>
+  </article>
+</Dasar>
+
+<style is:global>
+  body:has(.isi-privasi) .halaman { background: var(--putih); }
+  .kepala-chat { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: var(--putih); border-bottom: 1px solid var(--garis); }
+  .kepala-chat h1 { font-size: 1.05rem; font-weight: 800; }
+  .kepala-chat p { font-size: 0.78rem; color: var(--teks-2); }
+  .tombol-kembali { width: 36px; height: 36px; border-radius: 11px; border: 1px solid var(--garis); display: grid; place-items: center; color: var(--teks); flex: none; }
+  .tombol-kembali .ikon { width: 18px; height: 18px; }
+  .isi-privasi { padding: 16px 16px 48px; max-width: 68ch; font-size: 0.9rem; line-height: 1.6; }
+  .isi-privasi .pembuka { color: var(--teks-2); }
+  .isi-privasi h2 { font-size: 0.98rem; font-weight: 800; margin: 22px 0 6px; }
+  .isi-privasi p, .isi-privasi ul { margin: 0 0 8px; }
+  .isi-privasi ul { padding-left: 18px; }
+  .isi-privasi li + li { margin-top: 4px; }
+  .isi-privasi a { color: var(--biru); font-weight: 600; }
+</style>
+
+<script>
+  // Kembali ke halaman sebelumnya kalau datang dari dalam aplikasi.
+  document.getElementById('kembali')!.addEventListener('click', (e) => {
+    if (document.referrer.startsWith(location.origin)) {
+      e.preventDefault();
+      history.back();
+    }
+  });
+</script>

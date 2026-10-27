@@ -4,6 +4,7 @@ mod batas;
 mod chain;
 mod data;
 mod db;
+mod dosen;
 mod kalender;
 mod rekap;
 mod sinkron;
