@@ -110,3 +110,10 @@ Tes di HP lewat kabel: `adb reverse tcp:8080 tcp:8080`, lalu buka `localhost:808
 cd server && cargo test       # 13 tes: logika jadwal, hash, sinkron MyUnpam, KTM hilang, HP tepercaya, batas percobaan
 cd contracts && forge test    # 6 tes: PresensiKTM dan SertifikatKTM
 ```
+
+## Manajemen proyek
+
+Kelompok 11 (07TPLP003): Rahmat Eka Satria (PM, backend, blockchain, AI) dan Andika Agung Triadha (frontend, mobile, QA).
+
+- Papan tugas dan roadmap: [GitHub Project #3](https://github.com/users/rhmatzeka/projects/3)
+- Rencana proyek, anggaran (RAB), dan jadwal (Gantt): [`docs/Rencana_Anggaran_Jadwal_Smart_KTM.xlsx`](docs/Rencana_Anggaran_Jadwal_Smart_KTM.xlsx)

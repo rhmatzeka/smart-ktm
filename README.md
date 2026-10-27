@@ -110,3 +110,10 @@ Testing on a phone over USB: `adb reverse tcp:8080 tcp:8080`, then open `localho
 cd server && cargo test       # 13 tests: schedule logic, hashing, MyUnpam sync, lost card, trusted phones, rate limits
 cd contracts && forge test    # 6 tests: PresensiKTM and SertifikatKTM
 ```
+
+## Project management
+
+Group 11 (07TPLP003): Rahmat Eka Satria (PM, backend, blockchain, AI) and Andika Agung Triadha (frontend, mobile, QA).
+
+- Task board and roadmap: [GitHub Project #3](https://github.com/users/rhmatzeka/projects/3)
+- Plan, budget (RAB) and schedule (Gantt): [`docs/Rencana_Anggaran_Jadwal_Smart_KTM.xlsx`](docs/Rencana_Anggaran_Jadwal_Smart_KTM.xlsx)
