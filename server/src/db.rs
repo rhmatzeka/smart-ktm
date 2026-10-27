@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS sertifikat(
   waktu TEXT NOT NULL, kode TEXT NOT NULL UNIQUE, tx TEXT, status TEXT NOT NULL, UNIQUE(acara_id, user_id));
 CREATE TABLE IF NOT EXISTS perangkat(kode_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), dibuat TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS pengingat(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), teks TEXT NOT NULL, waktu TEXT NOT NULL, dibuat TEXT NOT NULL);
+-- Riwayat pemakaian KTM untuk pemiliknya (masuk, presensi, sertifikat, ditap orang). disanggah = pemilik menyanggah (bukan saya).
+CREATE TABLE IF NOT EXISTS jejak_ktm(
+  id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), waktu TEXT NOT NULL, aksi TEXT NOT NULL,
+  detail TEXT NOT NULL, presensi_id INTEGER, disanggah INTEGER NOT NULL DEFAULT 0);
 ";
 
 pub fn sha(s: &str) -> String {
@@ -95,6 +99,14 @@ pub fn siapkan(c: &Connection) -> rusqlite::Result<()> {
             c.execute(&format!("ALTER TABLE users ADD COLUMN {kolom} {tipe}"), [])?;
         }
     }
+    // Tugas dari Mentari: sumber = id unik di Mentari (sinkron ulang memperbarui, bukan menambah).
+    for (kolom, tipe) in [("sumber", "TEXT"), ("jenis", "TEXT"), ("url", "TEXT")] {
+        let ada: bool = c.query_row("SELECT COUNT(*) > 0 FROM pragma_table_info('tugas') WHERE name = ?1", [kolom], |r| r.get(0))?;
+        if !ada {
+            c.execute(&format!("ALTER TABLE tugas ADD COLUMN {kolom} {tipe}"), [])?;
+        }
+    }
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS tugas_sumber ON tugas(sumber)", [])?;
     c.busy_timeout(std::time::Duration::from_secs(5))?;
     let ada: i64 = c.query_row("SELECT COUNT(*) FROM matkul", [], |r| r.get(0))?;
     if ada == 0 {

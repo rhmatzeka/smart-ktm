@@ -67,6 +67,12 @@ const panah = ikon('kembali', 'ikon panah');
       <li><button type="button" id="buka-pin"><Fragment set:html={ikon('kunci')} /><span><b>Ganti PIN</b><small>PIN dipakai untuk masuk pakai NIM dan di HP baru</small></span><Fragment set:html={panah} /></button></li>
       <li><button type="button" id="buka-hilang"><Fragment set:html={ikon('peringatan')} /><span><b>Laporkan KTM hilang</b><small>Blokir kartu dan tampilkan kontakmu ke penemu</small></span><Fragment set:html={panah} /></button></li>
     </ul>
+    <p class="label-bagian">Riwayat pemakaian KTM</p>
+    <div class="kotak-jejak">
+      <p class="ket-jejak">Setiap kali KTM-mu dipakai: masuk, presensi, check-in acara, atau ditempel orang. Ada yang bukan kamu? Tekan <b>Bukan saya</b>: KTM langsung diblokir dan presensinya ditandai ke dosen.</p>
+      <ul class="daftar-jejak" id="daftar-jejak"><li class="kosong">Memuat…</li></ul>
+    </div>
+
     <form class="blok-form" id="form-pin" hidden>
       <p class="judul-form">Setelah PIN diganti, HP lain harus memasukkan PIN baru sekali sebelum bisa tap KTM tanpa PIN.</p>
       <div class="dua-kolom">
@@ -149,6 +155,18 @@ const panah = ikon('kembali', 'ikon panah');
   .baris-saklar b { font-size: 0.9rem; font-weight: 700; }
   .baris-saklar small { font-size: 0.75rem; color: var(--teks-2); font-weight: 400; }
   .baris-saklar input { width: 20px; height: 20px; min-height: 0; accent-color: var(--biru); flex: none; }
+  .kotak-jejak { background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; padding: 12px 14px; }
+  .ket-jejak { margin: 0 0 10px; font-size: 0.75rem; color: var(--teks-2); }
+  .daftar-jejak { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .daftar-jejak li { display: flex; gap: 10px; align-items: center; padding: 8px 0; }
+  .daftar-jejak li + li { border-top: 1px solid #eef1f6; }
+  .daftar-jejak .isi-jejak { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .daftar-jejak .isi-jejak b { font-size: 0.82rem; font-weight: 600; }
+  .daftar-jejak .isi-jejak small { font-size: 0.72rem; color: var(--teks-2); }
+  .daftar-jejak .ditolak b { color: #9f1239; }
+  .daftar-jejak .bukan-saya { flex: none; font: inherit; font-size: 0.75rem; font-weight: 700; color: #be123c; background: none; border: 1px solid #fecdd3; border-radius: 999px; padding: 4px 10px; }
+  .daftar-jejak .disanggah { flex: none; font-size: 0.72rem; color: var(--teks-2); }
+  .daftar-jejak .kosong { font-size: 0.8rem; color: var(--teks-2); }
   .banner-hilang { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; margin-bottom: 4px; border-radius: 14px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
   .banner-hilang b { font-size: 0.9rem; }
   .banner-hilang span { font-size: 0.78rem; }
@@ -160,7 +178,7 @@ const panah = ikon('kembali', 'ikon panah');
 </style>
 
 <script>
-  import { api, perangkat, sesi, tanganiGalat } from '../lib/api';
+  import { api, esc, perangkat, sesi, tanganiGalat } from '../lib/api';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
@@ -193,6 +211,38 @@ const panah = ikon('kembali', 'ikon panah');
       $('ringkas-publik').textContent = isiPublik.length ? `Terisi: ${isiPublik.join(', ')}` : 'Belum diisi: bio, GitHub, portofolio';
     })
     .catch((e) => tanganiGalat(e, salah));
+
+  // Riwayat pemakaian KTM + tombol "Bukan saya".
+  const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const kapan = (w: string) => `${+w.slice(8, 10)} ${BULAN[+w.slice(5, 7) - 1]}, ${w.slice(11, 16).replace(':', '.')}`;
+  async function muatJejak() {
+    try {
+      const { jejak } = await api<{ jejak: { id: number; waktu: string; aksi: string; detail: string; disanggah: boolean }[] }>('/ktm/jejak');
+      $('daftar-jejak').innerHTML = jejak.length
+        ? jejak.map((j) => `<li class="${j.aksi === 'ditolak' ? 'ditolak' : ''}"><span class="isi-jejak"><b>${esc(j.detail)}</b><small>${kapan(j.waktu)}</small></span>${
+            j.disanggah ? '<span class="disanggah">Disanggah</span>'
+              : `<button class="bukan-saya" type="button" data-jejak="${j.id}">${j.aksi === 'ditolak' ? 'Blokir KTM' : 'Bukan saya'}</button>`}</li>`).join('')
+        : '<li class="kosong">Belum ada catatan. Catatan muncul setelah KTM dipakai masuk, presensi, atau ditempel orang.</li>';
+    } catch (e) {
+      tanganiGalat(e, salah);
+    }
+  }
+  muatJejak();
+  $('daftar-jejak').addEventListener('click', async (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-jejak]');
+    if (!b) return;
+    if (!confirm('KTM ini akan diblokir supaya salinannya tidak bisa dipakai lagi, dan catatan ini ditandai ke dosen. Lanjutkan?')) return;
+    b.disabled = true;
+    try {
+      await api(`/ktm/jejak/${b.dataset.jejak}/bukan-saya`, {});
+      $('banner-hilang').hidden = false;
+      $('buka-hilang').closest('ul')!.hidden = true;
+      muatJejak();
+    } catch (e) {
+      b.disabled = false;
+      tanganiGalat(e, salah);
+    }
+  });
 
   $('pin-tap').addEventListener('change', async (e) => {
     const el = e.target as HTMLInputElement;

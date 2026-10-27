@@ -67,6 +67,8 @@ import { ikon } from '../lib/ikon';
         baris.map(([k, v]) => `<li><span>${esc(k)}</span><span>${esc(v)}</span></li>`).join('') +
         (r.tx ? `<li><span>Transaksi</span>${tautan(r.link_tx, pendek(r.tx))}</li>` : '') +
         (alamat ? `<li><span>Kontrak</span>${tautan(r.kontrak.startsWith('http') ? r.kontrak : null, pendek(alamat))}</li>` : '') +
+        // Kode kontrak terverifikasi (Sourcify, exact match): siapa pun bisa membaca aturan pencatatannya.
+        (alamat && r.kontrak.includes('sepolia') ? `<li><span>Kode kontrak</span>${tautan(`https://repo.sourcify.dev/11155111/${alamat}`, 'terverifikasi, baca kodenya')}</li>` : '') +
         `<li><span>Jaringan</span><span>${r.kontrak && r.kontrak.startsWith('http') ? 'Ethereum Sepolia (Etherscan)' : 'Blockchain lokal (belum publik)'}</span></li>`;
       $('hasil').hidden = false;
     } catch (e) {

@@ -54,23 +54,31 @@ pub fn jadwal(c: &Connection, user: i64, hari: Option<u32>) -> rusqlite::Result<
 pub fn tugas(c: &Connection, user: i64, kini: &DateTime<FixedOffset>, termasuk_selesai: bool) -> rusqlite::Result<Vec<Value>> {
     let mut q = c.prepare(
         "SELECT t.id, t.judul, t.deskripsi, m.nama, t.deadline,
-                EXISTS(SELECT 1 FROM tugas_selesai s WHERE s.tugas_id = t.id AND s.user_id = ?1)
+                EXISTS(SELECT 1 FROM tugas_selesai s WHERE s.tugas_id = t.id AND s.user_id = ?1),
+                t.jenis, t.url, t.sumber IS NOT NULL
          FROM tugas t JOIN matkul m ON m.id = t.matkul_id JOIN ambil a ON a.matkul_id = m.id AND a.user_id = ?1
-         ORDER BY t.deadline",
+         ORDER BY t.deadline = '', t.deadline",
     )?;
+    type Baris = (i64, String, String, String, String, bool, Option<String>, Option<String>, bool);
     let baris = q.query_map([user], |r| {
-        Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, String>(4)?, r.get::<_, bool>(5)?))
+        Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?, r.get(8)?))
     })?;
+    // Aktivitas Mentari yang tenggatnya lewat lebih dari seminggu sudah tidak bisa dikerjakan: tidak ditampilkan.
+    let basi = waktu::teks(&(*kini - chrono::Duration::days(7)));
     let mut hasil = vec![];
     for b in baris {
-        let (id, judul, deskripsi, matkul, deadline, selesai) = b?;
+        let (id, judul, deskripsi, matkul, deadline, selesai, jenis, url, dari_mentari): Baris = b?;
         if selesai && !termasuk_selesai {
+            continue;
+        }
+        if dari_mentari && !selesai && !deadline.is_empty() && deadline < basi {
             continue;
         }
         let (sisa, tingkat) = waktu::sisa(&deadline, kini);
         hasil.push(json!({
             "id": id, "judul": judul, "deskripsi": deskripsi, "matkul": matkul, "deadline": deadline,
             "sisa": sisa, "tingkat": if selesai { "selesai" } else { tingkat }, "selesai": selesai,
+            "jenis": jenis.unwrap_or_else(|| "Tugas".into()), "url": url,
         }));
     }
     Ok(hasil)
@@ -165,6 +173,56 @@ pub fn kehadiran(c: &Connection, user: i64, matkul: i64) -> rusqlite::Result<Opt
         })?
         .collect::<rusqlite::Result<_>>()?;
     Ok(Some(json!({ "matkul": nama, "dosen": dosen, "ruang": ruang, "pertemuan": pertemuan, "tap": tap })))
+}
+
+/// Jadwal notifikasi HP untuk 7 hari ke depan: kelas (15 menit sebelum mulai), tenggat tugas
+/// (H-1 dan 3 jam sebelumnya), dan pengingat dari Asisten KTM. Aplikasi Android menjadwalkannya
+/// sebagai notifikasi lokal; `id` stabil supaya penjadwalan ulang menimpa, bukan menggandakan.
+pub fn notifikasi(c: &Connection, user: i64, kini: &DateTime<FixedOffset>) -> rusqlite::Result<Vec<Value>> {
+    let batas = *kini + chrono::Duration::days(7);
+    let mut n: Vec<(DateTime<FixedOffset>, i64, String, String)> = vec![];
+    let mut tambah = |t: DateTime<FixedOffset>, id: i64, judul: String, isi: String| {
+        if t > *kini && t <= batas {
+            n.push((t, id, judul, isi));
+        }
+    };
+
+    let mut q = c.prepare("SELECT m.id, m.nama, m.hari, m.mulai, m.ruang FROM matkul m JOIN ambil a ON a.matkul_id = m.id WHERE a.user_id = ?1")?;
+    let kelas: Vec<(i64, String, u32, String, String)> =
+        q.query_map([user], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?.collect::<rusqlite::Result<_>>()?;
+    for (id, nama, hari, mulai, ruang) in kelas {
+        for geser in 0..8 {
+            let tgl = *kini + chrono::Duration::days(geser);
+            if waktu::hari_ke(&tgl) != hari {
+                continue;
+            }
+            let Some(awal) = waktu::baca(&format!("{} {mulai}", tgl.format("%Y-%m-%d"))) else { continue };
+            tambah(awal - chrono::Duration::minutes(15), 1_000_000 + id * 10 + geser, format!("15 menit lagi: {nama}"), format!("{ruang}, mulai {}", mulai.replace(':', ".")));
+        }
+    }
+
+    for t in tugas(c, user, kini, false)? {
+        let (Some(id), Some(judul), Some(Some(tenggat))) = (t["id"].as_i64(), t["judul"].as_str(), t["deadline"].as_str().map(waktu::baca)) else { continue };
+        let matkul = t["matkul"].as_str().unwrap_or_default();
+        let jam = tenggat.format("%H.%M");
+        tambah(tenggat - chrono::Duration::days(1), 2_000_000 + id * 10, format!("Tenggat besok: {judul}"), format!("{matkul}, {jam}"));
+        tambah(tenggat - chrono::Duration::hours(3), 2_000_000 + id * 10 + 1, format!("3 jam lagi: {judul}"), format!("{matkul}, tenggat {jam}"));
+    }
+
+    let mut q = c.prepare("SELECT id, teks, waktu FROM pengingat WHERE user_id = ?1")?;
+    let ingat: Vec<(i64, String, String)> = q.query_map([user], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?.collect::<rusqlite::Result<_>>()?;
+    for (id, teks, w) in ingat {
+        if let Some(t) = waktu::baca(&w) {
+            tambah(t, 3_000_000 + id, "Pengingat".into(), teks);
+        }
+    }
+
+    n.sort_by_key(|x| x.0);
+    // Android membatasi jumlah alarm per aplikasi; 60 cukup untuk seminggu.
+    Ok(n.into_iter()
+        .take(60)
+        .map(|(t, id, judul, isi)| json!({ "id": id, "waktu": t.format("%Y-%m-%dT%H:%M:%S%:z").to_string(), "judul": judul, "isi": isi }))
+        .collect())
 }
 
 pub fn pengingat(c: &Connection, user: i64) -> rusqlite::Result<Vec<Value>> {
@@ -276,5 +334,39 @@ mod tes {
         let bd = b["presensi"].as_array().unwrap().iter().find(|p| p["matkul"] == "Basis Data II").unwrap();
         assert_eq!(bd["absen"], 3);
         assert_eq!(bd["status"], "hampir batas");
+    }
+
+    #[test]
+    fn notifikasi_kelas_tugas_dan_pengingat() {
+        let c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let id: i64 = c.query_row("SELECT id FROM users WHERE nim = '231011400001'", [], |r| r.get(0)).unwrap();
+        c.execute("DELETE FROM tugas", []).unwrap();
+        let m: i64 = c.query_row("SELECT matkul_id FROM ambil WHERE user_id = ?1 LIMIT 1", [id], |r| r.get(0)).unwrap();
+        c.execute("UPDATE matkul SET hari = 3, mulai = '08:00' WHERE id = ?1", [m]).unwrap();
+        c.execute("DELETE FROM ambil WHERE user_id = ?1 AND matkul_id != ?2", params![id, m]).unwrap();
+        c.execute("INSERT INTO tugas(matkul_id, judul, deskripsi, deadline) VALUES(?1, 'WBS', '', '2026-10-30 23:59')", [m]).unwrap();
+        c.execute("INSERT INTO pengingat(user_id, teks, waktu, dibuat) VALUES(?1, 'Bawa laptop', '2026-10-28 06:30', '2026-10-27 09:00')", [id]).unwrap();
+        c.execute("INSERT INTO pengingat(user_id, teks, waktu, dibuat) VALUES(?1, 'Sudah lewat', '2026-10-26 06:30', '2026-10-25 09:00')", [id]).unwrap();
+
+        // Selasa 27 Okt 2026 10.00: kelas Rabu 08.00 -> diingatkan Rabu 07.45.
+        let kini = waktu::baca("2026-10-27 10:00").unwrap();
+        let n = notifikasi(&c, id, &kini).unwrap();
+        let waktu_: Vec<&str> = n.iter().map(|x| x["waktu"].as_str().unwrap()).collect();
+        assert!(waktu_.contains(&"2026-10-28T07:45:00+07:00"), "kelas 15 menit sebelum mulai: {waktu_:?}");
+        assert!(waktu_.contains(&"2026-10-29T23:59:00+07:00"), "tugas H-1");
+        assert!(waktu_.contains(&"2026-10-30T20:59:00+07:00"), "tugas 3 jam sebelum tenggat");
+        assert!(waktu_.contains(&"2026-10-28T06:30:00+07:00"), "pengingat dari AI");
+        assert!(!n.iter().any(|x| x["isi"].as_str().unwrap().contains("Sudah lewat")));
+        let mut urut = waktu_.clone();
+        urut.sort();
+        assert_eq!(waktu_, urut, "urut waktu");
+        let mut id_: Vec<i64> = n.iter().map(|x| x["id"].as_i64().unwrap()).collect();
+        id_.dedup();
+        assert_eq!(id_.len(), n.len(), "id notifikasi unik");
+
+        // Tugas yang sudah selesai tidak diingatkan.
+        c.execute("INSERT INTO tugas_selesai(user_id, tugas_id, waktu) SELECT ?1, id, '2026-10-27 10:00' FROM tugas", [id]).unwrap();
+        assert!(!notifikasi(&c, id, &kini).unwrap().iter().any(|x| x["judul"].as_str().unwrap().contains("WBS")));
     }
 }

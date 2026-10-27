@@ -58,6 +58,9 @@ pub fn router() -> Router<App> {
         .route("/sinkron", post(sinkron_unpam))
         .route("/kehadiran/{id}", get(kehadiran))
         .route("/jadwal", get(jadwal_minggu))
+        .route("/notifikasi", get(notifikasi))
+        .route("/ktm/jejak", get(lihat_jejak))
+        .route("/ktm/jejak/{id}/bukan-saya", post(bukan_saya))
         .route("/ktm/hilang", post(lapor_hilang))
         .route("/keamanan", post(atur_keamanan))
         .route("/pin", post(ganti_pin))
@@ -346,12 +349,16 @@ async fn masuk(State(app): State<App>, h: HeaderMap, Json(b): Json<Masuk>) -> Ha
     // Tap KTM tanpa PIN: hanya di HP tepercaya dan kalau pemilik tidak menyalakan "minta PIN".
     if b.uid.is_some() && b.pin.is_empty() {
         if !pin_tap && perangkat_sah(&c, id, &b.perangkat.daftar())? {
+            catat_jejak(&c, id, "masuk", "Masuk dengan tap KTM di HP tepercaya", None)?;
             let t = token_baru(&c, id)?;
             return Ok(Json(json!({ "token": t, "peran": peran, "nama": nama })));
         }
         return Err(galat(StatusCode::UNAUTHORIZED, "Masukkan PIN sekali untuk HP ini"));
     }
     cek_pin_akun(&app, id, &b.pin, &pin_hash)?;
+    if b.uid.is_some() {
+        catat_jejak(&c, id, "masuk", "Masuk dengan tap KTM + PIN di HP baru", None)?;
+    }
     let t = token_baru(&c, id)?;
     let p = perangkat_baru(&c, id)?;
     Ok(Json(json!({ "token": t, "peran": peran, "nama": nama, "perangkat": p })))
@@ -481,6 +488,13 @@ async fn jadwal_minggu(State(app): State<App>, h: HeaderMap) -> Hasil {
     Ok(Json(json!({ "hari_ini": waktu::hari_ke(&waktu::sekarang()), "kelas": kelas })))
 }
 
+/// Notifikasi yang dijadwalkan aplikasi Android di HP (kelas, tenggat tugas, pengingat).
+async fn notifikasi(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    Ok(Json(json!({ "notifikasi": data::notifikasi(&c, u.id, &waktu::sekarang())? })))
+}
+
 async fn kehadiran(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
     let c = app.db.lock().unwrap();
     let u = pengguna(&c, &h)?;
@@ -501,8 +515,9 @@ async fn sinkron_unpam(State(app): State<App>, h: HeaderMap, Json(d): Json<sinkr
     wajib(&u, "mhs")?;
     batasi(&app, &format!("sinkron:{}", u.id), 10, 600)?;
     let n = sinkron::sinkron(&mut c, u.id, &d).map_err(|e| galat(StatusCode::BAD_REQUEST, e.to_string()))?;
+    let tugas = sinkron::sinkron_mentari(&c, u.id, &d.mentari).map_err(|e| galat(StatusCode::BAD_REQUEST, e.to_string()))?;
     app.cache.lock().unwrap().retain(|k, _| !k.starts_with(&format!("{}:", u.id)));
-    Ok(Json(json!({ "jumlah": n })))
+    Ok(Json(json!({ "jumlah": n, "tugas": tugas })))
 }
 
 /// KTM orang lain ditap: hanya profil publik, tanpa jadwal/nilai.
@@ -520,6 +535,11 @@ async fn kenalan(State(app): State<App>, hd: HeaderMap, Json(b): Json<Uid>) -> H
     let Some((id, nama, prodi, bio, github, portofolio, publik, dibuat, foto)) = r else {
         return Err(galat(StatusCode::NOT_FOUND, "KTM ini belum terdaftar di Smart KTM"));
     };
+    let penap = pengguna(&c, &hd).ok();
+    if penap.as_ref().is_none_or(|p| p.id != id) {
+        let siapa = penap.map(|p| nama_depan(&p.nama)).unwrap_or_else(|| "Seseorang".into());
+        catat_jejak(&c, id, "kenalan", &format!("{siapa} menempel KTM-mu untuk melihat kartu nama"), None)?;
+    }
     let (hilang, pesan): (bool, Option<String>) = c.query_row("SELECT hilang, hilang_pesan FROM users WHERE id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))?;
     if hilang {
         return Ok(Json(json!({ "hilang": true, "nama": nama_depan(&nama), "pesan": pesan.unwrap_or_default() })));
@@ -712,7 +732,17 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
             v["tx"] = json!(tx);
             return Ok(Json(v));
         }
-        let saat = waktu::teks(&waktu::sekarang());
+        let kini = waktu::sekarang();
+        let (nama_matkul, ke): (String, i64) =
+            c.query_row("SELECT m.nama, s.pertemuan FROM sesi s JOIN matkul m ON m.id = s.matkul_id WHERE s.id = ?1", [id], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        if let Some(lain) = presensi_bentrok(&c, mid, id, &kini)? {
+            catat_jejak(&c, mid, "ditolak", &format!("Presensi {nama_matkul} ditolak: KTM baru saja dipakai presensi di {lain}"), None)?;
+            return Err(galat(
+                StatusCode::CONFLICT,
+                format!("KTM ini baru saja dipakai presensi di {lain}. Kemungkinan kartu digandakan: cocokkan foto dan minta mahasiswa menunjukkan aplikasinya."),
+            ));
+        }
+        let saat = waktu::teks(&kini);
         let bukti = db::sha(&format!("{}:presensi:{id}:{mid}:{saat}", app.rahasia));
         let status = if app.chain.is_some() { "menunggu" } else { "lokal" };
         c.execute(
@@ -720,6 +750,7 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
             params![id, mid, saat, bukti, status],
         )?;
         let pid = c.last_insert_rowid();
+        catat_jejak(&c, mid, "presensi", &format!("Presensi {nama_matkul} pertemuan {ke}, dicatat oleh {}", u.nama), Some(pid))?;
         let mut v = dasar;
         v["status"] = json!("hadir");
         v["waktu"] = json!(saat);
@@ -767,6 +798,72 @@ fn mahasiswa_dari_ktm(c: &Connection, hash: &str) -> Result<(i64, String, String
         Some((.., true)) => Err(galat(StatusCode::FORBIDDEN, "KTM ini dilaporkan hilang. Jangan dipakai, kembalikan ke pemiliknya.")),
         Some((id, nama, nim, foto, false)) => Ok((id, nama, nim, foto)),
     }
+}
+
+// ---------- Pemakaian KTM: kartu ganda & riwayat ----------
+
+/// Jeda minimal antara presensi di dua kelas berbeda. UID MIFARE Classic bisa disalin ke kartu lain;
+/// KTM yang sama dipakai di kelas lain dalam waktu sedekat ini hampir pasti salinan.
+const JEDA_KARTU_GANDA_MENIT: i64 = 20;
+
+/// Presensi lain dengan KTM yang sama dalam beberapa menit terakhir di sesi berbeda: "nama matkul".
+fn presensi_bentrok(c: &Connection, mhs: i64, sesi: i64, kini: &chrono::DateTime<chrono::FixedOffset>) -> rusqlite::Result<Option<String>> {
+    let sejak = waktu::teks(&(*kini - chrono::Duration::minutes(JEDA_KARTU_GANDA_MENIT)));
+    c.query_row(
+        "SELECT m.nama FROM presensi p JOIN sesi s ON s.id = p.sesi_id JOIN matkul m ON m.id = s.matkul_id
+         WHERE p.user_id = ?1 AND p.sesi_id != ?2 AND p.waktu >= ?3 AND p.status != 'disanggah' ORDER BY p.waktu DESC LIMIT 1",
+        params![mhs, sesi, sejak],
+        |r| r.get(0),
+    )
+    .optional()
+}
+
+fn catat_jejak(c: &Connection, user: i64, aksi: &str, detail: &str, presensi: Option<i64>) -> rusqlite::Result<i64> {
+    c.execute(
+        "INSERT INTO jejak_ktm(user_id, waktu, aksi, detail, presensi_id) VALUES(?1, ?2, ?3, ?4, ?5)",
+        params![user, waktu::teks(&waktu::sekarang()), aksi, detail, presensi],
+    )?;
+    Ok(c.last_insert_rowid())
+}
+
+fn jejak(c: &Connection, user: i64) -> rusqlite::Result<Vec<Value>> {
+    c.prepare("SELECT id, waktu, aksi, detail, disanggah FROM jejak_ktm WHERE user_id = ?1 ORDER BY id DESC LIMIT 30")?
+        .query_map([user], |r| {
+            Ok(json!({ "id": r.get::<_, i64>(0)?, "waktu": r.get::<_, String>(1)?, "aksi": r.get::<_, String>(2)?,
+                       "detail": r.get::<_, String>(3)?, "disanggah": r.get::<_, bool>(4)? }))
+        })?
+        .collect()
+}
+
+/// Pemilik bilang "bukan saya": catatan ditandai, presensinya disanggah (dosen melihatnya),
+/// dan KTM diblokir supaya salinannya tidak bisa dipakai lagi. KTM asli ditaut ulang lewat NIM + PIN.
+fn sanggah_jejak(c: &Connection, user: i64, id: i64) -> Result<(), Gagal> {
+    let presensi: Option<Option<i64>> = c
+        .query_row("SELECT presensi_id FROM jejak_ktm WHERE id = ?1 AND user_id = ?2", params![id, user], |r| r.get(0))
+        .optional()?;
+    let Some(presensi) = presensi else { return Err(galat(StatusCode::NOT_FOUND, "Catatan tidak ditemukan")) };
+    c.execute("UPDATE jejak_ktm SET disanggah = 1 WHERE id = ?1", [id])?;
+    if let Some(p) = presensi {
+        c.execute("UPDATE presensi SET status = 'disanggah' WHERE id = ?1 AND user_id = ?2", params![p, user])?;
+    }
+    c.execute(
+        "UPDATE users SET hilang = 1, hilang_pesan = COALESCE(hilang_pesan, 'Diblokir pemilik: KTM dipakai tanpa izin') WHERE id = ?1",
+        [user],
+    )?;
+    Ok(())
+}
+
+async fn lihat_jejak(State(app): State<App>, h: HeaderMap) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    Ok(Json(json!({ "jejak": jejak(&c, u.id)? })))
+}
+
+async fn bukan_saya(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    sanggah_jejak(&c, u.id, id)?;
+    Ok(Json(json!({ "ok": true, "hilang": true })))
 }
 
 // ---------- KTM hilang ----------
@@ -913,6 +1010,8 @@ async fn tap_acara(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>, Js
             params![id, mid, saat, kode, if ke_chain { "menunggu" } else { "lokal" }],
         )?;
         let sid = c.last_insert_rowid();
+        let acara: String = c.query_row("SELECT nama FROM acara WHERE id = ?1", [id], |r| r.get(0))?;
+        catat_jejak(&c, mid, "sertifikat", &format!("Check-in acara {acara}"), None)?;
         let mut v = dasar;
         v["status"] = json!("terbit");
         v["waktu"] = json!(saat);
@@ -1039,6 +1138,48 @@ mod tes {
         // Versi lama mengirim satu teks.
         let lama: TokenHp = serde_json::from_value(json!(hp_a)).unwrap();
         assert!(perangkat_sah(&c, a, &lama.daftar()).unwrap());
+    }
+
+    #[test]
+    fn ktm_dipakai_di_dua_kelas_sekaligus_ditolak() {
+        let c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let mhs: i64 = c.query_row("SELECT id FROM users WHERE nim = '231011400001'", [], |r| r.get(0)).unwrap();
+        let (m1, m2): (i64, i64) = c.query_row("SELECT MIN(id), MAX(id) FROM matkul", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        c.execute("INSERT INTO sesi(matkul_id, pertemuan, dibuka) VALUES(?1, 1, '2026-10-27 08:00')", [m1]).unwrap();
+        let s1 = c.last_insert_rowid();
+        c.execute("INSERT INTO sesi(matkul_id, pertemuan, dibuka) VALUES(?1, 1, '2026-10-27 08:05')", [m2]).unwrap();
+        let s2 = c.last_insert_rowid();
+        c.execute("INSERT INTO presensi(sesi_id, user_id, waktu, bukti, status) VALUES(?1, ?2, '2026-10-27 08:02', 'b1', 'lokal')", params![s1, mhs]).unwrap();
+
+        let kini = waktu::baca("2026-10-27 08:10").unwrap();
+        assert!(presensi_bentrok(&c, mhs, s2, &kini).unwrap().is_some(), "8 menit kemudian di kelas lain = kartu ganda");
+        assert!(presensi_bentrok(&c, mhs, s1, &kini).unwrap().is_none(), "sesi yang sama bukan bentrok");
+        let nanti = waktu::baca("2026-10-27 09:40").unwrap();
+        assert!(presensi_bentrok(&c, mhs, s2, &nanti).unwrap().is_none(), "kelas berikutnya setelah jeda wajar");
+    }
+
+    #[test]
+    fn bukan_saya_memblokir_ktm_dan_menyanggah_presensi() {
+        let c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let mhs: i64 = c.query_row("SELECT id FROM users WHERE nim = '231011400001'", [], |r| r.get(0)).unwrap();
+        let m: i64 = c.query_row("SELECT MIN(id) FROM matkul", [], |r| r.get(0)).unwrap();
+        c.execute("INSERT INTO sesi(matkul_id, pertemuan, dibuka) VALUES(?1, 1, '2026-10-27 08:00')", [m]).unwrap();
+        let s = c.last_insert_rowid();
+        c.execute("INSERT INTO presensi(sesi_id, user_id, waktu, bukti, status) VALUES(?1, ?2, '2026-10-27 08:02', 'b1', 'onchain')", params![s, mhs]).unwrap();
+        let p = c.last_insert_rowid();
+        let j = catat_jejak(&c, mhs, "presensi", "Presensi pertemuan 1", Some(p)).unwrap();
+        catat_jejak(&c, mhs, "masuk", "Masuk dengan tap KTM", None).unwrap();
+        assert_eq!(jejak(&c, mhs).unwrap().len(), 2);
+
+        assert!(sanggah_jejak(&c, mhs, j).is_ok());
+        let status: String = c.query_row("SELECT status FROM presensi WHERE id = ?1", [p], |r| r.get(0)).unwrap();
+        assert_eq!(status, "disanggah");
+        let hilang: bool = c.query_row("SELECT hilang FROM users WHERE id = ?1", [mhs], |r| r.get(0)).unwrap();
+        assert!(hilang, "KTM diblokir supaya salinannya tidak bisa dipakai lagi");
+        let lain: i64 = c.query_row("SELECT id FROM users WHERE peran = 'mhs' AND id != ?1 LIMIT 1", [mhs], |r| r.get(0)).unwrap();
+        assert!(sanggah_jejak(&c, lain, j).is_err(), "hanya pemilik yang bisa menyanggah");
     }
 }
 

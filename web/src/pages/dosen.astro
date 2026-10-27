@@ -151,6 +151,7 @@ import { ikon } from '../lib/ikon';
   }
 
   function statusChain(p: any) {
+    if (p.status === 'disanggah') return '<span class="gagal">disanggah pemilik KTM</span>';
     if (p.link_tx) return `<a href="${esc(p.link_tx)}" target="_blank" rel="noopener">⛓ lihat di explorer</a>`;
     if (p.tx) return `<a href="/verifikasi/?b=${esc(p.bukti)}">⛓ tercatat on-chain</a>`;
     if (p.status === 'menunggu') return '<span class="menunggu">mengirim ke blockchain…</span>';

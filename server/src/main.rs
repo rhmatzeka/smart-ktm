@@ -57,7 +57,8 @@ async fn main() -> anyhow::Result<()> {
         )?;
         sinkron::bersihkan_contoh(&mut conn, user)?;
         let n = sinkron::sinkron(&mut conn, user, &d)?;
-        println!("{n} kelas MyUnpam disinkronkan untuk NIM {}", d.nim);
+        let t = sinkron::sinkron_mentari(&conn, user, &d.mentari)?;
+        println!("{n} kelas MyUnpam dan {t} tugas Mentari disinkronkan untuk NIM {}", d.nim);
         return Ok(());
     }
 

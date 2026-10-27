@@ -87,6 +87,7 @@ import { ikon } from '../lib/ikon';
 
 <script>
   import { api, esc, tanganiGalat } from '../lib/api';
+  import { jadwalkanNotif } from '../lib/notif';
   import { ikon } from '../lib/ikon';
 
   type Pesan = { peran: 'user' | 'model'; teks: string };
@@ -129,6 +130,8 @@ import { ikon } from '../lib/ikon';
       const r = await api<{ balasan: string; aksi: string[]; mode: string }>('/chat', { pesan: teks, riwayat });
       tunggu.remove();
       r.aksi.forEach((a) => tambah('aksi', `${ikon('centang')}<span>${esc(a)}</span>`));
+      // Pengingat atau tugas baru dari asisten langsung dijadwalkan jadi notifikasi HP.
+      if (r.aksi.length) jadwalkanNotif(false);
       tambah('gelembung ai', rapikan(r.balasan));
       if (r.mode === 'offline') tambah('mode', 'Mode offline: kunci AI belum diatur di server.');
       riwayat.push({ peran: 'user', teks }, { peran: 'model', teks: r.balasan });

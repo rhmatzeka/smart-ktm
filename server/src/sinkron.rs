@@ -4,6 +4,9 @@
 //! my.unpam.ac.id setelah login (lihat web/src/pages/sinkron.astro). Kelas
 //! dicocokkan lewat kode matkul + kode kelas MyUnpam, jadi teman sekelas yang
 //! sinkron otomatis masuk kelas yang sama.
+//!
+//! Di aplikasi Android, sinkron yang sama juga mengambil tugas & aktivitas Mentari
+//! (lihat [`sinkron_mentari`]); tugas dicocokkan ke matkul lewat nama.
 
 use anyhow::{bail, Context};
 use rusqlite::{params, Connection, OptionalExtension};
@@ -24,6 +27,9 @@ pub struct DataUnpam {
     #[serde(default)]
     pub foto: String,
     pub kelas: Vec<KelasUnpam>,
+    /// Tugas & aktivitas Mentari yang belum dikerjakan (kosong kalau Mentari dilewati).
+    #[serde(default)]
+    pub mentari: Vec<TugasMentari>,
 }
 
 #[derive(Deserialize)]
@@ -62,6 +68,76 @@ pub struct PertemuanUnpam {
 }
 
 /// "08.50 - 10.30" -> ("08:50", "10:30")
+#[derive(Deserialize)]
+pub struct TugasMentari {
+    pub id: String,
+    pub matkul: String,
+    pub ke: i64,
+    /// Tugas, Pretest, Posttest, Forum, Kuesioner
+    pub jenis: String,
+    pub judul: String,
+    #[serde(default)]
+    pub isi: String,
+    #[serde(default)]
+    pub selesai: bool,
+    /// Tenggat dari Mentari kalau ada (ISO/UTC atau "YYYY-MM-DD HH:MM").
+    #[serde(default)]
+    pub batas: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+}
+
+/// Simpan tugas Mentari ke matkul yang diambil pengguna. Tenggat yang tidak diberikan Mentari
+/// diperkirakan dari akhir pekan pertemuan itu di MyUnpam. Mengembalikan jumlah tugas yang tersimpan.
+pub fn sinkron_mentari(c: &Connection, user: i64, tugas: &[TugasMentari]) -> anyhow::Result<usize> {
+    let kunci = |s: &str| s.to_lowercase().split(|ch: char| !ch.is_alphanumeric()).filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
+    let matkul: Vec<(i64, String)> = c
+        .prepare("SELECT m.id, m.nama FROM matkul m JOIN ambil a ON a.matkul_id = m.id WHERE a.user_id = ?1")?
+        .query_map([user], |r| Ok((r.get(0)?, r.get::<_, String>(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut n = 0;
+    for t in tugas {
+        let Some(m) = matkul.iter().find(|(_, nama)| kunci(nama) == kunci(&t.matkul)).map(|(id, _)| *id) else { continue };
+        let tenggat = match t.batas.as_deref().and_then(baca_tenggat) {
+            Some(b) => b,
+            None => c
+                .query_row("SELECT akhir FROM pertemuan_unpam WHERE user_id = ?1 AND matkul_id = ?2 AND ke = ?3", params![user, m, t.ke], |r| r.get::<_, String>(0))
+                .optional()?
+                .map(|a| format!("{a} 23:59"))
+                .unwrap_or_default(),
+        };
+        let sumber = format!("mentari:{}", t.id);
+        c.execute(
+            "INSERT INTO tugas(matkul_id, judul, deskripsi, deadline, sumber, jenis, url) VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(sumber) DO UPDATE SET judul = excluded.judul, deskripsi = excluded.deskripsi,
+               deadline = excluded.deadline, jenis = excluded.jenis, url = excluded.url",
+            params![m, t.judul.trim(), t.isi.trim(), tenggat, sumber, t.jenis, t.url],
+        )?;
+        if t.selesai {
+            c.execute(
+                "INSERT OR IGNORE INTO tugas_selesai(user_id, tugas_id, waktu) SELECT ?1, id, ?2 FROM tugas WHERE sumber = ?3",
+                params![user, waktu::teks(&waktu::sekarang()), sumber],
+            )?;
+        }
+        n += 1;
+    }
+    Ok(n)
+}
+
+/// "2026-10-31T16:59:00.000Z" -> "2026-10-31 23:59" (WIB); "2026-10-31 23:59[:00]" dan "2026-10-31" juga diterima.
+fn baca_tenggat(s: &str) -> Option<String> {
+    let s = s.trim();
+    if let Ok(d) = chrono::DateTime::parse_from_rfc3339(s) {
+        return Some(d.with_timezone(&chrono::FixedOffset::east_opt(7 * 3600)?).format("%Y-%m-%d %H:%M").to_string());
+    }
+    let t = s.replace('T', " ");
+    match t.len() {
+        10 if chrono::NaiveDate::parse_from_str(&t, "%Y-%m-%d").is_ok() => Some(format!("{t} 23:59")),
+        16.. if chrono::NaiveDateTime::parse_from_str(&t[..16], "%Y-%m-%d %H:%M").is_ok() => Some(t[..16].to_string()),
+        _ => None,
+    }
+}
+
 pub fn baca_jam(s: &str) -> Option<(String, String)> {
     let (a, b) = s.split_once('-')?;
     let rapi = |t: &str| -> Option<String> {
@@ -219,5 +295,34 @@ mod tes {
         assert!(sinkron(&mut c, teman, &data("231011400777", "07TPLP003")).is_err(), "NIM orang lain ditolak");
         let pt: i64 = c.query_row("SELECT COUNT(*) FROM pertemuan_unpam WHERE user_id = ?1", [demo], |r| r.get(0)).unwrap();
         assert_eq!(pt, 2);
+    }
+
+    #[test]
+    fn tugas_mentari_masuk_ke_matkul() {
+        let mut c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let demo: i64 = c.query_row("SELECT id FROM users WHERE nim = '231011400001'", [], |r| r.get(0)).unwrap();
+        bersihkan_contoh(&mut c, demo).unwrap();
+        sinkron(&mut c, demo, &data("231011400777", "07TPLP003")).unwrap();
+        let tugas: Vec<TugasMentari> = serde_json::from_value(serde_json::json!([
+            // tanpa tenggat: diperkirakan dari akhir pertemuan ke-2 di MyUnpam
+            {"id": "a1", "matkul": "MANAJEMEN PROYEK INFORMATIKA", "ke": 2, "jenis": "Tugas", "judul": "Buat WBS", "isi": "Kumpulkan PDF", "selesai": false, "url": "https://mentari.unpam.ac.id/u-courses/X/assignment/a1"},
+            {"id": "a2", "matkul": "Testing dan QA Perangkat Lunak", "ke": 3, "jenis": "Forum", "judul": "Forum P3", "selesai": true, "batas": "2026-10-31T16:59:00.000Z"},
+            {"id": "a3", "matkul": "MATKUL LAIN", "ke": 1, "jenis": "Tugas", "judul": "Tidak cocok", "selesai": false}
+        ]))
+        .unwrap();
+        assert_eq!(sinkron_mentari(&c, demo, &tugas).unwrap(), 2, "tugas matkul yang tidak diambil dilewati");
+        assert_eq!(sinkron_mentari(&c, demo, &tugas).unwrap(), 2);
+        let semua: Vec<(String, String, String, Option<String>)> = c
+            .prepare("SELECT judul, deadline, jenis, url FROM tugas ORDER BY sumber").unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))).unwrap()
+            .collect::<rusqlite::Result<_>>().unwrap();
+        assert_eq!(semua.len(), 2, "sinkron ulang tidak membuat tugas dobel");
+        assert_eq!(semua[0].0, "Buat WBS");
+        assert_eq!(semua[0].1, "2026-09-12 23:59");
+        assert_eq!(semua[1].1, "2026-10-31 23:59", "tenggat UTC diubah ke WIB");
+        assert_eq!(semua[1].2, "Forum");
+        let selesai: i64 = c.query_row("SELECT COUNT(*) FROM tugas_selesai WHERE user_id = ?1", [demo], |r| r.get(0)).unwrap();
+        assert_eq!(selesai, 1, "status selesai dari Mentari ikut");
     }
 }

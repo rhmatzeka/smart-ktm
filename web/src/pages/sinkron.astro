@@ -23,7 +23,7 @@ import { ikon } from '../lib/ikon';
     <!-- Di aplikasi Android: satu tombol -->
     <article class="kartu langkah-sinkron" id="satu-tombol" hidden>
       <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Sinkron satu tombol</p>
-      <p class="redup kecil">MyUnpam terbuka di dalam aplikasi. Login seperti biasa, jadwal dan presensi diambil otomatis. Berikutnya tidak perlu login lagi selama sesi MyUnpam masih aktif.</p>
+      <p class="redup kecil">MyUnpam lalu Mentari terbuka di dalam aplikasi. Login seperti biasa: jadwal, presensi, dan tugas Mentari diambil otomatis. Berikutnya tidak perlu login lagi selama sesinya masih aktif.</p>
       <button class="tombol" id="sinkron-app" type="button">Sinkron sekarang</button>
     </article>
 
@@ -68,6 +68,7 @@ import { ikon } from '../lib/ikon';
 
 <script>
   import { api, esc, sesi, tanganiGalat } from '../lib/api';
+  import { jadwalkanNotif } from '../lib/notif';
 
   const $ = (id: string) => document.getElementById(id)!;
   const KUNCI = 'smartktm.sinkron';
@@ -84,6 +85,29 @@ import { ikon } from '../lib/ikon';
   const kode = `javascript:(async()=>{try{${inti}location.href='${location.origin}/sinkron/#'+encodeURIComponent(JSON.stringify(d))}catch(e){alert('Smart KTM: buka my.unpam.ac.id dan login dulu, lalu jalankan lagi.')}})()`;
   // Aplikasi Android: hasil dikirim ke jembatan SmartKTM; sesi habis (401) = arahkan ke login MyUnpam.
   const skripAplikasi = `(async()=>{try{${inti}SmartKTM.selesai(JSON.stringify(d))}catch(e){if(e===401){localStorage.removeItem('access_token');SmartKTM.gagal('login','');location.href='/'}else SmartKTM.gagal(String(e),localStorage.getItem('access_token')||'')}})()`;
+  // Mentari (aplikasi Android saja): tugas & aktivitas yang belum dikerjakan. Pretest/Posttest/Forum/Kuesioner
+  // hanya sampai satu pertemuan setelah yang terakhir dikerjakan, supaya pertemuan yang belum dibuka tidak ikut.
+  const cekMentari = `(()=>{try{const a=JSON.parse(localStorage.getItem('access')||'[]');return (a[+localStorage.getItem('accessIndex')||0]||a[0]||{}).token||''}catch(e){return ''}})()`;
+  const intiMentari = `const t=${cekMentari};if(!t)throw 401;`
+    + `const g=u=>fetch(u,{headers:{Authorization:'Bearer '+t}}).then(r=>{if(!r.ok)throw r.status;return r.json()});`
+    + `const J={PENUGASAN_TERSTRUKTUR:'Tugas',PRE_TEST:'Pretest',POST_TEST:'Posttest',FORUM_DISKUSI:'Forum',KUESIONER:'Kuesioner'};`
+    + `const bersih=x=>String(x||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\\s+/g,' ').trim();`
+    + `const l=await g('/api/user-course?page=1&limit=50');const tugas=[];`
+    + `for(const c of l.data||[]){const dt=await g('/api/user-course/'+c.kode_course).catch(()=>null);if(!dt)continue;`
+    + `const nama=((String(c.coursename).match(/^\\s*\\[\\d+\\]\\s*(.+?)\\s*#/)||[])[1]||String(c.coursename).split('#')[0]).trim();`
+    + `const ps=(dt.data||[]).map(s=>({s,n:+((String(s.kode_section).match(/PERTEMUAN_(\\d+)/)||[])[1]||0)})).filter(x=>x.n);`
+    + `const maju=Math.max(0,...ps.filter(x=>(x.s.sub_section||[]).some(ss=>ss.completion)).map(x=>x.n));`
+    + `for(const {s,n} of ps)for(const ss of s.sub_section||[]){const j=J[ss.kode_template];if(!j)continue;const isi=bersih(ss.konten);`
+    + `if(j==='Tugas'){if(!ss.link&&!ss.file&&(!isi||/^pertemuan\\s*\\d+$/i.test(isi)))continue}else if(ss.completion||n>maju+1)continue;`
+    + `tugas.push({id:String(ss.id||c.kode_course+'|'+s.kode_section+'|'+ss.kode_template),matkul:nama,ke:n,jenis:j,judul:j==='Tugas'?(ss.judul||'Tugas pertemuan '+n):j+' pertemuan '+n,isi:isi.slice(0,400),selesai:!!ss.completion,`
+    + `batas:ss.end_date||ss.tanggal_selesai||ss.deadline||ss.end_at||ss.batas_waktu||ss.tanggal_akhir||null,url:'https://mentari.unpam.ac.id/u-courses/'+c.kode_course+(ss.id&&j==='Tugas'?'/assignment/'+ss.id:'')})}}`
+    + `const d={tugas};`;
+  const skripMentari = `(async()=>{try{${intiMentari}SmartKTM.selesai(JSON.stringify(d))}catch(e){if(e===401){localStorage.removeItem('access');SmartKTM.gagal('login','');location.href='/'}else SmartKTM.gagal(String(e),${cekMentari})}})()`;
+  const langkah = [
+    { nama: 'MyUnpam', url: 'https://my.unpam.ac.id/', host: 'my.unpam.ac.id', cekLogin: "localStorage.getItem('access_token')||''", skrip: skripAplikasi },
+    { nama: 'Mentari', url: 'https://mentari.unpam.ac.id/', host: 'mentari.unpam.ac.id', cekLogin: cekMentari, skrip: skripMentari, bolehLewat: true },
+  ];
+
   ($('seret') as HTMLAnchorElement).href = kode;
   $('seret').addEventListener('click', (e) => { e.preventDefault(); alert('Seret tombol ini ke bilah bookmark, jangan diklik.'); });
 
@@ -99,9 +123,9 @@ import { ikon } from '../lib/ikon';
   async function kirim(data: any) {
     $('hasil').hidden = false;
     try {
-      const r = await api<{ jumlah: number }>('/sinkron', data);
+      const r = await api<{ jumlah: number; tugas?: number }>('/sinkron', data);
       try { sessionStorage.removeItem(KUNCI); } catch { /* abaikan */ }
-      $('hasil-judul').textContent = `${r.jumlah} kelas tersinkron dari MyUnpam`;
+      $('hasil-judul').textContent = r.tugas ? `${r.jumlah} kelas dan ${r.tugas} tugas Mentari tersinkron` : `${r.jumlah} kelas tersinkron dari MyUnpam`;
       $('daftar').innerHTML = data.kelas
         .map((k: any) => {
           const hadir = (k.pertemuan || []).filter((p: any) => p.status === 'hadir').length;
@@ -110,6 +134,7 @@ import { ikon } from '../lib/ikon';
         })
         .join('');
       $('ke-beranda').hidden = false;
+      jadwalkanNotif();
       $('cara').hidden = true;
     } catch (e) {
       $('hasil').hidden = true;
@@ -128,9 +153,13 @@ import { ikon } from '../lib/ikon';
       tombol.disabled = true;
       $('pesan').textContent = '';
       try {
-        const r = await cap.nativePromise('MyUnpam', 'ambil', { skrip: skripAplikasi });
+        // Aplikasi versi awal hanya kenal { skrip } (MyUnpam saja); versi baru memakai { langkah }.
+        const r = await cap.nativePromise('MyUnpam', 'ambil', { skrip: skripAplikasi, langkah });
+        const data = JSON.parse(r.data);
+        const mentari = r.hasil?.[1];
+        if (mentari) data.mentari = JSON.parse(mentari).tugas ?? [];
         $('satu-tombol').hidden = true;
-        await kirim(JSON.parse(r.data));
+        await kirim(data);
         if ($('hasil').hidden) $('satu-tombol').hidden = false;
       } catch (e) {
         const t = (e as Error)?.message || '';

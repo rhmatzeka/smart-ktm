@@ -159,6 +159,8 @@ import { ikon, ikonApp } from '../lib/ikon';
   .tanda.merah { background: var(--merah); } .tanda.kuning { background: #f59e0b; } .tanda.biasa { background: var(--biru-muda); }
   .daftar-tugas .isi, .daftar-hadir .isi { flex: 1; min-width: 0; }
   .daftar-tugas b, .daftar-hadir b { display: block; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .daftar-tugas .ke-mentari { color: inherit; text-decoration: none; }
+  .daftar-tugas .ke-mentari b { text-decoration: underline; text-decoration-color: var(--garis, #d6dbe6); text-underline-offset: 3px; }
   .daftar-tugas .ket, .daftar-hadir .ket { font-size: 0.78rem; color: var(--teks-2); }
   .sisa { font-size: 0.78rem; font-weight: 800; white-space: nowrap; }
   .sisa.merah { color: var(--merah); } .sisa.kuning { color: #b45309; } .sisa.biasa { color: var(--biru); }
@@ -208,6 +210,7 @@ import { ikon, ikonApp } from '../lib/ikon';
 
 <script>
   import { api, esc, tanganiGalat } from '../lib/api';
+  import { jadwalkanNotif } from '../lib/notif';
   import { ikon } from '../lib/ikon';
 
   const $ = (id: string) => document.getElementById(id)!;
@@ -316,10 +319,10 @@ import { ikon, ikonApp } from '../lib/ikon';
 
     const tugas = semuaTugas ? b.tugas : b.tugas.slice(0, 3);
     $('daftar-tugas').innerHTML = tugas.length
-      ? tugas.map((t: any) => `<li><span class="tanda ${t.tingkat}"></span><span class="isi"><b>${esc(t.judul)}</b><span class="ket">${esc(t.matkul)}</span></span>
+      ? tugas.map((t: any) => `<li><span class="tanda ${t.tingkat}"></span><span class="isi">${t.url ? `<a class="ke-mentari" href="${esc(t.url)}" target="_blank" rel="noopener"><b>${esc(t.judul)}</b></a>` : `<b>${esc(t.judul)}</b>`}<span class="ket">${t.jenis && t.jenis !== 'Tugas' ? `${esc(t.jenis)} Mentari, ` : t.url ? 'Mentari, ' : ''}${esc(t.matkul)}</span></span>
           <span class="sisa ${t.tingkat}">${esc(t.sisa)}</span>
           <button class="tombol-kumpul" data-tugas="${t.id}" aria-label="Tandai ${esc(t.judul)} sudah dikumpulkan" title="Sudah dikumpulkan">${ikon('centang')}</button></li>`).join('')
-      : '<li class="kosong">Belum ada tugas. Bilang ke Tanya AI, misalnya "ada tugas MPI bikin proposal, deadline Jumat".</li>';
+      : '<li class="kosong">Belum ada tugas. Sinkron MyUnpam di aplikasi Android ikut mengambil tugas Mentari, atau bilang ke Tanya AI, misalnya "ada tugas MPI bikin proposal, deadline Jumat".</li>';
     $('semua-tugas').hidden = b.tugas.length <= 3;
     $('semua-tugas').textContent = semuaTugas ? 'Tampilkan lebih sedikit' : `Lihat semua (${b.tugas.length})`;
 
@@ -351,6 +354,7 @@ import { ikon, ikonApp } from '../lib/ikon';
   async function muat() {
     try {
       render(await api('/beranda'));
+      jadwalkanNotif();
     } catch (e) {
       tanganiGalat(e, (t) => ($('pesan').textContent = t));
     }
