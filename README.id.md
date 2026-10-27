@@ -42,6 +42,8 @@ Aplikasi Android memuat situs yang live, jadi fitur baru langsung muncul tanpa p
 - **Notifikasi HP** (Android): 15 menit sebelum kelas, H-1 dan 3 jam sebelum tenggat tugas, serta pengingat yang dibuat AI agent.
 - **AI agent dengan alat**: Groq (`openai/gpt-oss-120b`), cadangan Gemini, mode offline tanpa kunci. Bisa melihat jadwal, tugas, presensi, mencatat tugas dari obrolan, menandai tugas selesai, dan membuat pengingat.
 - **Presensi on-chain**: HP dosen sebagai pembaca, foto mahasiswa muncul setiap tap, hash kehadiran dikirim ke `PresensiKTM`. Mahasiswa tidak perlu wallet: wallet operator di server yang menandatangani dan membayar gas. Siapa pun bisa memverifikasi kode bukti di Etherscan, dan kode kedua kontrak terverifikasi di [Sourcify](https://repo.sourcify.dev/11155111/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d) (exact match).
+- **Rekap kehadiran untuk dosen** per kelas (mahasiswa x pertemuan, peringatan batas absen) dengan **unduhan Excel** (lengkap dengan rumus).
+- **Jadwal ke kalender**: semua pertemuan (tanggal asli MyUnpam) dan tenggat tugas sebagai berkas `.ics` atau link langganan Google Calendar pribadi.
 - **Sertifikat acara on-chain** dengan halaman verifikasi publik.
 - **Mode KTM hilang** dan **kartu nama digital**.
 - **Aplikasi Android** (Capacitor) dengan plugin NFC native yang hanya membaca; **PWA** untuk HP lain.
@@ -110,7 +112,7 @@ Tes di HP lewat kabel: `adb reverse tcp:8080 tcp:8080`, lalu buka `localhost:808
 ## Tes
 
 ```bash
-cd server && cargo test       # 18 tes: logika jadwal, hash, sinkron MyUnpam & Mentari, notifikasi, KTM hilang, HP tepercaya, kartu ganda, batas percobaan
+cd server && cargo test       # 22 tes: logika jadwal, hash, sinkron MyUnpam & Mentari, notifikasi, KTM hilang, HP tepercaya, kartu ganda, rekap & Excel, kalender, link bertanda tangan, batas percobaan
 cd contracts && forge test    # 6 tes: PresensiKTM dan SertifikatKTM
 ```
 
