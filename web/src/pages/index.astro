@@ -189,7 +189,7 @@ import { ikon } from '../lib/ikon';
     berhenti = null;
     uid = u;
     try {
-      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean; hilang?: boolean; pesan?: string }>('/ktm/cek', { uid });
+      const r = await api<{ terdaftar: boolean; nama?: string; peran?: string; milik_sesi: boolean; hilang?: boolean; pesan?: string; perlu_pin?: boolean }>('/ktm/cek', { uid });
       if (r.hilang) {
         $('hilang-nama').textContent = r.nama ?? '';
         $('hilang-pesan').textContent = r.pesan ? `Pesan dari pemilik: "${r.pesan}"` : '';
@@ -200,6 +200,11 @@ import { ikon } from '../lib/ikon';
       // KTM pemilik sesi di HP ini: langsung buka beranda, tanpa PIN.
       if (r.milik_sesi) {
         location.href = tujuan(r.peran ?? 'mhs');
+        return;
+      }
+      // KTM terdaftar: langsung masuk, kecuali pemiliknya menyalakan "minta PIN setiap tap".
+      if (r.terdaftar && !r.perlu_pin) {
+        selesaiMasuk(await api('/masuk', { uid }));
         return;
       }
       if (r.terdaftar) {

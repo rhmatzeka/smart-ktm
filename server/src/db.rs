@@ -88,7 +88,7 @@ pub fn siapkan(c: &Connection) -> rusqlite::Result<()> {
         c.execute("ALTER TABLE matkul ADD COLUMN dosen_nama TEXT", [])?;
     }
     // Foto profil & semester dari MyUnpam.
-    for (kolom, tipe) in [("foto", "TEXT"), ("semester", "TEXT"), ("hilang", "INTEGER NOT NULL DEFAULT 0"), ("hilang_pesan", "TEXT")] {
+    for (kolom, tipe) in [("foto", "TEXT"), ("semester", "TEXT"), ("hilang", "INTEGER NOT NULL DEFAULT 0"), ("hilang_pesan", "TEXT"), ("pin_tap", "INTEGER NOT NULL DEFAULT 0")] {
         let ada: bool = c.query_row("SELECT COUNT(*) > 0 FROM pragma_table_info('users') WHERE name = ?1", [kolom], |r| r.get(0))?;
         if !ada {
             c.execute(&format!("ALTER TABLE users ADD COLUMN {kolom} {tipe}"), [])?;

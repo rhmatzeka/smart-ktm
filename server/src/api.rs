@@ -57,6 +57,7 @@ pub fn router() -> Router<App> {
         .route("/kehadiran/{id}", get(kehadiran))
         .route("/jadwal", get(jadwal_minggu))
         .route("/ktm/hilang", post(lapor_hilang))
+        .route("/keamanan", post(atur_keamanan))
         .route("/acara", get(daftar_acara).post(buat_acara))
         .route("/acara/{id}", get(lihat_acara))
         .route("/acara/{id}/tap", post(tap_acara))
@@ -134,16 +135,19 @@ struct Uid {
 async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<Uid>) -> Hasil {
     let hash = uid_hash(&app, &b.uid)?;
     let c = app.db.lock().unwrap();
-    let r: Option<(i64, String, String, bool, Option<String>)> = c
-        .query_row("SELECT id, nama, peran, hilang, hilang_pesan FROM users WHERE uid_hash = ?1", [&hash], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+    let r: Option<(i64, String, String, bool, Option<String>, bool)> = c
+        .query_row("SELECT id, nama, peran, hilang, hilang_pesan, pin_tap FROM users WHERE uid_hash = ?1", [&hash], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
         })
         .optional()?;
     let sesi = pengguna(&c, &h).ok();
     Ok(Json(match r {
         // KTM yang dilaporkan hilang tidak bisa dipakai masuk; penemu melihat cara menghubungi pemilik.
-        Some((_, n, _, true, pesan)) => json!({ "terdaftar": true, "hilang": true, "nama": nama_depan(&n), "pesan": pesan.unwrap_or_default(), "milik_sesi": false }),
-        Some((id, n, p, false, _)) => json!({ "terdaftar": true, "hilang": false, "nama": nama_depan(&n), "peran": p, "milik_sesi": sesi.is_some_and(|s| s.id == id) }),
+        Some((_, n, _, true, pesan, _)) => json!({ "terdaftar": true, "hilang": true, "nama": nama_depan(&n), "pesan": pesan.unwrap_or_default(), "milik_sesi": false }),
+        Some((id, n, p, false, _, pin_tap)) => json!({
+            "terdaftar": true, "hilang": false, "nama": nama_depan(&n), "peran": p,
+            "milik_sesi": sesi.is_some_and(|s| s.id == id), "perlu_pin": pin_tap,
+        }),
         None => json!({ "terdaftar": false, "hilang": false, "milik_sesi": false }),
     }))
 }
@@ -214,11 +218,24 @@ async fn daftar(State(app): State<App>, Json(b): Json<Daftar>) -> Hasil {
 struct Masuk {
     uid: Option<String>,
     nim: Option<String>,
+    #[serde(default)]
     pin: String,
 }
 
 async fn masuk(State(app): State<App>, Json(b): Json<Masuk>) -> Hasil {
     let c = app.db.lock().unwrap();
+    // KTM fisik adalah kuncinya: tap KTM masuk tanpa PIN, kecuali pemilik menyalakan "minta PIN".
+    // Masuk pakai NIM selalu butuh PIN.
+    if let Some(uid) = &b.uid {
+        let h = uid_hash(&app, uid)?;
+        let tanpa_pin: Option<(i64, String, String)> = c
+            .query_row("SELECT id, peran, nama FROM users WHERE uid_hash = ?1 AND hilang = 0 AND pin_tap = 0", [&h], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .optional()?;
+        if let (Some((id, peran, nama)), true) = (tanpa_pin, b.pin.is_empty()) {
+            let t = token_baru(&c, id)?;
+            return Ok(Json(json!({ "token": t, "peran": peran, "nama": nama })));
+        }
+    }
     let cari = "SELECT id, peran, nama, pin_hash FROM users WHERE ";
     let akun: Option<(i64, String, String, String)> = match (&b.uid, &b.nim) {
         (Some(uid), _) => {
@@ -262,6 +279,7 @@ async fn saya(State(app): State<App>, h: HeaderMap) -> Hasil {
         "bio": bio, "github": github, "portofolio": portofolio, "publik": publik, "ktm": ktm,
         "foto": foto, "semester": semester,
         "hilang": c.query_row("SELECT hilang FROM users WHERE id = ?1", [u.id], |r| r.get::<_, bool>(0))?,
+        "pin_tap": c.query_row("SELECT pin_tap FROM users WHERE id = ?1", [u.id], |r| r.get::<_, bool>(0))?,
         "hilang_pesan": c.query_row("SELECT hilang_pesan FROM users WHERE id = ?1", [u.id], |r| r.get::<_, Option<String>>(0))?,
     })))
 }
@@ -646,6 +664,18 @@ async fn lapor_hilang(State(app): State<App>, h: HeaderMap, Json(b): Json<LaporH
         params![b.hilang, if b.hilang && !pesan.is_empty() { Some(pesan) } else { None }, u.id],
     )?;
     Ok(Json(json!({ "hilang": b.hilang })))
+}
+
+#[derive(Deserialize)]
+struct Keamanan {
+    pin_tap: bool,
+}
+
+async fn atur_keamanan(State(app): State<App>, h: HeaderMap, Json(b): Json<Keamanan>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    c.execute("UPDATE users SET pin_tap = ?1 WHERE id = ?2", params![b.pin_tap, u.id])?;
+    Ok(Json(json!({ "pin_tap": b.pin_tap })))
 }
 
 // ---------- acara & sertifikat ----------

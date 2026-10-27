@@ -63,6 +63,7 @@ const panah = ikon('kembali', 'ikon panah');
 
     <p class="label-bagian">Keamanan</p>
     <ul class="daftar-aksi">
+      <li><label class="baris-saklar"><Fragment set:html={ikon('perisai')} /><span><b>Minta PIN setiap tap KTM</b><small>Mati: tap KTM langsung masuk. Nyalakan kalau HP sering dipinjam.</small></span><input type="checkbox" id="pin-tap" /></label></li>
       <li><button type="button" id="buka-hilang"><Fragment set:html={ikon('peringatan')} /><span><b>Laporkan KTM hilang</b><small>Blokir kartu dan tampilkan kontakmu ke penemu</small></span><Fragment set:html={panah} /></button></li>
     </ul>
     <form class="blok-form" id="form-hilang" hidden>
@@ -133,6 +134,11 @@ const panah = ikon('kembali', 'ikon panah');
   .baris-simpan { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px; }
   .tersimpan { color: var(--hijau); font-size: 0.8rem; font-weight: 700; }
 
+  .baris-saklar { display: flex; gap: 12px; align-items: center; padding: 12px 14px; margin: 0; font: inherit; cursor: pointer; }
+  .baris-saklar span { flex: 1; display: flex; flex-direction: column; }
+  .baris-saklar b { font-size: 0.9rem; font-weight: 700; }
+  .baris-saklar small { font-size: 0.75rem; color: var(--teks-2); font-weight: 400; }
+  .baris-saklar input { width: 20px; height: 20px; min-height: 0; accent-color: var(--biru); flex: none; }
   .banner-hilang { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; margin-bottom: 4px; border-radius: 14px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
   .banner-hilang b { font-size: 0.9rem; }
   .banner-hilang span { font-size: 0.78rem; }
@@ -170,6 +176,7 @@ const panah = ikon('kembali', 'ikon panah');
       $<HTMLInputElement>('portofolio').value = s.portofolio;
       $<HTMLInputElement>('publik').checked = s.publik;
       $('banner-hilang').hidden = !s.hilang;
+      ($('pin-tap') as HTMLInputElement).checked = !!s.pin_tap;
       $('buka-hilang').closest('ul')!.hidden = !!s.hilang;
       if (s.hilang_pesan) ($('pesan-hilang') as HTMLTextAreaElement).value = s.hilang_pesan;
       const isiPublik = [s.bio && 'bio', s.github && 'GitHub', s.portofolio && 'portofolio'].filter(Boolean);
@@ -177,6 +184,11 @@ const panah = ikon('kembali', 'ikon panah');
     })
     .catch((e) => tanganiGalat(e, salah));
 
+  $('pin-tap').addEventListener('change', async (e) => {
+    const el = e.target as HTMLInputElement;
+    try { await api('/keamanan', { pin_tap: el.checked }); }
+    catch (err) { el.checked = !el.checked; tanganiGalat(err, salah); }
+  });
   $('buka-hilang').addEventListener('click', () => {
     const f = $('form-hilang');
     f.hidden = !f.hidden;
