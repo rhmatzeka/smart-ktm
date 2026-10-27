@@ -19,6 +19,12 @@ ssh "$HOST" 'id smartktm >/dev/null 2>&1 || useradd --system --home /opt/smart-k
 rsync -az "$SEMENTARA/smart-ktm-server" "$(readlink -f ~/.foundry/bin/anvil)" "$(readlink -f ~/.foundry/bin/cast)" "$HOST:/opt/smart-ktm/bin/"
 rsync -az --delete web/dist/ "$HOST:/opt/smart-ktm/web/"
 rm -rf "$SEMENTARA"
+# APK Android terbaru dari rilis GitHub "apk-terbaru" (dibuat workflow Android), kalau ada.
+if gh release view apk-terbaru >/dev/null 2>&1; then
+  APK=$(mktemp -d)
+  gh release download apk-terbaru -p SmartKTM.apk -D "$APK" >/dev/null 2>&1 && ssh "$HOST" 'mkdir -p /opt/smart-ktm/data/unduh' && rsync -az "$APK/SmartKTM.apk" "$HOST:/opt/smart-ktm/data/unduh/SmartKTM.apk"
+  rm -rf "$APK"
+fi
 
 if [ "$PINDAH" = "--pindah" ]; then
   echo "3. Pindahkan data dari laptop (layanan laptop dihentikan dulu supaya data utuh)"

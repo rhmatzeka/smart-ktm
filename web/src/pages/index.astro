@@ -89,6 +89,10 @@ import { ikon } from '../lib/ikon';
       <button class="tombol garis-biru" type="submit">Masuk</button>
     </form>
   </section>
+  <a class="pasang-apk" id="pasang-apk" href="/unduh/SmartKTM.apk" hidden>
+    <span><b>Pasang aplikasi Android</b><small>Tempel KTM, aplikasi langsung terbuka. 13,7 MB</small></span>
+    <span class="unduh-label">Unduh</span>
+  </a>
   <p class="catatan-kecil">Smart KTM tidak menulis apa pun ke kartu atau ke sistem kampus.</p>
 </Dasar>
 
@@ -144,6 +148,11 @@ import { ikon } from '../lib/ikon';
 
   .pesan-penemu { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #fef3c7; color: #92400e; font-size: 0.85rem; font-weight: 600; }
   .pesan-galat { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: 0.85rem; font-weight: 600; }
+  .pasang-apk { display: flex; gap: 12px; align-items: center; margin: 14px 14px 0; padding: 12px 14px; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; color: var(--teks); text-decoration: none; }
+  .pasang-apk span:first-child { flex: 1; display: flex; flex-direction: column; }
+  .pasang-apk b { font-size: 0.9rem; }
+  .pasang-apk small { font-size: 0.75rem; color: var(--teks-2); }
+  .unduh-label { font-size: 0.8rem; font-weight: 800; color: var(--putih); background: var(--biru); padding: 6px 12px; border-radius: 10px; }
   .catatan-kecil { text-align: center; font-size: 0.75rem; color: var(--teks-2); margin: 16px 16px 28px; }
 </style>
 
@@ -273,6 +282,9 @@ import { ikon } from '../lib/ikon';
       })
       .catch((e) => { if (e instanceof GalatApi && e.status === 401) sesi.hapus(); });
   }
+
+  // Di browser Android: tawarkan aplikasi (tap KTM membuka aplikasi otomatis).
+  if (diAndroid() && !diAplikasi()) $('pasang-apk').hidden = false;
 
   // Di aplikasi Android: langsung siap baca (termasuk tap yang membuka aplikasi).
   // Di Chrome: langsung siap baca kalau izin NFC sudah pernah diberikan.
