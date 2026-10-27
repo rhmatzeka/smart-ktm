@@ -7,14 +7,14 @@
 Tap your student ID card on a phone and your day opens up: the next class, the week's schedule, assignments, and attendance, plus an AI agent that answers questions and takes actions for you. In class, the lecturer's phone becomes an attendance machine: students tap their cards, their photo appears for the lecturer to check, and every check-in is anchored on a smart contract, so attendance cannot be edited quietly afterwards.
 
 - **Live app:** https://ktm.rahmateka.my.id
-- **Android app:** https://ktm.rahmateka.my.id/unduh/SmartKTM.apk
+- **Android app:** https://ktm.rahmateka.my.id/unduh/SmartKTM.apk?v=2
 - **Contracts on Ethereum Sepolia:** attendance [`PresensiKTM`](https://sepolia.etherscan.io/address/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d), certificates [`SertifikatKTM`](https://sepolia.etherscan.io/address/0x4cf209D67BBcd33c8a1Dc84E0428841D3F0adA9b)
 
 ## Get the app
 
 | Device | How | Tap KTM |
 |---|---|---|
-| **Android (recommended)** | Download the [APK](https://ktm.rahmateka.my.id/unduh/SmartKTM.apk) (≈14 MB), open it, allow "install from this source", and choose *Install anyway* if Play Protect warns (the app is not on the Play Store yet). | ✅ Native NFC. Holding your KTM to the phone opens the app even when it is closed. |
+| **Android (recommended)** | Download the [APK](https://ktm.rahmateka.my.id/unduh/SmartKTM.apk?v=2) (≈14 MB), open it, allow "install from this source", and choose *Install anyway* if Play Protect warns (the app is not on the Play Store yet). | ✅ Native NFC. Holding your KTM to the phone opens the app even when it is closed. |
 | Android, Chrome | Open https://ktm.rahmateka.my.id in **Chrome** (not Brave). Optional: menu → *Add to Home screen*. | ✅ Web NFC, while the page is open. |
 | iPhone | Open the site in Safari → *Share* → *Add to Home Screen*. Sign in with NIM and PIN. | ❌ iPhone NFC cannot read MIFARE Classic cards. |
 | Laptop | Open the site in any browser. Sign in with NIM and PIN. | ❌ |

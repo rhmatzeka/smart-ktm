@@ -11,7 +11,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use axum::Router;
+use axum::http::{header, HeaderValue};
 use tower_http::services::{ServeDir, ServeFile};
+use tower_http::set_header::SetResponseHeader;
 
 #[derive(Clone)]
 pub struct App {
@@ -89,7 +91,11 @@ async fn main() -> anyhow::Result<()> {
     // APK Android disajikan dari data/unduh (diunggah scripts/deploy-vps.sh, tidak ikut repo).
     let router = Router::new()
         .nest("/api", api::router())
-        .nest_service("/unduh", ServeDir::new(format!("{data_dir}/unduh")))
+        // no-cache: Cloudflare tidak menyimpan APK lama, jadi unduhan selalu versi terbaru.
+        .nest_service(
+            "/unduh",
+            SetResponseHeader::overriding(ServeDir::new(format!("{data_dir}/unduh")), header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
+        )
         .fallback_service(ServeDir::new(&web).not_found_service(ServeFile::new(format!("{web}/404.html"))))
         .with_state(app);
 

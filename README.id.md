@@ -7,14 +7,14 @@
 Tap KTM ke HP dan harimu langsung terbuka: kelas berikutnya, jadwal seminggu, tugas, dan kehadiran, ditambah AI agent yang menjawab sekaligus bertindak. Di kelas, HP dosen jadi mesin absen: mahasiswa tap KTM, fotonya muncul untuk dicocokkan, dan setiap kehadiran dicatat di smart contract sehingga tidak bisa diubah diam-diam.
 
 - **Aplikasi web:** https://ktm.rahmateka.my.id
-- **Aplikasi Android:** https://ktm.rahmateka.my.id/unduh/SmartKTM.apk
+- **Aplikasi Android:** https://ktm.rahmateka.my.id/unduh/SmartKTM.apk?v=2
 - **Kontrak di Ethereum Sepolia:** presensi [`PresensiKTM`](https://sepolia.etherscan.io/address/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d), sertifikat [`SertifikatKTM`](https://sepolia.etherscan.io/address/0x4cf209D67BBcd33c8a1Dc84E0428841D3F0adA9b)
 
 ## Cara memasang
 
 | Perangkat | Caranya | Tap KTM |
 |---|---|---|
-| **Android (disarankan)** | Unduh [APK](https://ktm.rahmateka.my.id/unduh/SmartKTM.apk) (±14 MB), buka file-nya, izinkan "instal dari sumber ini", lalu pilih *Tetap instal* kalau Play Protect memberi peringatan (aplikasinya belum ada di Play Store). | ✅ NFC native. Menempel KTM membuka aplikasi walau sedang tertutup. |
+| **Android (disarankan)** | Unduh [APK](https://ktm.rahmateka.my.id/unduh/SmartKTM.apk?v=2) (±14 MB), buka file-nya, izinkan "instal dari sumber ini", lalu pilih *Tetap instal* kalau Play Protect memberi peringatan (aplikasinya belum ada di Play Store). | ✅ NFC native. Menempel KTM membuka aplikasi walau sedang tertutup. |
 | Android, Chrome | Buka https://ktm.rahmateka.my.id di **Chrome** (bukan Brave). Opsional: menu → *Tambahkan ke layar utama*. | ✅ Web NFC, selama halaman terbuka. |
 | iPhone | Buka situsnya di Safari → *Bagikan* → *Tambahkan ke Layar Utama*. Masuk pakai NIM dan PIN. | ❌ NFC iPhone tidak bisa membaca kartu MIFARE Classic. |
 | Laptop | Buka situsnya di browser apa saja. Masuk pakai NIM dan PIN. | ❌ |

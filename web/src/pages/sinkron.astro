@@ -31,7 +31,7 @@ import { ikon } from '../lib/ikon';
     <article class="kartu langkah-sinkron" id="perbarui" hidden>
       <p class="kartu-judul"><span class="titik-ikon t-oranye"><Fragment set:html={ikon('kalender')} /></span>Ada cara yang lebih gampang</p>
       <p class="redup kecil">Pasang Smart KTM versi terbaru supaya sinkron MyUnpam cukup satu tombol.</p>
-      <a class="tombol" href="/unduh/SmartKTM.apk">Unduh aplikasi terbaru</a>
+      <a class="tombol" href="/unduh/SmartKTM.apk?v=2">Unduh aplikasi terbaru</a>
     </article>
 
     <!-- Cara pakai -->
@@ -56,7 +56,7 @@ import { ikon } from '../lib/ikon';
   .ikon-kembali { width: 40px; height: 40px; border-radius: 12px; background: var(--biru-pudar); color: var(--biru); display: grid; place-items: center; }
   .langkah-sinkron ol { margin: 0 0 16px; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; }
   .langkah-sinkron code { background: var(--latar); padding: 1px 6px; border-radius: 6px; font-size: 0.85rem; }
-  .langkah-sinkron a { color: var(--biru); font-weight: 700; }
+  .langkah-sinkron a:not(.tombol) { color: var(--biru); font-weight: 700; }
   .laptop { margin-top: 12px; text-align: center; }
   .bookmarklet { display: inline-block; padding: 4px 10px; border-radius: 8px; background: var(--biru-pudar); text-decoration: none; }
   .tersalin { color: var(--hijau); font-weight: 700; text-align: center; margin-top: 8px; min-height: 1.4em; }
@@ -140,7 +140,9 @@ import { ikon } from '../lib/ikon';
       }
     });
   } else if (plugin('KtmNfc')) {
+    // Aplikasi versi lama: bookmark tidak bisa dipakai di dalam aplikasi, jadi cukup tawarkan pembaruan.
     $('perbarui').hidden = false;
+    $('cara').hidden = true;
   }
 
   // Data datang dari bookmark lewat #hash; simpan dulu kalau belum masuk.
