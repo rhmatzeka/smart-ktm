@@ -1044,6 +1044,7 @@ mod tes {
 
 /// Kirim ulang presensi & sertifikat yang gagal atau macet ke blockchain.
 /// Dicek dulu ke kontrak supaya yang ternyata sudah tercatat tidak dikirim dua kali.
+/// Kirim ulang ke blockchain: yang gagal, yang macet, dan yang tercatat 'lokal' sebelum blockchain aktif.
 pub async fn coba_ulang_chain(app: &App) {
     let Some(ch) = app.chain.clone() else { return };
     let macet = waktu::teks(&(waktu::sekarang() - chrono::Duration::minutes(3)));
@@ -1056,10 +1057,10 @@ pub async fn coba_ulang_chain(app: &App) {
         };
         (
             ambil("SELECT p.id, p.sesi_id, u.uid_hash, p.bukti FROM presensi p JOIN users u ON u.id = p.user_id
-                   WHERE (p.status = 'gagal' OR (p.status = 'menunggu' AND p.waktu < ?1)) AND u.uid_hash IS NOT NULL LIMIT 20"),
+                   WHERE (p.status IN ('gagal', 'lokal') OR (p.status = 'menunggu' AND p.waktu < ?1)) AND u.uid_hash IS NOT NULL LIMIT 20"),
             if ch.ada_sertifikat() {
                 ambil("SELECT s.id, s.acara_id, u.uid_hash, s.kode FROM sertifikat s JOIN users u ON u.id = s.user_id
-                       WHERE (s.status = 'gagal' OR (s.status = 'menunggu' AND s.waktu < ?1)) AND u.uid_hash IS NOT NULL LIMIT 20")
+                       WHERE (s.status IN ('gagal', 'lokal') OR (s.status = 'menunggu' AND s.waktu < ?1)) AND u.uid_hash IS NOT NULL LIMIT 20")
             } else {
                 vec![]
             },
