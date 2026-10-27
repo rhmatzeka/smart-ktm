@@ -127,9 +127,37 @@ fn perangkat_baru(c: &Connection, user: i64) -> rusqlite::Result<String> {
     Ok(t)
 }
 
-fn perangkat_sah(c: &Connection, user: i64, token: Option<&str>) -> rusqlite::Result<bool> {
-    let Some(t) = token.filter(|t| !t.is_empty()) else { return Ok(false) };
-    c.query_row("SELECT EXISTS(SELECT 1 FROM perangkat WHERE kode_hash = ?1 AND user_id = ?2)", params![db::sha(t), user], |r| r.get(0))
+/// Token HP tepercaya yang dikirim HP: satu per akun yang pernah masuk di HP itu,
+/// supaya HP yang dipakai bergantian (pemilik lalu teman) tidak saling menimpa. Versi lama mengirim satu teks.
+#[derive(Deserialize, Default)]
+#[serde(untagged)]
+enum TokenHp {
+    #[default]
+    Kosong,
+    Satu(String),
+    Banyak(Vec<String>),
+}
+
+impl TokenHp {
+    fn daftar(&self) -> Vec<&str> {
+        match self {
+            TokenHp::Kosong => vec![],
+            TokenHp::Satu(t) => vec![t.as_str()],
+            TokenHp::Banyak(v) => v.iter().take(MAKS_TOKEN_HP).map(String::as_str).collect(),
+        }
+    }
+}
+
+const MAKS_TOKEN_HP: usize = 5;
+
+fn perangkat_sah(c: &Connection, user: i64, token: &[&str]) -> rusqlite::Result<bool> {
+    for t in token.iter().filter(|t| !t.is_empty()) {
+        let ada: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM perangkat WHERE kode_hash = ?1 AND user_id = ?2)", params![db::sha(t), user], |r| r.get(0))?;
+        if ada {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// IP asli pengunjung (lewat Cloudflare Tunnel).
@@ -199,7 +227,7 @@ struct Uid {
 struct CekKtm {
     uid: String,
     #[serde(default)]
-    perangkat: Option<String>,
+    perangkat: TokenHp,
 }
 
 /// `milik_sesi` = KTM ini milik akun yang sudah masuk di perangkat ini,
@@ -220,7 +248,7 @@ async fn ktm_cek(State(app): State<App>, h: HeaderMap, Json(b): Json<CekKtm>) ->
         Some((id, n, p, false, _, pin_tap)) => json!({
             "terdaftar": true, "hilang": false, "nama": nama_depan(&n), "peran": p,
             "milik_sesi": sesi.is_some_and(|s| s.id == id),
-            "perlu_pin": pin_tap || !perangkat_sah(&c, id, b.perangkat.as_deref())?,
+            "perlu_pin": pin_tap || !perangkat_sah(&c, id, &b.perangkat.daftar())?,
         }),
         None => json!({ "terdaftar": false, "hilang": false, "milik_sesi": false }),
     }))
@@ -295,7 +323,7 @@ struct Masuk {
     #[serde(default)]
     pin: String,
     #[serde(default)]
-    perangkat: Option<String>,
+    perangkat: TokenHp,
 }
 
 async fn masuk(State(app): State<App>, h: HeaderMap, Json(b): Json<Masuk>) -> Hasil {
@@ -317,7 +345,7 @@ async fn masuk(State(app): State<App>, h: HeaderMap, Json(b): Json<Masuk>) -> Ha
     }
     // Tap KTM tanpa PIN: hanya di HP tepercaya dan kalau pemilik tidak menyalakan "minta PIN".
     if b.uid.is_some() && b.pin.is_empty() {
-        if !pin_tap && perangkat_sah(&c, id, b.perangkat.as_deref())? {
+        if !pin_tap && perangkat_sah(&c, id, &b.perangkat.daftar())? {
             let t = token_baru(&c, id)?;
             return Ok(Json(json!({ "token": t, "peran": peran, "nama": nama })));
         }
@@ -991,10 +1019,26 @@ mod tes {
         db::siapkan(&c).unwrap();
         let (a, b): (i64, i64) = c.query_row("SELECT MIN(id), MAX(id) FROM users WHERE peran = 'mhs'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         let hp = perangkat_baru(&c, a).unwrap();
-        assert!(perangkat_sah(&c, a, Some(&hp)).unwrap());
-        assert!(!perangkat_sah(&c, b, Some(&hp)).unwrap(), "token HP milik akun lain tidak berlaku");
-        assert!(!perangkat_sah(&c, a, None).unwrap());
-        assert!(!perangkat_sah(&c, a, Some("tebakan")).unwrap());
+        assert!(perangkat_sah(&c, a, &[hp.as_str()]).unwrap());
+        assert!(!perangkat_sah(&c, b, &[hp.as_str()]).unwrap(), "token HP milik akun lain tidak berlaku");
+        assert!(!perangkat_sah(&c, a, &[]).unwrap());
+        assert!(!perangkat_sah(&c, a, &["tebakan"]).unwrap());
+    }
+
+    #[test]
+    fn satu_hp_dipakai_bergantian_dua_akun() {
+        let c = Connection::open_in_memory().unwrap();
+        db::siapkan(&c).unwrap();
+        let (a, b): (i64, i64) = c.query_row("SELECT MIN(id), MAX(id) FROM users WHERE peran = 'mhs'", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+        let hp_a = perangkat_baru(&c, a).unwrap();
+        let hp_b = perangkat_baru(&c, b).unwrap();
+        // Teman daftar di HP ini sesudah pemilik: token pemilik tidak boleh hilang.
+        let disimpan: TokenHp = serde_json::from_value(json!([hp_b, hp_a])).unwrap();
+        assert!(perangkat_sah(&c, a, &disimpan.daftar()).unwrap());
+        assert!(perangkat_sah(&c, b, &disimpan.daftar()).unwrap());
+        // Versi lama mengirim satu teks.
+        let lama: TokenHp = serde_json::from_value(json!(hp_a)).unwrap();
+        assert!(perangkat_sah(&c, a, &lama.daftar()).unwrap());
     }
 }
 

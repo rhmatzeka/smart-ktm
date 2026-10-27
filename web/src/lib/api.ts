@@ -12,15 +12,26 @@ export const sesi = {
   },
 };
 
-/** Token HP tepercaya: tetap tersimpan walau keluar, supaya tap KTM di HP ini tidak minta PIN lagi. */
+/**
+ * Token HP tepercaya: tetap tersimpan walau keluar, supaya tap KTM di HP ini tidak minta PIN lagi.
+ * Satu token per akun (maks 5, terbaru di depan), jadi HP yang dipakai bergantian tidak saling menimpa.
+ */
 const KUNCI_HP = 'smartktm.perangkat';
+const MAKS_HP = 5;
 export const perangkat = {
-  ambil(): string | null {
-    try { return localStorage.getItem(KUNCI_HP); } catch { return null; }
+  ambil(): string[] {
+    try {
+      const isi = localStorage.getItem(KUNCI_HP);
+      if (!isi) return [];
+      if (!isi.startsWith('[')) return [isi]; // format lama: satu token
+      const d = JSON.parse(isi);
+      return Array.isArray(d) ? d.filter((t) => typeof t === 'string') : [];
+    } catch { return []; }
   },
   simpan(t?: string) {
     if (!t) return;
-    try { localStorage.setItem(KUNCI_HP, t); } catch { /* abaikan */ }
+    const semua = [t, ...perangkat.ambil().filter((x) => x !== t)].slice(0, MAKS_HP);
+    try { localStorage.setItem(KUNCI_HP, JSON.stringify(semua)); } catch { /* abaikan */ }
   },
 };
 
