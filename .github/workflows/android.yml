@@ -27,6 +27,13 @@ jobs:
           distribution: temurin
           java-version: 21
       - run: npm ci
+      # Kunci tanda tangan tetap (secret DEBUG_KEYSTORE, base64), supaya APK baru bisa menimpa versi lama
+      # tanpa uninstall. Tanpa secret, Gradle membuat kunci acak per build.
+      - name: Kunci tanda tangan tetap
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+        if: env.DEBUG_KEYSTORE != ''
+        run: mkdir -p ~/.android && echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
       - name: Ikon dan splash dari mobile/assets
         run: npx -y @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#1747C9' --splashBackgroundColor '#1747C9'
       - run: npx cap sync android

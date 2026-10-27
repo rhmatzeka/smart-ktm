@@ -96,7 +96,12 @@ async fn main() -> anyhow::Result<()> {
             "/unduh",
             SetResponseHeader::overriding(ServeDir::new(format!("{data_dir}/unduh")), header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
         )
-        .fallback_service(ServeDir::new(&web).not_found_service(ServeFile::new(format!("{web}/404.html"))))
+        // no-cache: aplikasi Android (WebView) selalu memuat halaman versi terbaru setelah deploy.
+        .fallback_service(SetResponseHeader::overriding(
+            ServeDir::new(&web).not_found_service(ServeFile::new(format!("{web}/404.html"))),
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("no-cache"),
+        ))
         .with_state(app);
 
     let alamat = format!("{}:{}", env("HOST", "127.0.0.1"), env("PORT", "8080"));
