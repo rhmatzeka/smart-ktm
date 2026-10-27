@@ -99,7 +99,8 @@ import { ikon } from '../lib/ikon';
 </Dasar>
 
 <style is:global>
-  .tautan-bawah { display: flex; justify-content: center; gap: 18px; margin-top: -4px; }
+  .catatan-kecil:has(+ .tautan-bawah) { margin-bottom: 8px; }
+  .tautan-bawah { display: flex; justify-content: center; gap: 18px; margin-top: 0; }
   .tautan-bawah a { color: var(--biru); font-weight: 600; text-decoration: none; }
   body:has(.kartu-masuk) .halaman { background: var(--latar); }
   .pita-masuk {
