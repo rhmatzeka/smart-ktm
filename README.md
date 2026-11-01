@@ -10,6 +10,8 @@ Tap your student ID card on a phone and your day opens up: the next class, the w
 - **Android app:** https://ktm.rahmateka.my.id/unduh/SmartKTM.apk?v=2
 - **Contracts on Ethereum Sepolia:** attendance [`PresensiKTM`](https://sepolia.etherscan.io/address/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d), certificates [`SertifikatKTM`](https://sepolia.etherscan.io/address/0x4cf209D67BBcd33c8a1Dc84E0428841D3F0adA9b)
 
+<p align="center"><img src="docs/images/preview.png" width="320" alt="Smart KTM sign-in screen: tap the student ID card or use NIM and PIN"></p>
+
 ## Get the app
 
 | Device | How | Tap KTM |
