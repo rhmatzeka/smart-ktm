@@ -12,6 +12,15 @@ import { ikon } from '../lib/ikon';
       </div>
       <h1 class="sapa-besar">Mode dosen</h1>
       <p class="sapa-kecil" id="nama-dosen"></p>
+      <section class="rekap-semua" id="rekap-semua" aria-labelledby="rs-judul" hidden>
+        <p class="rs-judul" id="rs-judul">Rekap semua kelas</p>
+        <div class="rs-angka">
+          <div><b id="rs-kelas">0</b><span>kelas</span></div>
+          <div><b id="rs-rata">–</b><span>rata-rata hadir</span></div>
+          <div><b id="rs-perlu">0</b><span>perlu perhatian</span></div>
+        </div>
+        <ul class="rs-perhatian" id="rs-perhatian"></ul>
+      </section>
       <a class="ke-acara" href="/acara/"><Fragment set:html={ikon('perisai')} /><span><b>Acara & sertifikat on-chain</b><small>Check-in seminar dengan tap KTM</small></span></a>
       <button class="ke-acara" id="undang" type="button"><Fragment set:html={ikon('orang')} /><span><b>Undang dosen lain</b><small>Kode sekali pakai, berlaku 7 hari</small></span></button>
       <div class="kotak-undangan" id="kotak-undangan" hidden>
@@ -86,6 +95,26 @@ import { ikon } from '../lib/ikon';
   .kelas-dosen .ke-rekap { display: inline-flex; gap: 6px; align-items: center; margin: 6px 0 0 14px; font-size: 0.8rem; font-weight: 700; color: var(--putih); text-decoration: none; opacity: 0.92; }
   .kelas-dosen .ke-rekap .ikon { width: 15px; height: 15px; }
   .kelas-dosen .aktif { display: inline-block; margin-top: 4px; font-size: 0.72rem; font-weight: 700; color: var(--hijau); background: #dcfce7; padding: 2px 8px; border-radius: 99px; }
+  .rekap-semua { margin-top: 14px; border: 1px solid var(--garis); border-radius: 16px; background: var(--putih); }
+  .rs-judul { font-size: 0.78rem; font-weight: 700; color: var(--teks-2); padding: 10px 12px 0; }
+  .rs-angka { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .rs-angka div { display: flex; flex-direction: column; padding: 6px 12px 12px; }
+  .rs-angka div + div { border-left: 1px solid var(--garis); }
+  .rs-angka b { font-size: 1.25rem; font-weight: 800; color: var(--biru); }
+  .rs-angka span { font-size: 0.72rem; color: var(--teks-2); }
+  .rs-perhatian { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--garis); }
+  .rs-perhatian:empty { display: none; }
+  .rs-perhatian li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; font-size: 0.82rem; }
+  .rs-perhatian li + li { border-top: 1px solid #eef1f6; }
+  .rs-perhatian .isi { min-width: 0; }
+  .rs-perhatian .isi b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rs-perhatian .isi small { display: block; color: var(--teks-2); font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rs-perhatian .lagi { color: var(--teks-2); font-size: 0.75rem; }
+  .pil-alpa { flex: none; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .pil-alpa.hampir { background: #fef3c7; color: #92400e; }
+  .pil-alpa.lewat { background: #ffe4e6; color: #9f1239; }
+  .kelas-dosen .angka-kelas { display: block; margin-top: 2px; font-size: 0.78rem; font-weight: 700; color: var(--biru); }
+  .kelas-dosen .angka-kelas .bahaya { color: #b91c1c; }
   .hitung { font-weight: 600; color: var(--teks-2); }
   .hitung b { font-size: 1.8rem; color: var(--biru); }
   .judul-kelas { font-size: 1.6rem; font-weight: 800; margin-top: 14px; }
@@ -155,15 +184,44 @@ import { ikon } from '../lib/ikon';
     try {
       const r = await api<any>('/dosen/kelas');
       $('nama-dosen').textContent = r.nama;
+      rekapSemua(r.kelas);
       $('kelas').innerHTML = r.kelas
         .map((k: any, i: number) => `<li><button data-matkul="${k.id}">${ikonApp('kalender', WARNA[i % WARNA.length])}
           <span><b>${esc(k.nama)}</b><span class="redup">${esc(k.hari)} ${esc(k.mulai.replace(':', '.'))} · ${esc(k.ruang)} · ${k.peserta} mahasiswa</span>
+          ${angkaKelas(k)}
           ${k.sesi_aktif ? '<br><span class="aktif">Sesi sedang dibuka</span>' : ''}</span></button>
           <a class="ke-rekap" href="/rekap/?k=${k.id}">${ikon('tugas')} Rekap kehadiran${k.pertemuan ? ` (${k.pertemuan} sesi)` : ''}</a></li>`)
         .join('');
     } catch (e) {
       tanganiGalat(e, salah);
     }
+  }
+
+  type Perlu = { nama: string; alpa: number; status: string };
+
+  /** Ringkasan semua kelas: rata-rata hadir tertimbang jumlah pertemuan x peserta, dan mahasiswa yang dekat batas alpa. */
+  function rekapSemua(kelas: any[]) {
+    const ada = kelas.filter((k) => k.rata_hadir !== null && k.rata_hadir !== undefined);
+    const bobot = ada.reduce((a, k) => a + k.pertemuan * k.peserta, 0);
+    const rata = bobot ? Math.round(ada.reduce((a, k) => a + k.rata_hadir * k.pertemuan * k.peserta, 0) / bobot) : null;
+    const perlu: (Perlu & { kelas: string; id: number })[] = kelas
+      .flatMap((k) => (k.perlu || []).map((p: Perlu) => ({ ...p, kelas: k.nama, id: k.id })))
+      .sort((a, b) => b.alpa - a.alpa || a.nama.localeCompare(b.nama));
+    $('rs-kelas').textContent = String(kelas.length);
+    $('rs-rata').textContent = rata === null ? '–' : `${rata}%`;
+    $('rs-perlu').textContent = String(perlu.length);
+    const MAKS = 5;
+    $('rs-perhatian').innerHTML =
+      perlu.slice(0, MAKS).map((p) => `<li><span class="isi"><b>${esc(p.nama)}</b><small>${esc(p.kelas)}</small></span>
+        <span class="pil-alpa ${p.status === 'lewat batas' ? 'lewat' : 'hampir'}">alpa ${p.alpa}</span></li>`).join('') +
+      (perlu.length > MAKS ? `<li class="lagi">+${perlu.length - MAKS} lainnya, lihat di rekap tiap kelas</li>` : '');
+    $('rekap-semua').hidden = !kelas.length;
+  }
+
+  function angkaKelas(k: any) {
+    if (k.rata_hadir === null || k.rata_hadir === undefined) return '';
+    const n = (k.perlu || []).length;
+    return `<span class="angka-kelas">Hadir ${k.rata_hadir}%${n ? ` · <span class="bahaya">${n} perlu perhatian</span>` : ''}</span>`;
   }
 
   function statusChain(p: any) {

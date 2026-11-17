@@ -62,6 +62,7 @@ pub fn router() -> Router<App> {
         .route("/notifikasi", get(notifikasi))
         .route("/ktm/jejak", get(lihat_jejak))
         .route("/dosen/kelas/{id}/rekap", get(lihat_rekap))
+        .route("/dosen/kelas/{id}/keterangan", post(simpan_keterangan))
         .route("/unduh/rekap/{token}", get(unduh_rekap))
         .route("/kalender", get(link_kalender))
         .route("/akun/hapus", post(hapus_akun_saya))
@@ -633,6 +634,13 @@ async fn dosen_kelas(State(app): State<App>, h: HeaderMap) -> Hasil {
             }))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
+    // Rekap ringkas tiap kelas untuk halaman utama mode dosen.
+    let mut kelas = kelas;
+    for k in kelas.iter_mut() {
+        let r = rekap::rekap(&c, k["id"].as_i64().unwrap_or_default())?;
+        k["rata_hadir"] = json!(r.rata_hadir());
+        k["perlu"] = json!(r.perlu_perhatian().iter().map(|b| json!({ "nama": b.nama, "alpa": b.alpa, "status": b.status })).collect::<Vec<_>>());
+    }
     Ok(Json(json!({ "nama": u.nama, "kelas": kelas })))
 }
 
@@ -758,6 +766,11 @@ async fn tap_presensi(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>,
             params![id, mid, saat, bukti, status],
         )?;
         let pid = c.last_insert_rowid();
+        // Sempat ditandai izin/sakit tapi ternyata datang dan tap: yang berlaku hadir.
+        c.execute(
+            "DELETE FROM keterangan WHERE user_id = ?1 AND pertemuan = ?2 AND matkul_id = (SELECT matkul_id FROM sesi WHERE id = ?3)",
+            params![mid, ke, id],
+        )?;
         catat_jejak(&c, mid, "presensi", &format!("Presensi {nama_matkul} pertemuan {ke}, dicatat oleh {}", u.nama), Some(pid))?;
         let mut v = dasar;
         v["status"] = json!("hadir");
@@ -920,9 +933,39 @@ async fn lihat_rekap(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>) 
         return Err(galat(StatusCode::NOT_FOUND, "Kelas tidak ditemukan"));
     }
     let mut v = rekap::rekap(&c, id)?.json();
+    if let (Some(ch), Some(mhs)) = (app.chain.as_ref(), v["mahasiswa"].as_array_mut()) {
+        for sel in mhs.iter_mut().filter_map(|m| m["sel"].as_array_mut()).flatten() {
+            if let Some(link) = sel["tx"].as_str().and_then(|t| ch.link_tx(t)) {
+                sel["link_tx"] = json!(link);
+            }
+        }
+    }
     let kedaluwarsa = waktu::sekarang().timestamp() + LINK_REKAP_DETIK;
     v["unduh"] = json!(format!("/api/unduh/rekap/{}.xlsx", token_rekap(&app.rahasia, id, u.id, kedaluwarsa)));
     Ok(Json(v))
+}
+
+#[derive(Deserialize)]
+struct Keterangan {
+    nim: String,
+    pertemuan: i64,
+    /// "I" izin, "S" sakit, "" alpa (hapus keterangan).
+    jenis: String,
+    #[serde(default)]
+    catatan: String,
+}
+
+async fn simpan_keterangan(State(app): State<App>, h: HeaderMap, Path(id): Path<i64>, Json(b): Json<Keterangan>) -> Hasil {
+    let c = app.db.lock().unwrap();
+    let u = pengguna(&c, &h)?;
+    wajib(&u, "dosen")?;
+    let milik: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM matkul WHERE id = ?1 AND dosen_id = ?2)", params![id, u.id], |r| r.get(0))?;
+    if !milik {
+        return Err(galat(StatusCode::NOT_FOUND, "Kelas tidak ditemukan"));
+    }
+    rekap::atur_keterangan(&c, id, &b.nim, b.pertemuan, &b.jenis, &b.catatan, u.id, &waktu::teks(&waktu::sekarang()))?
+        .map_err(|pesan| galat(StatusCode::UNPROCESSABLE_ENTITY, pesan))?;
+    Ok(Json(json!({ "ok": true })))
 }
 
 async fn unduh_rekap(State(app): State<App>, h: HeaderMap, Path(token): Path<String>) -> Result<Response, Gagal> {
@@ -1006,7 +1049,7 @@ fn hapus_akun(c: &mut Connection, user: i64) -> Result<(), Gagal> {
         return Err(galat(StatusCode::FORBIDDEN, "Akun dosen tidak bisa dihapus sendiri karena masih memegang kelas."));
     }
     let tx = c.transaction()?;
-    for t in ["sesi_login", "perangkat", "ambil", "presensi", "sertifikat", "tugas_selesai", "pengingat", "pertemuan_unpam", "jejak_ktm"] {
+    for t in ["sesi_login", "perangkat", "ambil", "presensi", "sertifikat", "tugas_selesai", "pengingat", "pertemuan_unpam", "jejak_ktm", "keterangan"] {
         tx.execute(&format!("DELETE FROM {t} WHERE user_id = ?1"), [user])?;
     }
     tx.execute("DELETE FROM users WHERE id = ?1", [user])?;
@@ -1341,6 +1384,8 @@ mod tes {
         let c = Connection::open_in_memory().unwrap();
         db::siapkan(&c).unwrap();
         let mhs: i64 = c.query_row("SELECT id FROM users WHERE nim = '231011400001'", [], |r| r.get(0)).unwrap();
+        // Data contoh membuat presensi relatif terhadap hari ini; kosongkan supaya tes tidak bergantung tanggal.
+        c.execute("DELETE FROM presensi WHERE user_id = ?1", [mhs]).unwrap();
         let (m1, m2): (i64, i64) = c.query_row("SELECT MIN(id), MAX(id) FROM matkul", [], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
         c.execute("INSERT INTO sesi(matkul_id, pertemuan, dibuka) VALUES(?1, 1, '2026-10-27 08:00')", [m1]).unwrap();
         let s1 = c.last_insert_rowid();

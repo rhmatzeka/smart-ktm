@@ -42,7 +42,7 @@ Aplikasi Android memuat situs yang live, jadi fitur baru langsung muncul tanpa p
 - **Notifikasi HP** (Android): 15 menit sebelum kelas, H-1 dan 3 jam sebelum tenggat tugas, serta pengingat yang dibuat AI agent.
 - **AI agent dengan alat**: Groq (`openai/gpt-oss-120b`), cadangan Gemini, mode offline tanpa kunci. Bisa melihat jadwal, tugas, presensi, mencatat tugas dari obrolan, menandai tugas selesai, dan membuat pengingat.
 - **Presensi on-chain**: HP dosen sebagai pembaca, foto mahasiswa muncul setiap tap, hash kehadiran dikirim ke `PresensiKTM`. Mahasiswa tidak perlu wallet: wallet operator di server yang menandatangani dan membayar gas. Siapa pun bisa memverifikasi kode bukti di Etherscan, dan kode kedua kontrak terverifikasi di [Sourcify](https://repo.sourcify.dev/11155111/0xE3D562D1a8f82e3A31AB956EA81b504d0ac63c8d) (exact match).
-- **Rekap kehadiran untuk dosen** per kelas (mahasiswa x pertemuan, peringatan batas absen) dengan **unduhan Excel** (lengkap dengan rumus).
+- **Rekap kehadiran untuk dosen**: ringkasan semua kelas di halaman utama dosen (rata-rata hadir, mahasiswa yang dekat batas alpa), tabel per kelas (mahasiswa x pertemuan) tempat dosen menandai **izin / sakit** (hadir tetap hanya dari tap KTM), detail per pertemuan (siapa tap jam berapa, bukti on-chain, siapa alpa), dan **unduhan Excel** dengan kolom H/I/S/A berupa rumus.
 - **Jadwal ke kalender**: semua pertemuan (tanggal asli MyUnpam) dan tenggat tugas sebagai berkas `.ics` atau link langganan Google Calendar pribadi.
 - **Akun dosen sungguhan** lewat kode undangan dari dosen terdaftar (sekali pakai, 7 hari); kelas terhubung otomatis kalau namanya sama dengan dosen pengampu di MyUnpam.
 - **Halaman privasi** ([/privasi/](https://ktm.rahmateka.my.id/privasi/)) dan **hapus akun**: akun dan semua data pribadi dihapus dari server.
@@ -114,7 +114,7 @@ Tes di HP lewat kabel: `adb reverse tcp:8080 tcp:8080`, lalu buka `localhost:808
 ## Tes
 
 ```bash
-cd server && cargo test       # 27 tes: logika jadwal, hash, sinkron MyUnpam & Mentari, notifikasi, KTM hilang, HP tepercaya, kartu ganda, rekap & Excel, kalender, link bertanda tangan, undangan dosen, hapus akun, batas percobaan
+cd server && cargo test       # 29 tes: logika jadwal, hash, sinkron MyUnpam & Mentari, notifikasi, KTM hilang, HP tepercaya, kartu ganda, rekap, izin/sakit & Excel, kalender, link bertanda tangan, undangan dosen, hapus akun, batas percobaan
 cd contracts && forge test    # 6 tes: PresensiKTM dan SertifikatKTM
 ```
 
