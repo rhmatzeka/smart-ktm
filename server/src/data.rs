@@ -94,20 +94,23 @@ pub fn presensi(c: &Connection, user: i64, dibuat: &str) -> rusqlite::Result<Vec
            (SELECT COUNT(*) FROM sesi s WHERE s.matkul_id = m.id AND s.dibuka >= ?2 AND
               (s.ditutup IS NOT NULL OR EXISTS(SELECT 1 FROM presensi p WHERE p.sesi_id = s.id AND p.user_id = ?1))),
            (SELECT COUNT(*) FROM presensi p JOIN sesi s ON s.id = p.sesi_id WHERE s.matkul_id = m.id AND p.user_id = ?1),
-           (SELECT COUNT(*) FROM presensi p JOIN sesi s ON s.id = p.sesi_id WHERE s.matkul_id = m.id AND p.user_id = ?1 AND p.tx IS NOT NULL)
+           (SELECT COUNT(*) FROM presensi p JOIN sesi s ON s.id = p.sesi_id WHERE s.matkul_id = m.id AND p.user_id = ?1 AND p.tx IS NOT NULL),
+           (SELECT COUNT(*) FROM keterangan k WHERE k.matkul_id = m.id AND k.user_id = ?1 AND
+              EXISTS(SELECT 1 FROM sesi s WHERE s.matkul_id = m.id AND s.pertemuan = k.pertemuan AND s.dibuka >= ?2))
          FROM matkul m JOIN ambil a ON a.matkul_id = m.id WHERE a.user_id = ?1 ORDER BY m.hari, m.mulai",
     )?;
-    let baris: Vec<(i64, String, i64, i64, i64, i64)> = q
-        .query_map(params![user, dibuat], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)))?
+    let baris: Vec<(i64, String, i64, i64, i64, i64, i64)> = q
+        .query_map(params![user, dibuat], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)))?
         .collect::<rusqlite::Result<_>>()?;
     let mut q_unpam = c.prepare("SELECT ke, mulai, akhir, status FROM pertemuan_unpam WHERE user_id = ?1 AND matkul_id = ?2 ORDER BY ke")?;
 
     let mut hasil = vec![];
-    for (id, nama, batas, total_tap, hadir_tap, onchain) in baris {
+    for (id, nama, batas, total_tap, hadir_tap, onchain, izin_sakit) in baris {
         let unpam: Vec<(i64, String, String, Option<String>)> =
             q_unpam.query_map(params![user, id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?.collect::<rusqlite::Result<_>>()?;
         let (hadir, total, absen, belum, bisa, jumlah, sumber) = if unpam.is_empty() {
-            (hadir_tap, total_tap, (total_tap - hadir_tap).max(0), vec![], vec![], 0, "smart-ktm")
+            // Izin/sakit dari dosen tidak dihitung absen.
+            (hadir_tap, total_tap, (total_tap - hadir_tap - izin_sakit).max(0), vec![], vec![], 0, "smart-ktm")
         } else {
             // Periode presensi yang sudah lewat tanpa status = terlewat; yang sedang berjalan = masih bisa.
             let lewat: Vec<_> = unpam.iter().filter(|p| p.2 < hari_ini).collect();
@@ -120,13 +123,7 @@ pub fn presensi(c: &Connection, user: i64, dibuat: &str) -> rusqlite::Result<Vec
             let absen = lewat.iter().filter(|p| !hadir(p)).count() as i64;
             (n_hadir, total, absen, belum, bisa, unpam.len() as i64, "myunpam")
         };
-        let status = if absen >= batas {
-            "lewat batas"
-        } else if absen == batas - 1 {
-            "hampir batas"
-        } else {
-            "aman"
-        };
+        let status = crate::rekap::status_absen(absen, batas);
         hasil.push(json!({
             "id": id, "matkul": nama, "hadir": hadir, "total": total, "absen": absen, "batas": batas, "status": status,
             "onchain": onchain, "belum_presensi": belum, "bisa_presensi": bisa, "jumlah_pertemuan": jumlah, "sumber": sumber,

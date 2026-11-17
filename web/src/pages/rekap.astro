@@ -25,16 +25,64 @@ import { ikon } from '../lib/ikon';
 
     <a class="tombol" id="unduh" href="#" download hidden><Fragment set:html={ikon('tugas')} /> Unduh Excel</a>
 
+    <p class="petunjuk-rekap" id="petunjuk" hidden>Ketuk <b>P1, P2, …</b> untuk detail pertemuan. Ketuk sel yang tidak hadir untuk menandai izin atau sakit.</p>
     <div class="tabel-rekap" id="wadah-tabel" hidden>
       <table>
         <thead id="kepala-tabel"></thead>
         <tbody id="isi-tabel"></tbody>
       </table>
     </div>
-    <p class="ket-rekap" id="ket" hidden>H hadir (tap KTM), – tidak hadir, S disanggah pemilik KTM. Hanya pertemuan yang dibuka lewat mesin absen Smart KTM yang dihitung.</p>
+    <ul class="ket-rekap" id="ket" hidden>
+      <li><i class="tanda H">H</i> hadir (tap KTM)</li>
+      <li><i class="tanda I">I</i> izin</li>
+      <li><i class="tanda S">S</i> sakit</li>
+      <li><i class="tanda A">A</i> alpa</li>
+      <li><i class="tanda D">D</i> disanggah pemilik KTM, dihitung alpa</li>
+    </ul>
+    <p class="ket-kecil" id="ket-batas" hidden>Status dihitung dari jumlah alpa. Izin dan sakit tidak menambah alpa. Hadir hanya bisa dari tap KTM, tidak bisa diisi tangan.</p>
     <p class="kosong-rekap" id="kosong" hidden>Belum ada sesi presensi untuk kelas ini. Buka presensi dari mesin absen, rekapnya muncul di sini.</p>
     <p id="pesan" class="pesan-galat" role="alert" hidden></p>
   </section>
+
+  <!-- Detail satu pertemuan -->
+  <dialog class="lembar" id="d-pertemuan" aria-labelledby="dp-judul">
+   <div class="lembar-isi">
+    <div class="lembar-kepala">
+      <div>
+        <h2 id="dp-judul">Pertemuan</h2>
+        <p id="dp-info"></p>
+      </div>
+      <button class="lembar-tutup" type="button" data-tutup aria-label="Tutup">×</button>
+    </div>
+    <div class="hitung-pertemuan" id="dp-hitung"></div>
+    <div id="dp-isi"></div>
+   </div>
+  </dialog>
+
+  <!-- Tandai izin / sakit / alpa -->
+  <dialog class="lembar" id="d-ket" aria-labelledby="dk-judul">
+    <form method="dialog" id="f-ket" class="lembar-isi">
+      <div class="lembar-kepala">
+        <div>
+          <h2 id="dk-judul">Keterangan</h2>
+          <p id="dk-info"></p>
+        </div>
+        <button class="lembar-tutup" type="button" data-tutup aria-label="Tutup">×</button>
+      </div>
+      <fieldset class="pilih-ket">
+        <legend>Tandai sebagai</legend>
+        <label><input type="radio" name="jenis" value="I" /> <span>Izin</span></label>
+        <label><input type="radio" name="jenis" value="S" /> <span>Sakit</span></label>
+        <label><input type="radio" name="jenis" value="" /> <span>Alpa</span></label>
+      </fieldset>
+      <div id="dk-catatan-wadah">
+        <label for="dk-catatan">Catatan (opsional)</label>
+        <input id="dk-catatan" maxlength="200" placeholder="mis. surat dokter, acara keluarga" autocomplete="off" />
+      </div>
+      <p class="pesan-galat" id="dk-pesan" role="alert" hidden></p>
+      <button class="tombol" type="submit" id="dk-simpan">Simpan</button>
+    </form>
+  </dialog>
 </Dasar>
 
 <style is:global>
@@ -55,77 +103,257 @@ import { ikon } from '../lib/ikon';
   .perhatian ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .perhatian li { display: flex; justify-content: space-between; gap: 10px; font-size: 0.85rem; }
   .perhatian li span { color: var(--teks-2); white-space: nowrap; }
-  .pil { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .pil { display: inline-block; font-size: 0.7rem; font-weight: 700; font-style: normal; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
   .pil.aman { background: #dcfce7; color: #166534; }
   .pil.hampir { background: #fef3c7; color: #92400e; }
   .pil.lewat { background: #ffe4e6; color: #9f1239; }
 
   #unduh { align-self: flex-start; }
+  .petunjuk-rekap { font-size: 0.75rem; color: var(--teks-2); margin-bottom: -4px; }
   .tabel-rekap { overflow-x: auto; background: var(--putih); border: 1px solid var(--garis); border-radius: 16px; }
   .tabel-rekap table { border-collapse: collapse; font-size: 0.8rem; min-width: 100%; }
-  .tabel-rekap th, .tabel-rekap td { padding: 8px 6px; border-bottom: 1px solid #eef1f6; text-align: center; white-space: nowrap; }
-  .tabel-rekap th { font-size: 0.7rem; color: var(--teks-2); font-weight: 700; background: #f8fafd; }
+  .tabel-rekap th, .tabel-rekap td { padding: 0; border-bottom: 1px solid #eef1f6; text-align: center; white-space: nowrap; }
+  .tabel-rekap th { font-size: 0.7rem; color: var(--teks-2); font-weight: 700; background: #f8fafd; padding: 8px 6px; }
   .tabel-rekap th small { display: block; font-weight: 500; }
-  .tabel-rekap .nama { position: sticky; left: 0; background: var(--putih); text-align: left; padding-left: 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; box-shadow: 1px 0 0 #eef1f6; }
+  .tabel-rekap td { padding: 8px 6px; }
+  .tabel-rekap td.sel { padding: 3px; }
+  .tabel-rekap .nama { position: sticky; left: 0; z-index: 1; background: var(--putih); text-align: left; padding-left: 12px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; box-shadow: 1px 0 0 #eef1f6; }
   .tabel-rekap th.nama { background: #f8fafd; }
   .tabel-rekap .nama small { display: block; color: var(--teks-2); font-size: 0.7rem; }
-  .tabel-rekap td.H { color: var(--hijau); font-weight: 800; }
-  .tabel-rekap td.S { color: #b45309; font-weight: 800; }
-  .tabel-rekap td.kosong-tanda { color: #c3cad6; }
-  .ket-rekap, .kosong-rekap { font-size: 0.75rem; color: var(--teks-2); }
+  .tabel-rekap th.ke { padding: 3px; }
+  .tabel-rekap th.ke button { width: 100%; min-width: 44px; padding: 5px 4px; border: 0; border-radius: 8px; background: transparent; font: inherit; color: var(--biru); cursor: pointer; }
+  .tabel-rekap th.ke button:hover, .tabel-rekap th.ke button:focus-visible { background: var(--biru-pudar); outline: none; }
+  .tabel-rekap th.ke small { color: var(--teks-2); }
+
+  .tanda { display: inline-grid; place-items: center; min-width: 30px; height: 28px; border-radius: 8px; font-style: normal; font-weight: 800; font-size: 0.78rem; }
+  .tanda.H { color: #15803d; background: #e2f6e7; }
+  .tanda.I { color: var(--biru); background: #e6edff; }
+  .tanda.S { color: #6d28d9; background: #efe7ff; }
+  .tanda.A { color: #be123c; background: #fff1f2; }
+  .tanda.D { color: #a16207; background: #fef3c7; }
+  button.tanda { border: 0; font-family: inherit; cursor: pointer; }
+  button.tanda:hover, button.tanda:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+
+  .ket-rekap { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.75rem; color: var(--teks-2); }
+  .ket-rekap li { display: flex; align-items: center; gap: 6px; }
+  .ket-rekap .tanda { min-width: 22px; height: 20px; font-size: 0.68rem; border-radius: 6px; }
+  .ket-kecil, .kosong-rekap { font-size: 0.75rem; color: var(--teks-2); }
+
+  /* Lembar bawah (dialog) */
+  .lembar { border: 0; padding: 0; width: 100%; max-width: 480px; max-height: 85vh; margin: auto auto 0; border-radius: 22px 22px 0 0; background: var(--putih); color: var(--teks); box-shadow: 0 -12px 40px -12px rgba(16, 24, 40, 0.35); }
+  .lembar::backdrop { background: rgba(16, 24, 40, 0.45); }
+  @media (min-width: 560px) { .lembar { margin: auto; border-radius: 22px; } }
+  .lembar-isi { padding: 18px 18px 22px; }
+  .lembar-kepala { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+  .lembar-kepala h2 { font-size: 1.05rem; font-weight: 800; }
+  .lembar-kepala p { font-size: 0.78rem; color: var(--teks-2); }
+  .lembar-tutup { width: 34px; height: 34px; flex: none; border: 1px solid var(--garis); border-radius: 10px; background: var(--putih); font-size: 1.3rem; line-height: 1; color: var(--teks-2); cursor: pointer; }
+
+  .hitung-pertemuan { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .hitung-pertemuan div { border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; }
+  .hitung-pertemuan b { font-size: 1.15rem; font-weight: 800; }
+  .hitung-pertemuan span { font-size: 0.7rem; }
+  .hitung-pertemuan .H { background: #e2f6e7; color: #15803d; }
+  .hitung-pertemuan .I { background: #e6edff; color: var(--biru); }
+  .hitung-pertemuan .S { background: #efe7ff; color: #6d28d9; }
+  .hitung-pertemuan .A { background: #fff1f2; color: #be123c; }
+  .grup-pertemuan { margin-top: 16px; }
+  .grup-pertemuan h3 { font-size: 0.8rem; font-weight: 700; color: var(--teks-2); margin-bottom: 6px; }
+  .grup-pertemuan ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .grup-pertemuan li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eef1f6; font-size: 0.85rem; }
+  .grup-pertemuan li:last-child { border-bottom: 0; }
+  .grup-pertemuan .isi { flex: 1; min-width: 0; }
+  .grup-pertemuan .isi b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .grup-pertemuan .isi small { display: block; font-size: 0.72rem; color: var(--teks-2); }
+  .grup-pertemuan .isi a { color: var(--biru); font-weight: 700; }
+  .grup-pertemuan .jam { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .grup-pertemuan .ubah { border: 1px solid var(--garis); background: var(--putih); color: var(--biru); font: inherit; font-size: 0.75rem; font-weight: 700; padding: 5px 10px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+  .grup-pertemuan .kosong { color: var(--teks-2); font-size: 0.8rem; }
+
+  .pilih-ket { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pilih-ket legend { font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
+  .pilih-ket label { margin: 0; }
+  .pilih-ket input { position: absolute; opacity: 0; pointer-events: none; }
+  .pilih-ket span { display: block; text-align: center; padding: 11px 6px; border: 1.5px solid var(--garis); border-radius: 12px; font-weight: 700; cursor: pointer; }
+  .pilih-ket input:checked + span { border-color: var(--biru); background: var(--biru-pudar); color: var(--biru); }
+  .pilih-ket input:focus-visible + span { outline: 2px solid var(--biru); outline-offset: 2px; }
+  #f-ket .tombol { margin-top: 16px; }
 </style>
 
 <script>
-  import { api, esc, tanganiGalat } from '../lib/api';
+  import { api, esc, jam, tanganiGalat } from '../lib/api';
 
   const $ = (id: string) => document.getElementById(id)!;
   const salah = (t: string) => { $('pesan').textContent = t; $('pesan').hidden = !t; };
   const kelasPil = (s: string) => (s === 'lewat batas' ? 'lewat' : s === 'hampir batas' ? 'hampir' : 'aman');
   const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   const tgl = (t: string) => `${+t.slice(8, 10)} ${BULAN[+t.slice(5, 7) - 1]}`;
+  const NAMA_TANDA: Record<string, string> = { H: 'hadir', I: 'izin', S: 'sakit', A: 'alpa', D: 'disanggah' };
 
-  type Mhs = { nim: string; nama: string; tanda: string[]; hadir: number; absen: number; onchain: number; status: string };
-  type Rekap = { matkul: string; kode: string; dosen: string; batas: number; pertemuan: { ke: number; tanggal: string }[]; mahasiswa: Mhs[]; unduh: string };
+  type Sel = { t: string; waktu: string | null; tx: string | null; link_tx?: string; bukti: string | null; catatan: string | null };
+  type Mhs = { nim: string; nama: string; tanda: string[]; sel: Sel[]; hadir: number; izin: number; sakit: number; alpa: number; onchain: number; status: string };
+  type Pertemuan = { ke: number; tanggal: string; jam: string };
+  type Rekap = { matkul: string; kode: string; dosen: string; batas: number; rata_hadir: number | null; pertemuan: Pertemuan[]; mahasiswa: Mhs[]; unduh: string };
+
+  const kelas = new URLSearchParams(location.search).get('k');
+  let data: Rekap | null = null;
+  let pertemuanTerbuka: number | null = null; // indeks pertemuan yang detailnya sedang dibuka
+  let sasaran: { nim: string; i: number } | null = null; // sel yang sedang diberi keterangan
 
   async function muat() {
-    const k = new URLSearchParams(location.search).get('k');
-    if (!k) return salah('Kelas tidak dipilih. Kembali ke daftar kelas.');
+    if (!kelas) return salah('Kelas tidak dipilih. Kembali ke daftar kelas.');
     try {
-      const r = await api<Rekap>(`/dosen/kelas/${k}/rekap`);
-      document.title = `Rekap ${r.matkul}`;
-      $('r-matkul').textContent = r.matkul;
-      $('r-info').textContent = `Batas absen ${r.batas} kali`;
-      const n = r.pertemuan.length;
-      $('n-mhs').textContent = String(r.mahasiswa.length);
-      $('n-pert').textContent = String(n);
-      const rata = n && r.mahasiswa.length ? Math.round((r.mahasiswa.reduce((a, m) => a + m.hadir, 0) / (n * r.mahasiswa.length)) * 100) : 0;
-      $('n-rata').textContent = `${rata}%`;
-      $('ringkas').hidden = false;
-
-      if (!n) {
-        $('kosong').hidden = false;
-        return;
-      }
-      const perlu = r.mahasiswa.filter((m) => m.status !== 'aman').sort((a, b) => b.absen - a.absen);
-      $('perhatian').hidden = !perlu.length;
-      $('daftar-perhatian').innerHTML = perlu
-        .map((m) => `<li><b>${esc(m.nama)}</b><span>absen ${m.absen} <i class="pil ${kelasPil(m.status)}">${esc(m.status)}</i></span></li>`)
-        .join('');
-
-      ($('unduh') as HTMLAnchorElement).href = r.unduh;
-      $('unduh').hidden = false;
-
-      $('kepala-tabel').innerHTML = `<tr><th class="nama">Mahasiswa</th>${r.pertemuan.map((p) => `<th>P${p.ke}<small>${tgl(p.tanggal)}</small></th>`).join('')}<th>Hadir</th><th>Status</th></tr>`;
-      $('isi-tabel').innerHTML = r.mahasiswa
-        .map((m) => `<tr><td class="nama"><b>${esc(m.nama)}</b><small>${esc(m.nim)}</small></td>${m.tanda
-          .map((t) => `<td class="${t === '-' ? 'kosong-tanda' : t}">${t === '-' ? '–' : t}</td>`)
-          .join('')}<td><b>${m.hadir}</b>/${n}</td><td><i class="pil ${kelasPil(m.status)}">${esc(m.status)}</i></td></tr>`)
-        .join('');
-      $('wadah-tabel').hidden = false;
-      $('ket').hidden = false;
+      data = await api<Rekap>(`/dosen/kelas/${kelas}/rekap`);
+      salah('');
+      tampil(data);
+      if (pertemuanTerbuka !== null) tampilPertemuan(pertemuanTerbuka);
     } catch (e) {
       tanganiGalat(e, salah);
     }
   }
+
+  function tampil(r: Rekap) {
+    document.title = `Rekap ${r.matkul}`;
+    $('r-matkul').textContent = r.matkul;
+    $('r-info').textContent = `Batas alpa ${r.batas} kali`;
+    const n = r.pertemuan.length;
+    $('n-mhs').textContent = String(r.mahasiswa.length);
+    $('n-pert').textContent = String(n);
+    $('n-rata').textContent = r.rata_hadir === null ? '–' : `${r.rata_hadir}%`;
+    $('ringkas').hidden = false;
+
+    if (!n) {
+      $('kosong').hidden = false;
+      return;
+    }
+    const perlu = r.mahasiswa.filter((m) => m.status !== 'aman').sort((a, b) => b.alpa - a.alpa);
+    $('perhatian').hidden = !perlu.length;
+    $('daftar-perhatian').innerHTML = perlu
+      .map((m) => `<li><b>${esc(m.nama)}</b><span>alpa ${m.alpa} <i class="pil ${kelasPil(m.status)}">${esc(m.status)}</i></span></li>`)
+      .join('');
+
+    ($('unduh') as HTMLAnchorElement).href = r.unduh;
+    $('unduh').hidden = false;
+
+    $('kepala-tabel').innerHTML = `<tr><th class="nama">Mahasiswa</th>${r.pertemuan
+      .map((p, i) => `<th class="ke"><button type="button" data-pertemuan="${i}" aria-label="Detail pertemuan ${p.ke}">P${p.ke}<small>${tgl(p.tanggal)}</small></button></th>`)
+      .join('')}<th>Hadir</th><th>Alpa</th><th>Status</th></tr>`;
+    $('isi-tabel').innerHTML = r.mahasiswa
+      .map((m) => `<tr><td class="nama"><b>${esc(m.nama)}</b><small>${esc(m.nim)}</small></td>${m.sel
+        .map((s, i) => {
+          const judul = `${m.nama}, P${r.pertemuan[i].ke}: ${NAMA_TANDA[s.t]}${s.catatan ? ` (${s.catatan})` : ''}`;
+          return s.t === 'H'
+            ? `<td class="sel"><i class="tanda H" title="${esc(`${judul} ${jam(s.waktu || '')}`)}">H</i></td>`
+            : `<td class="sel"><button type="button" class="tanda ${s.t}" data-nim="${esc(m.nim)}" data-i="${i}" title="${esc(judul)}" aria-label="${esc(`${judul}. Ubah keterangan`)}">${s.t}</button></td>`;
+        })
+        .join('')}<td><b>${m.hadir}</b>/${n}</td><td>${m.alpa}</td><td><i class="pil ${kelasPil(m.status)}">${esc(m.status)}</i></td></tr>`)
+      .join('');
+    for (const id of ['petunjuk', 'wadah-tabel', 'ket', 'ket-batas']) $(id).hidden = false;
+  }
+
+  function bukti(s: Sel) {
+    if (s.link_tx) return `<a href="${esc(s.link_tx)}" target="_blank" rel="noopener">on-chain</a>`;
+    if (s.bukti) return `<a href="/verifikasi/?b=${esc(s.bukti)}">${s.tx ? 'on-chain' : 'cek bukti'}</a>`;
+    return '';
+  }
+
+  function tampilPertemuan(i: number) {
+    if (!data) return;
+    const p = data.pertemuan[i];
+    const baris = data.mahasiswa.map((m) => ({ m, s: m.sel[i] }));
+    const grup = (t: string[]) => baris.filter((b) => t.includes(b.s.t));
+    const hadir = grup(['H']).sort((a, b) => (a.s.waktu || '').localeCompare(b.s.waktu || ''));
+    const izin = grup(['I', 'S']);
+    const alpa = grup(['A', 'D']);
+    $('dp-judul').textContent = `Pertemuan ${p.ke}`;
+    $('dp-info').textContent = `${data.matkul} · ${tgl(p.tanggal)}${p.jam ? `, dibuka ${p.jam.replace(':', '.')}` : ''}`;
+    $('dp-hitung').innerHTML = [
+      ['H', hadir.length, 'hadir'],
+      ['I', grup(['I']).length, 'izin'],
+      ['S', grup(['S']).length, 'sakit'],
+      ['A', alpa.length, 'alpa'],
+    ].map(([k, n, l]) => `<div class="${k}"><b>${n}</b><span>${l}</span></div>`).join('');
+    const ubah = (m: Mhs, label: string) => `<button type="button" class="ubah" data-nim="${esc(m.nim)}" data-i="${i}">${label}</button>`;
+    const daftar = (judul: string, isi: string, kosong: string) =>
+      `<section class="grup-pertemuan"><h3>${judul}</h3><ul>${isi || `<li class="kosong">${kosong}</li>`}</ul></section>`;
+    $('dp-isi').innerHTML =
+      daftar(`Hadir (${hadir.length})`, hadir.map(({ m, s }) =>
+        `<li><span class="isi"><b>${esc(m.nama)}</b><small>${esc(m.nim)} ${bukti(s) ? `· ${bukti(s)}` : ''}</small></span><span class="jam">${esc(jam(s.waktu || ''))}</span></li>`).join(''), 'Belum ada yang tap KTM.') +
+      daftar(`Izin & sakit (${izin.length})`, izin.map(({ m, s }) =>
+        `<li><i class="tanda ${s.t}">${s.t}</i><span class="isi"><b>${esc(m.nama)}</b><small>${esc(s.catatan || NAMA_TANDA[s.t])}</small></span>${ubah(m, 'Ubah')}</li>`).join(''), 'Tidak ada.') +
+      daftar(`Alpa (${alpa.length})`, alpa.map(({ m, s }) =>
+        `<li><span class="isi"><b>${esc(m.nama)}</b><small>${esc(m.nim)}${s.t === 'D' ? ' · tap disanggah pemilik KTM' : ''}</small></span>${ubah(m, 'Izin/sakit')}</li>`).join(''), 'Semua mahasiswa hadir atau berketerangan.');
+  }
+
+  function bukaPertemuan(i: number) {
+    pertemuanTerbuka = i;
+    tampilPertemuan(i);
+    const d = $('d-pertemuan') as HTMLDialogElement;
+    if (!d.open) d.showModal();
+  }
+
+  function bukaKeterangan(nim: string, i: number) {
+    if (!data) return;
+    const m = data.mahasiswa.find((x) => x.nim === nim);
+    if (!m) return;
+    sasaran = { nim, i };
+    const s = m.sel[i];
+    $('dk-judul').textContent = m.nama;
+    $('dk-info').textContent = `Pertemuan ${data.pertemuan[i].ke} · ${tgl(data.pertemuan[i].tanggal)} · sekarang ${NAMA_TANDA[s.t]}`;
+    const pilihan = s.t === 'I' || s.t === 'S' ? s.t : '';
+    for (const r of document.querySelectorAll<HTMLInputElement>('#f-ket input[name=jenis]')) r.checked = r.value === pilihan;
+    ($('dk-catatan') as HTMLInputElement).value = s.catatan || '';
+    $('dk-catatan-wadah').hidden = !pilihan;
+    $('dk-pesan').hidden = true;
+    ($('d-ket') as HTMLDialogElement).showModal();
+  }
+
+  document.addEventListener('click', (e) => {
+    const el = e.target as HTMLElement;
+    const p = el.closest<HTMLElement>('[data-pertemuan]');
+    if (p) return bukaPertemuan(+p.dataset.pertemuan!);
+    const k = el.closest<HTMLElement>('[data-nim]');
+    if (k) return bukaKeterangan(k.dataset.nim!, +k.dataset.i!);
+    const t = el.closest<HTMLElement>('[data-tutup]');
+    if (t) (t.closest('dialog') as HTMLDialogElement).close();
+  });
+  // Klik di luar lembar (backdrop) menutupnya.
+  for (const d of document.querySelectorAll<HTMLDialogElement>('dialog.lembar')) {
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+  }
+  $('d-pertemuan').addEventListener('close', () => { pertemuanTerbuka = null; });
+
+  $('f-ket').addEventListener('change', () => {
+    const j = (document.querySelector('#f-ket input[name=jenis]:checked') as HTMLInputElement | null)?.value ?? '';
+    $('dk-catatan-wadah').hidden = !j;
+  });
+
+  $('f-ket').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!sasaran || !data) return;
+    const pilih = document.querySelector('#f-ket input[name=jenis]:checked') as HTMLInputElement | null;
+    if (!pilih) {
+      $('dk-pesan').textContent = 'Pilih izin, sakit, atau alpa.';
+      $('dk-pesan').hidden = false;
+      return;
+    }
+    const tombol = $('dk-simpan') as HTMLButtonElement;
+    tombol.disabled = true;
+    try {
+      await api(`/dosen/kelas/${kelas}/keterangan`, {
+        nim: sasaran.nim,
+        pertemuan: data.pertemuan[sasaran.i].ke,
+        jenis: pilih.value,
+        catatan: pilih.value ? ($('dk-catatan') as HTMLInputElement).value : '',
+      });
+      ($('d-ket') as HTMLDialogElement).close();
+      await muat();
+    } catch (err) {
+      tanganiGalat(err, (t) => { $('dk-pesan').textContent = t; $('dk-pesan').hidden = false; });
+    } finally {
+      tombol.disabled = false;
+    }
+  });
+
   muat();
 </script>

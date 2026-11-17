@@ -48,6 +48,11 @@ CREATE TABLE IF NOT EXISTS undangan_dosen(
 CREATE TABLE IF NOT EXISTS jejak_ktm(
   id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), waktu TEXT NOT NULL, aksi TEXT NOT NULL,
   detail TEXT NOT NULL, presensi_id INTEGER, disanggah INTEGER NOT NULL DEFAULT 0);
+-- Keterangan izin (I) / sakit (S) dari dosen per pertemuan. Tanpa tap KTM dan tanpa keterangan = alpa.
+CREATE TABLE IF NOT EXISTS keterangan(
+  matkul_id INTEGER NOT NULL REFERENCES matkul(id), user_id INTEGER NOT NULL REFERENCES users(id), pertemuan INTEGER NOT NULL,
+  jenis TEXT NOT NULL CHECK(jenis IN ('I', 'S')), catatan TEXT NOT NULL DEFAULT '', oleh INTEGER NOT NULL REFERENCES users(id),
+  waktu TEXT NOT NULL, PRIMARY KEY(matkul_id, user_id, pertemuan));
 ";
 
 pub fn sha(s: &str) -> String {

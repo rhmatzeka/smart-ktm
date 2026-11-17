@@ -233,6 +233,7 @@ pub fn bersihkan_contoh(c: &mut Connection, kecuali: i64) -> anyhow::Result<()> 
         "CREATE TEMP TABLE IF NOT EXISTS m_contoh AS SELECT id FROM matkul WHERE kode LIKE 'TPL05%';
          DELETE FROM presensi WHERE sesi_id IN (SELECT id FROM sesi WHERE matkul_id IN (SELECT id FROM m_contoh));
          DELETE FROM sesi WHERE matkul_id IN (SELECT id FROM m_contoh);
+         DELETE FROM keterangan WHERE matkul_id IN (SELECT id FROM m_contoh);
          DELETE FROM tugas_selesai WHERE tugas_id IN (SELECT id FROM tugas WHERE matkul_id IN (SELECT id FROM m_contoh));
          DELETE FROM tugas WHERE matkul_id IN (SELECT id FROM m_contoh);
          DELETE FROM ambil WHERE matkul_id IN (SELECT id FROM m_contoh);
@@ -240,7 +241,7 @@ pub fn bersihkan_contoh(c: &mut Connection, kecuali: i64) -> anyhow::Result<()> 
     )?;
     tx.execute("DELETE FROM matkul WHERE kode LIKE 'TPL05%'", [])?;
     let palsu = "(SELECT id FROM users WHERE id != ?1 AND ((peran = 'mhs' AND nim LIKE '2310114000__') OR (peran = 'dosen' AND nim LIKE '04000001%')))";
-    for t in ["presensi", "ambil", "sesi_login", "tugas_selesai", "pengingat", "pertemuan_unpam"] {
+    for t in ["presensi", "ambil", "sesi_login", "tugas_selesai", "pengingat", "pertemuan_unpam", "keterangan"] {
         tx.execute(&format!("DELETE FROM {t} WHERE user_id IN {palsu}"), [kecuali])?;
     }
     tx.execute(&format!("DELETE FROM users WHERE id IN {palsu}"), [kecuali])?;
