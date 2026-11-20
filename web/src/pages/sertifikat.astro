@@ -112,7 +112,7 @@ import { ikon } from '../lib/ikon';
       if (s.foto) $('s-foto').innerHTML = `<img src="${esc(s.foto)}" alt="">`;
       else $('s-foto').textContent = s.nama.charAt(0);
       $('s-nama').textContent = s.nama;
-      $('s-prodi').textContent = `${s.prodi}, Universitas Pamulang`;
+      $('s-prodi').textContent = s.prodi;
       $('s-acara').textContent = s.acara;
       $('s-detail').textContent = [s.penyelenggara, tglPanjang(s.tanggal), s.tempat].filter(Boolean).join(' · ');
       $('s-waktu').textContent = `${s.waktu} WIB`;

@@ -275,7 +275,7 @@ async fn groq(app: &App, kunci: &str, u: &Pengguna, pesan: &str, riwayat: &[Pesa
 fn sistem(u: &Pengguna) -> String {
     let kini = waktu::sekarang();
     format!(
-        "Kamu AI agent akademik di aplikasi Smart KTM untuk mahasiswa Universitas Pamulang. \
+        "Kamu AI agent akademik di aplikasi Smart KTM untuk mahasiswa. \
          Pengguna: {} (NIM {}, {}). Sekarang {} WIB, hari {}. \
          Jawab dalam bahasa Indonesia santai, singkat dan jelas (maksimal sekitar 120 kata). \
          Selalu pakai alat untuk data jadwal, tugas, presensi dan pengingat; jangan mengarang data. \
