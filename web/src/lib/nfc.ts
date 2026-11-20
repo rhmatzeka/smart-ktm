@@ -1,6 +1,6 @@
 // Pembaca KTM: plugin native di aplikasi Android (Capacitor), Web NFC di Chrome Android.
 //
-// PENTING: modul ini hanya MEMBACA nomor seri kartu. KTM UNPAM adalah MIFARE Classic
+// PENTING: modul ini hanya MEMBACA nomor seri kartu. KTM kampus adalah MIFARE Classic
 // yang "NdefFormatable": menulis NDEF akan memformat kartu dan menghapus data parkirnya.
 // Jangan pernah memanggil NDEFReader.write() atau makeReadOnly() di proyek ini.
 
