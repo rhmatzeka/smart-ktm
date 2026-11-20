@@ -2,7 +2,7 @@
 
 **English** · [Bahasa Indonesia](README.id.md)
 
-**AI Agent and Blockchain on the Student ID Card (KTM).** A course project for *Manajemen Proyek Informatika* (IT Project Management) at Universitas Pamulang, Indonesia.
+**AI Agent and Blockchain on the Student ID Card (KTM).** A course project for *Manajemen Proyek Informatika* (IT Project Management).
 
 Tap your student ID card on a phone and your day opens up: the next class, the week's schedule, assignments, and attendance, plus an AI agent that answers questions and takes actions for you. In class, the lecturer's phone becomes an attendance machine: students tap their cards, their photo appears for the lecturer to check, and every check-in is anchored on a smart contract, so attendance cannot be edited quietly afterwards.
 
@@ -38,7 +38,7 @@ The Android app loads the live site, so new features arrive without reinstalling
 
 ## Features
 
-- **Tap-to-sign-in with NFC.** UNPAM KTMs are MIFARE Classic 1K cards (the same cards used at the parking gate). The app only reads the card's serial number (UID) and never writes to the card, so the parking data stays intact. UIDs are stored as salted hashes.
+- **Tap-to-sign-in with NFC.** Campus KTMs are MIFARE Classic 1K cards (the same cards used at the parking gate). The app only reads the card's serial number (UID) and never writes to the card, so the parking data stays intact. UIDs are stored as salted hashes.
 - **Real data from MyUnpam and Mentari, one tap.** In the Android app, *Sync now* opens MyUnpam and then Mentari inside the app; the student signs in as usual and the app collects the schedule (course, day, time, room, lecturer), attendance per meeting, profile photo, and open Mentari assignments and activities. Passwords are typed only into the campus pages. Browsers use a bookmarklet for MyUnpam.
 - **Time-aware home screen.** Next class with a countdown, a weekly timeline, missed meetings, and a one-sentence AI summary.
 - **Phone notifications** (Android): 15 minutes before each class, the day before and 3 hours before each deadline, and reminders created by the AI agent.

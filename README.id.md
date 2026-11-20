@@ -2,7 +2,7 @@
 
 [English](README.md) · **Bahasa Indonesia**
 
-**AI Agent dan Blockchain pada KTM.** Tugas mata kuliah Manajemen Proyek Informatika, Universitas Pamulang.
+**AI Agent dan Blockchain pada KTM.** Tugas mata kuliah Manajemen Proyek Informatika.
 
 Tap KTM ke HP dan harimu langsung terbuka: kelas berikutnya, jadwal seminggu, tugas, dan kehadiran, ditambah AI agent yang menjawab sekaligus bertindak. Di kelas, HP dosen jadi mesin absen: mahasiswa tap KTM, fotonya muncul untuk dicocokkan, dan setiap kehadiran dicatat di smart contract sehingga tidak bisa diubah diam-diam.
 
@@ -36,7 +36,7 @@ Aplikasi Android memuat situs yang live, jadi fitur baru langsung muncul tanpa p
 
 ## Fitur
 
-- **Masuk dengan tap KTM (NFC).** KTM UNPAM adalah MIFARE Classic 1K (kartu yang sama untuk parkir). Aplikasi hanya membaca nomor seri (UID) dan tidak pernah menulis ke kartu, jadi data parkir aman. UID disimpan sebagai hash bergaram.
+- **Masuk dengan tap KTM (NFC).** KTM kampus adalah MIFARE Classic 1K (kartu yang sama untuk parkir). Aplikasi hanya membaca nomor seri (UID) dan tidak pernah menulis ke kartu, jadi data parkir aman. UID disimpan sebagai hash bergaram.
 - **Data asli dari MyUnpam dan Mentari, satu tombol.** Di aplikasi Android, *Sinkron sekarang* membuka MyUnpam lalu Mentari di dalam aplikasi; mahasiswa login seperti biasa dan aplikasi mengambil jadwal (matkul, hari, jam, ruang, dosen), presensi tiap pertemuan, foto, serta tugas dan aktivitas Mentari yang belum dikerjakan. Kata sandi hanya diketik di halaman kampus. Di browser, MyUnpam disinkron lewat bookmark.
 - **Beranda yang menyesuaikan waktu**: kelas berikutnya dengan hitung mundur, jadwal seminggu, pertemuan terlewat, ringkasan AI satu kalimat.
 - **Notifikasi HP** (Android): 15 menit sebelum kelas, H-1 dan 3 jam sebelum tenggat tugas, serta pengingat yang dibuat AI agent.
