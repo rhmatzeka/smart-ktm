@@ -570,7 +570,7 @@ async fn kenalan(State(app): State<App>, hd: HeaderMap, Json(b): Json<Uid>) -> H
         lencana.insert(0, format!("{n_sertifikat} sertifikat on-chain"));
     }
     Ok(Json(json!({
-        "privat": false, "nama": nama, "prodi": prodi, "kampus": "Universitas Pamulang", "foto": foto,
+        "privat": false, "nama": nama, "prodi": prodi, "foto": foto,
         "bio": bio, "github": github, "portofolio": portofolio, "lencana": lencana,
     })))
 }

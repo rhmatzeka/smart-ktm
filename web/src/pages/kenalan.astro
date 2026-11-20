@@ -17,7 +17,7 @@ import { ikon } from '../lib/ikon';
       <div class="kn-atas"><span>Kartu nama digital</span><a href="/profil/">Ubah</a></div>
       <div class="kn-id">
         <span class="kn-foto" id="s-inisial">·</span>
-        <div><b id="s-nama">Memuat…</b><span id="s-prodi"></span><span>Universitas Pamulang</span></div>
+        <div><b id="s-nama">Memuat…</b><span id="s-prodi"></span></div>
       </div>
       <p class="kn-bio" id="s-bio"></p>
       <div class="kn-link" id="s-tautan"></div>
@@ -196,7 +196,7 @@ import { ikon } from '../lib/ikon';
       $('profil').hidden = false;
       pasangFoto($('inisial'), p.privat ? null : p.foto, p.nama);
       $('nama').textContent = p.nama;
-      $('prodi').textContent = p.privat ? 'Profil ini disembunyikan pemiliknya.' : `${p.prodi}, ${p.kampus}`;
+      $('prodi').textContent = p.privat ? 'Profil ini disembunyikan pemiliknya.' : p.prodi;
       $('bio').textContent = p.privat ? '' : p.bio;
       $('tautan').innerHTML = p.privat ? '' : tautan(p);
       $('lencana').innerHTML = p.privat ? '' : p.lencana.map((l: string) => `<span>${esc(l)}</span>`).join('');
