@@ -1,6 +1,7 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
 import Kartu from '../components/Kartu.astro';
+import KotakPin from '../components/KotakPin.astro';
 import { ikon } from '../lib/ikon';
 const panah = ikon('kembali', 'ikon panah');
 ---
@@ -73,8 +74,7 @@ const panah = ikon('kembali', 'ikon panah');
     </ul>
     <form class="blok-form" id="form-hapus" hidden>
       <p class="judul-form">Semua datamu di Smart KTM dihapus permanen: akun, KTM tertaut, jadwal, presensi, sertifikat, dan riwayat. Bukti di blockchain tetap ada tapi hanya hash yang tidak bisa dikaitkan lagi ke kamu.</p>
-      <label for="pin-hapus">Masukkan PIN untuk konfirmasi</label>
-      <input id="pin-hapus" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+      <KotakPin id="pin-hapus" label="Masukkan PIN untuk konfirmasi" />
       <div class="baris-simpan"><button class="tombol kecil-saja merah" type="submit">Hapus akun saya</button></div>
     </form>
     <p class="label-bagian">Riwayat pemakaian KTM</p>
@@ -85,10 +85,8 @@ const panah = ikon('kembali', 'ikon panah');
 
     <form class="blok-form" id="form-pin" hidden>
       <p class="judul-form">Setelah PIN diganti, HP lain harus memasukkan PIN baru sekali sebelum bisa tap KTM tanpa PIN.</p>
-      <div class="dua-kolom">
-        <div><label for="pin-lama">PIN lama</label><input id="pin-lama" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required /></div>
-        <div><label for="pin-baru">PIN baru</label><input id="pin-baru" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required /></div>
-      </div>
+      <KotakPin id="pin-lama" label="PIN lama" />
+      <KotakPin id="pin-baru" label="PIN baru" baru />
       <div class="baris-simpan"><span class="tersimpan" id="pin-ok" role="status"></span><button class="tombol kecil-saja" type="submit">Ganti PIN</button></div>
     </form>
 

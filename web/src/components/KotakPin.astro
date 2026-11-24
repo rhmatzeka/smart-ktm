@@ -1,0 +1,95 @@
+---
+// PIN 6 angka sebagai 6 kotak (gaya m-banking). Input aslinya satu, transparan di atas
+// kotak-kotak, jadi isi otomatis pengelola sandi, tempel, dan keyboard angka tetap jalan.
+// `otomatis`: form langsung dikirim begitu 6 angka terisi dan isian lain sudah valid.
+interface Props {
+  id: string;
+  label: string;
+  name?: string;
+  baru?: boolean;
+  otomatis?: boolean;
+}
+const { id, label, name, baru = false, otomatis = false } = Astro.props;
+---
+<div class="pin-blok">
+  <div class="pin-kepala">
+    <label for={id}>{label}</label>
+    <button class="pin-lihat" type="button" aria-controls={id} aria-pressed="false">Lihat</button>
+  </div>
+  <div class="pin-kotak" data-otomatis={otomatis ? '1' : undefined}>
+    <input
+      class="pin-asli" id={id} name={name} type="password" inputmode="numeric" pattern="[0-9]{6}"
+      maxlength="6" autocomplete={baru ? 'new-password' : 'current-password'} required
+    />
+    <span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+</div>
+
+<style is:global>
+  .pin-blok { margin-top: 12px; }
+  .pin-kepala { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .pin-blok .pin-kepala label { margin: 0; }
+  .pin-lihat { background: none; border: 0; padding: 2px 0; font: 700 0.78rem var(--font); color: var(--biru); cursor: pointer; }
+  .pin-kotak { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .pin-kotak > span {
+    height: 50px; display: grid; place-items: center; border-radius: 12px;
+    background: var(--putih); border: 1.5px solid var(--garis-tegas);
+    font: 800 1.2rem var(--font); color: var(--teks); transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .pin-kotak > span.terisi { border-color: var(--biru-muda); }
+  .pin-kotak > span.titik::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--teks); }
+  .pin-kotak:focus-within > span.aktif { border-color: var(--biru); box-shadow: 0 0 0 3px var(--biru-pudar); }
+  .pin-kotak.salah > span { border-color: var(--merah); }
+  .pin-asli {
+    position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0;
+    opacity: 0; border: 0; font-size: 16px; cursor: text; z-index: 1;
+  }
+</style>
+
+<script>
+  function siapkan(kotak: HTMLElement) {
+    if (kotak.dataset.siap) return;
+    kotak.dataset.siap = '1';
+    const input = kotak.querySelector<HTMLInputElement>('.pin-asli')!;
+    const sel = [...kotak.querySelectorAll<HTMLSpanElement>(':scope > span')];
+    const lihat = kotak.parentElement!.querySelector<HTMLButtonElement>('.pin-lihat')!;
+    let tampak = false;
+
+    const gambar = () => {
+      const v = input.value;
+      sel.forEach((s, i) => {
+        const ada = i < v.length;
+        s.textContent = ada && tampak ? v[i] : '';
+        s.classList.toggle('terisi', ada);
+        s.classList.toggle('titik', ada && !tampak);
+        s.classList.toggle('aktif', i === Math.min(v.length, 5));
+      });
+    };
+
+    input.addEventListener('input', () => {
+      const bersih = input.value.replace(/\D/g, '').slice(0, 6);
+      if (bersih !== input.value) input.value = bersih;
+      kotak.classList.remove('salah');
+      gambar();
+      const form = input.form;
+      if (kotak.dataset.otomatis && bersih.length === 6 && form?.checkValidity()) {
+        const tombol = form.querySelector<HTMLButtonElement>('button[type=submit]');
+        if (!tombol?.disabled) form.requestSubmit();
+      }
+    });
+    // form.reset() tidak memicu 'input', jadi gambar ulang sesudahnya.
+    input.form?.addEventListener('reset', () => setTimeout(gambar, 0));
+    // Kursor selalu di ujung, seperti kotak PIN di aplikasi bank.
+    input.addEventListener('focus', () => setTimeout(() => input.setSelectionRange(6, 6), 0));
+    lihat.addEventListener('click', () => {
+      tampak = !tampak;
+      lihat.textContent = tampak ? 'Tutup' : 'Lihat';
+      lihat.setAttribute('aria-pressed', String(tampak));
+      gambar();
+    });
+    gambar();
+  }
+
+  document.querySelectorAll<HTMLElement>('.pin-kotak').forEach(siapkan);
+
+</script>

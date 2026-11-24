@@ -1,6 +1,7 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
 import { ikon } from '../lib/ikon';
+import KotakPin from '../components/KotakPin.astro';
 ---
 <Dasar judul="Daftar dosen">
   <header class="atas-putih">
@@ -21,16 +22,8 @@ import { ikon } from '../lib/ikon';
       <label for="nama">Nama lengkap dengan gelar</label>
       <input id="nama" name="nama" autocomplete="name" placeholder="Contoh: Juli Gunawan, S.T., M.Kom." required />
       <p class="redup kecil">Tulis sama seperti di jadwal MyUnpam supaya kelas Anda terhubung otomatis.</p>
-      <div class="dua-kolom">
-        <div>
-          <label for="pin">Buat PIN 6 angka</label>
-          <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
-        </div>
-        <div>
-          <label for="pin2">Ulangi PIN</label>
-          <input id="pin2" name="pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
-        </div>
-      </div>
+      <KotakPin id="pin" name="pin" label="Buat PIN 6 angka" baru />
+      <KotakPin id="pin2" name="pin2" label="Ulangi PIN" baru />
       <button class="tombol" type="submit">Daftar</button>
       <p class="galat-form" id="pesan" role="alert" hidden></p>
     </form>
@@ -46,7 +39,6 @@ import { ikon } from '../lib/ikon';
 
 <style is:global>
   .ikon-kembali { width: 40px; height: 40px; border-radius: 12px; background: var(--biru-pudar); color: var(--biru); display: grid; place-items: center; }
-  .form-dosen .dua-kolom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .form-dosen .tombol { margin-top: 16px; }
   .form-dosen .redup { margin-top: 4px; }
   .galat-form { margin-top: 10px; color: var(--merah); font-weight: 600; font-size: 0.85rem; }
