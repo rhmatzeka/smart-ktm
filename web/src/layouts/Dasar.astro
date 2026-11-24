@@ -51,6 +51,7 @@ const menu = [
     --teks: #101828;
     --teks-2: #5b6475;
     --garis: #e4e9f2;
+    --garis-tegas: #cbd5e6;
     --kuning: #fbbf24;
     --oranye: #f97316;
     --hijau: #16a34a;
@@ -141,12 +142,14 @@ const menu = [
   .tombol:disabled { opacity: 0.6; cursor: wait; }
   .tautan { background: none; border: 0; padding: 8px 0; font: 600 0.95rem var(--font); color: inherit; text-decoration: underline; cursor: pointer; }
 
-  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 6px; }
+  label { display: block; font-weight: 700; font-size: 0.85rem; margin: 14px 0 6px; }
   input, textarea {
-    width: 100%; min-height: 44px; padding: 10px 12px; font: 0.95rem var(--font); color: var(--teks);
-    background: var(--latar); border: 1.5px solid var(--garis); border-radius: var(--r-kecil);
+    width: 100%; min-height: 48px; padding: 11px 14px; font: 0.95rem var(--font); color: var(--teks);
+    background: var(--putih); border: 1.5px solid var(--garis-tegas); border-radius: 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
-  input:focus, textarea:focus { border-color: var(--biru); outline: none; background: var(--putih); }
+  input::placeholder, textarea::placeholder { color: #98a2b3; }
+  input:focus, textarea:focus { border-color: var(--biru); outline: none; box-shadow: 0 0 0 3px var(--biru-pudar); }
 
   .galat { color: var(--merah); font-weight: 600; }
   .zona-biru .galat { color: #ffd2d4; }

@@ -1,6 +1,7 @@
 ---
 import Dasar from '../layouts/Dasar.astro';
 import { ikon } from '../lib/ikon';
+import KotakPin from '../components/KotakPin.astro';
 ---
 <Dasar judul="Masuk">
   <header class="pita-masuk">
@@ -42,8 +43,7 @@ import { ikon } from '../lib/ikon';
     <form id="form-pin" hidden>
       <p class="judul-blok">Halo, <span id="pin-nama"></span>. Masukkan PIN.</p>
       <p class="redup kecil">Cukup sekali di HP ini. Berikutnya, tap KTM langsung masuk.</p>
-      <label for="pin">PIN 6 angka</label>
-      <input id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
+      <KotakPin id="pin" name="pin" label="PIN" otomatis />
       <button class="tombol" type="submit">Masuk</button>
       <button class="tautan" type="button" data-kembali>Bukan kamu? Kembali</button>
     </form>
@@ -53,13 +53,12 @@ import { ikon } from '../lib/ikon';
       <p class="judul-blok">✓ KTM terbaca. Daftar sekali saja.</p>
       <p class="redup kecil">Kalau NIM kamu sudah ada di sistem, isi NIM dan PIN saja.</p>
       <label for="d-nim">NIM</label>
-      <input id="d-nim" name="nim" inputmode="numeric" autocomplete="username" required />
+      <input id="d-nim" name="nim" inputmode="numeric" autocomplete="username" placeholder="Contoh: 231011400001" required />
       <label for="d-nama">Nama lengkap</label>
-      <input id="d-nama" name="nama" autocomplete="name" />
+      <input id="d-nama" name="nama" autocomplete="name" placeholder="Sesuai KTM" />
       <label for="d-prodi">Program studi</label>
       <input id="d-prodi" name="prodi" value="Teknik Informatika" />
-      <label for="d-pin">Buat PIN 6 angka</label>
-      <input id="d-pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required />
+      <KotakPin id="d-pin" name="pin" label="Buat PIN 6 angka" baru />
       <button class="tombol" type="submit">Daftarkan KTM</button>
       <button class="tautan" type="button" data-kembali>Batal</button>
     </form>
@@ -76,17 +75,10 @@ import { ikon } from '../lib/ikon';
 
     <!-- Masuk pakai NIM: di kartu yang sama, dekat atas supaya tidak tertutup keyboard -->
     <form id="form-nim">
-      <p class="atau">atau pakai NIM</p>
-      <div class="dua-kolom">
-        <div>
-          <label for="m-nim">NIM atau NIDN</label>
-          <input id="m-nim" name="nim" inputmode="numeric" autocomplete="username" required />
-        </div>
-        <div>
-          <label for="m-pin">PIN</label>
-          <input id="m-pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required />
-        </div>
-      </div>
+      <p class="atau">atau masuk pakai NIM</p>
+      <label for="m-nim">NIM atau NIDN</label>
+      <input id="m-nim" name="nim" inputmode="numeric" autocomplete="username" placeholder="Contoh: 231011400001" required />
+      <KotakPin id="m-pin" name="pin" label="PIN" otomatis />
       <button class="tombol garis-biru" type="submit">Masuk</button>
     </form>
   </section>
@@ -117,16 +109,15 @@ import { ikon } from '../lib/ikon';
   .pita-masuk p { font-size: 0.88rem; opacity: 0.9; position: relative; z-index: 1; }
 
   .kartu-masuk {
-    position: relative; z-index: 2; margin: -42px 14px 0; padding: 14px;
-    background: var(--putih); border-radius: 18px; box-shadow: 0 14px 30px -20px rgba(15, 54, 153, 0.5);
+    position: relative; z-index: 2; margin: -42px 14px 0; padding: 18px 16px;
+    background: var(--putih); border-radius: 20px; box-shadow: 0 18px 40px -24px rgba(15, 54, 153, 0.55);
     scroll-margin: 12px;
   }
-  .kartu-masuk .tombol { margin-top: 12px; }
+  .kartu-masuk .tombol { margin-top: 18px; }
   .kartu-masuk .tautan { display: block; margin: 6px auto 0; color: var(--teks-2); font-size: 0.85rem; }
   .judul-blok { font-weight: 800; font-size: 0.98rem; margin-bottom: 2px; }
   .kartu-masuk label { margin-top: 10px; font-size: 0.8rem; }
-  .dua-kolom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
-  .atau { display: flex; align-items: center; gap: 10px; margin: 16px 0 2px; font-size: 0.75rem; color: var(--teks-2); }
+  .atau { display: flex; align-items: center; gap: 10px; margin: 20px 0 4px; font-size: 0.75rem; color: var(--teks-2); }
   .atau::before, .atau::after { content: ''; flex: 1; height: 1px; background: var(--garis); }
 
   .tap-baris { display: flex; gap: 12px; align-items: center; }
@@ -163,6 +154,7 @@ import { ikon } from '../lib/ikon';
 
 <script>
   import { api, perangkat, sesi, tujuan, GalatApi } from '../lib/api';
+  import { pinSalah } from '../lib/pin';
   import { bacaKtm, diAndroid, diAplikasi, diBrave, diIphone, nfcDidukung, pesanGalatNfc, tautanChrome, type Berhenti } from '../lib/nfc';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -253,6 +245,7 @@ import { ikon } from '../lib/ikon';
         await jalan(Object.fromEntries(new FormData(form)) as Record<string, string>);
       } catch (e) {
         salah((e as Error).message);
+        if (e instanceof GalatApi && e.status === 401) pinSalah(form);
       } finally {
         tombol.disabled = false;
       }
