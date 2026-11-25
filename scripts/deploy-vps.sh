@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Deploy Smart KTM ke VPS (default host ssh "vps") di /opt/smart-ktm, tetap jalan walau laptop mati.
+# Deploy Smart KTM ke VPS (default host ssh "srv", server rumah) di /opt/smart-ktm, tetap jalan walau laptop mati.
 #   ./scripts/deploy-vps.sh           update kode + web (data di VPS tidak disentuh)
 #   ./scripts/deploy-vps.sh --pindah  sekali saja: pindahkan data + tunnel dari laptop ke VPS
 set -euo pipefail
 cd "$(dirname "$0")/.."
-HOST=${VPS_HOST:-vps}
+HOST=${VPS_HOST:-srv}
 CF_ID=$(~/.local/bin/cloudflared tunnel list 2>/dev/null | awk '$2=="smart-ktm"{print $1}')
 PINDAH=${1:-}
 
@@ -38,7 +38,7 @@ tunnel: $CF_ID
 credentials-file: /etc/cloudflared/smart-ktm.json
 ingress:
   - hostname: ktm.rahmateka.my.id
-    service: http://localhost:8080
+    service: http://localhost:8090
   - service: http_status:404
 EOF
 fi
@@ -58,13 +58,13 @@ WantedBy=multi-user.target
 UNIT
 cat > /etc/systemd/system/smart-ktm.service <<UNIT
 [Unit]
-Description=Smart KTM - server web + API (:8080)
+Description=Smart KTM - server web + API (:8090)
 After=smart-ktm-anvil.service
 Wants=smart-ktm-anvil.service
 [Service]
 User=smartktm
 WorkingDirectory=/opt/smart-ktm
-Environment=DATA_DIR=/opt/smart-ktm/data WEB_DIR=/opt/smart-ktm/web CAST_BIN=/opt/smart-ktm/bin/cast
+Environment=PORT=8090 DATA_DIR=/opt/smart-ktm/data WEB_DIR=/opt/smart-ktm/web CAST_BIN=/opt/smart-ktm/bin/cast
 ExecStart=/opt/smart-ktm/bin/smart-ktm-server
 Restart=always
 RestartSec=3
@@ -73,7 +73,7 @@ WantedBy=multi-user.target
 UNIT
 cat > /etc/systemd/system/smart-ktm-tunnel.service <<UNIT
 [Unit]
-Description=Cloudflare Tunnel ktm.rahmateka.my.id -> localhost:8080
+Description=Cloudflare Tunnel ktm.rahmateka.my.id -> localhost:8090
 After=network-online.target smart-ktm.service
 Wants=network-online.target
 [Service]
@@ -96,7 +96,7 @@ systemctl enable -q smart-ktm smart-ktm-tunnel
 systemctl restart smart-ktm smart-ktm-tunnel
 sleep 4
 systemctl is-active smart-ktm smart-ktm-tunnel | tr '\n' ' '; echo
-curl -s -o /dev/null -w "VPS lokal :8080 -> %{http_code}\n" http://127.0.0.1:8080/
+curl -s -o /dev/null -w "VPS lokal :8090 -> %{http_code}\n" http://127.0.0.1:8090/
 EOF
 
 if [ "$PINDAH" = "--pindah" ]; then
